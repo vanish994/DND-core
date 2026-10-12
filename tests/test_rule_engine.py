@@ -1602,15 +1602,16 @@ class RuleEngineTests(unittest.TestCase):
         self.assertIn("dadiva_do_destino", EPIC_FEATS)
         self.assertEqual(FEATS["alerta"]["categoria"], "origem")
 
-    def test_origin_talents_distinguish_catalog_from_implemented_effects(self):
+    def test_origin_talents_resolve_deterministic_benefits(self):
         result = self.engine.evaluate({"type": "feat", "talento": "alerta", "nivel": 1})
         self.assertIn("proficiência_iniciativa", result.outcome["efeitos"])
-        self.assertEqual(result.outcome["resultado"], "nao_implementado")
+        self.assertEqual(result.outcome["resultado"], "resolvido")
+        self.assertEqual(result.outcome["bonus_iniciativa"], "bonus_proficiencia")
         result = self.engine.evaluate({"type": "feat", "talento": "vigoroso", "nivel": 5})
         self.assertEqual(result.outcome["pv_adicionais"], 10)
         result = self.engine.evaluate({"type": "feat", "talento": "sortudo", "nivel": 1, "bonus_proficiencia": 2})
-        self.assertEqual(result.outcome["resultado"], "nao_implementado")
-        self.assertNotIn("pontos_de_sorte", result.outcome)
+        self.assertEqual(result.outcome["resultado"], "resolvido")
+        self.assertEqual(result.outcome["pontos_de_sorte"], 2)
 
     def test_general_talent_prerequisites_and_effects(self):
         blocked = self.engine.evaluate(
@@ -1624,15 +1625,15 @@ class RuleEngineTests(unittest.TestCase):
         result = self.engine.evaluate({"type": "feat", "talento": "sentinela", "nivel": 4, "forca": 13})
         self.assertIn("zera_deslocamento", result.outcome["efeitos"])
 
-    def test_epic_talents_require_level_19_and_mark_partial_effects_unimplemented(self):
+    def test_epic_talents_require_level_19_and_resolve_benefits(self):
         blocked = self.engine.evaluate({"type": "feat", "talento": "dadiva_da_velocidade", "nivel": 18})
         self.assertEqual(blocked.outcome["motivo"], "nivel_insuficiente")
-        partial = self.engine.evaluate({"type": "feat", "talento": "dadiva_da_velocidade", "nivel": 19})
-        self.assertEqual(partial.outcome["resultado"], "nao_implementado")
-        self.assertNotIn("deslocamento_adicional_m", partial.outcome)
+        velocidade = self.engine.evaluate({"type": "feat", "talento": "dadiva_da_velocidade", "nivel": 19})
+        self.assertEqual(velocidade.outcome["resultado"], "resolvido")
+        self.assertEqual(velocidade.outcome["deslocamento_adicional_m"], 9)
         true_sight = self.engine.evaluate({"type": "feat", "talento": "dadiva_da_visao_verdadeira", "nivel": 19})
-        self.assertEqual(true_sight.outcome["resultado"], "nao_implementado")
-        self.assertNotIn("visao_verdadeira_m", true_sight.outcome)
+        self.assertEqual(true_sight.outcome["resultado"], "resolvido")
+        self.assertEqual(true_sight.outcome["visao_verdadeira_m"], 18)
 
     def test_spell_catalog_is_queryable_by_school_and_circle(self):
         from rule_engine import ESCOLAS, listar_magias, obter_magia
