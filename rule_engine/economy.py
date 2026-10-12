@@ -143,9 +143,18 @@ def vender_item(fatos: dict) -> dict[str, Any]:
 
 def resolver_inventario(fatos: dict) -> dict[str, Any]:
     forca = int(fatos.get("forca", 10))
-    peso = float(fatos.get("peso_atual", 0)) + float(fatos.get("peso_adicionado", 0))
     capacidade = max(0, forca) * 7.5
     itens = list(fatos.get("itens", []))
+    peso_inventario = (
+        float(fatos["peso_atual"])
+        if "peso_atual" in fatos
+        else sum(
+            float(item.get("peso", 0)) * int(item.get("quantidade", 1))
+            for item in itens
+            if isinstance(item, dict)
+        )
+    )
+    peso = peso_inventario + float(fatos.get("peso_adicionado", 0))
     removidos: list[dict[str, Any]] = []
     remove_ids = {str(x) for x in fatos.get("remover_ids", [])}
     remove_plans = {str(x) for x in fatos.get("remover_planos", [])}
