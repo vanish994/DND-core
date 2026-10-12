@@ -183,6 +183,11 @@ def resolver_sintonizacao(fatos: dict) -> dict[str, Any]:
         requires_attunement = bool(fatos["sintonizacao_requerida"])
     if not requires_attunement:
         return {"resultado": "nao_requerida", "item": item["nome"]}
+    if item.get("sintonizacao_requer_classe") == "conjurador":
+        if fatos.get("conjurador") is None:
+            return {"resultado": "requer_dados", "motivo": "confirmar_se_usuario_e_conjurador"}
+        if fatos.get("conjurador") is not True:
+            return {"resultado": "bloqueado", "motivo": "item_requer_sintonizacao_por_conjurador"}
     if fatos.get("acao", "sintonizar") == "encerrar":
         if nome not in {str(x).lower() for x in sintonizados}:
             return {"resultado": "bloqueado", "motivo": "item_nao_sintonizado"}
