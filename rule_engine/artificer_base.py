@@ -414,7 +414,12 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                     return {**base, "resultado": "bloqueado", "motivo": "magia_nao_preparada", "magia": nome_magia}
 
             magic_entry = obter_magia(nome_magia)
-            components = str((magic_entry or {}).get("componentes", ""))
+            if magic_entry is None:
+                return {**base, "resultado": "bloqueado", "motivo": "magia_sem_entrada_no_catalogo", "magia": nome_magia}
+            ritual_cast = bool(facts.get("ritual", facts.get("como_ritual", False)))
+            if ritual_cast and magic_entry.get("ritual") is not True:
+                return {**base, "resultado": "bloqueado", "motivo": "magia_nao_tem_tag_ritual", "magia": nome_magia}
+            components = str(magic_entry.get("componentes", ""))
             has_material = "M" in {part.strip() for part in components.replace("(", ",").replace(")", ",").split(",")}
             material_normalized = normalizar_nome_magia(components)
             needs_special_material = has_material and (
@@ -461,19 +466,22 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 "reparar": "1_minuto",
                 "consertar": "1_minuto",
             }
-            tempo_conjuracao = tempo_por_magia.get(chave_magia, "acao")
-            if tempo_conjuracao == "reacao":
+            tempo_conjuracao_base = tempo_por_magia.get(chave_magia, "acao")
+            if tempo_conjuracao_base == "reacao":
+                if ritual_cast:
+                    return {**base, "resultado": "bloqueado", "motivo": "magia_de_reacao_nao_pode_ser_conjurada_como_ritual"}
                 if facts.get("gatilho_reacao_ocorrido") is None:
                     return {**base, "resultado": "requer_dados", "motivo": "gatilho_da_reacao_necessario",
-                            "tempo_conjuracao": tempo_conjuracao}
+                            "tempo_conjuracao": tempo_conjuracao_base}
                 if facts.get("gatilho_reacao_ocorrido") is not True:
                     return {**base, "resultado": "bloqueado", "motivo": "gatilho_da_reacao_nao_ocorreu"}
                 if facts.get("reacao_disponivel") is not True:
                     return {**base, "resultado": "bloqueado", "motivo": "reacao_indisponivel"}
 
+            tempo_conjuracao = "ritual_10_minutos_adicionais" if ritual_cast else tempo_conjuracao_base
             slot_level = nivel_magia
             slots: dict[str, int] = {}
-            if nivel_magia > 0:
+            if nivel_magia > 0 and not ritual_cast:
                 slot_value = facts.get("espaco", facts.get("slot_level", nivel_magia))
                 try:
                     slot_level = int(slot_value)
@@ -503,23 +511,30 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 if slots.get(str(slot_level), 0) < 1:
                     return {**base, "resultado": "bloqueado", "motivo": "sem_espacos_de_magia",
                             "magia": nome_magia, "circulo_espaco": slot_level}
+
             dados_magia = {
                 k: v for k, v in facts.items()
-                if k not in {"classe", "nivel", "recurso", "feature", "acao", "espacos_restantes", "slots_remaining"}
+                if k not in {
+                    "classe", "nivel", "recurso", "feature", "acao",
+                    "espacos_restantes", "slots_remaining", "ritual", "como_ritual",
+                }
             }
             dados_magia["magia"] = nome_magia
-            if nivel_magia > 0:
+            if nivel_magia > 0 and not ritual_cast:
                 dados_magia["has_slot"] = True
                 dados_magia["espaco"] = slot_level
-            else:
+            elif nivel_magia == 0:
                 dados_magia["espaco"] = 0
             resolucao = resolver_magia(dados_magia)
             saida = {
                 **base, **resolucao, "caracteristica": key, "magia": nome_magia,
-                "slot_consumido": None, "tempo_conjuracao": tempo_conjuracao,
+                "slot_consumido": None, "ritual": ritual_cast,
+                "tempo_conjuracao": tempo_conjuracao,
+                "tempo_conjuracao_base": tempo_conjuracao_base,
+                "minutos_adicionais_ritual": 10 if ritual_cast else 0,
                 "acao_economica": tempo_conjuracao,
             }
-            if nivel_magia > 0 and resolucao.get("resultado") == "conjurada":
+            if nivel_magia > 0 and not ritual_cast and resolucao.get("resultado") == "conjurada":
                 slots[str(slot_level)] -= 1
                 saida.update({
                     "slot_consumido": slot_level,
