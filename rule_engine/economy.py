@@ -156,13 +156,32 @@ def resolver_inventario(fatos: dict) -> dict[str, Any]:
     }
 
 
-def resolver_sintonizacao(fatos: dict) -> dict[str, Any]:
+def _item_magico_de_fatos(fatos: dict) -> dict[str, Any] | None:
     item = consultar_item(fatos["item"])
-    if not item or item.get("categoria") != "item_magico":
+    if item and item.get("categoria") == "item_magico":
+        return item
+    metadata = fatos.get("metadados_item")
+    if not isinstance(metadata, dict) or not metadata:
+        return None
+    return {
+        **metadata,
+        "nome": metadata.get("nome", str(fatos["item"])),
+        "categoria": "item_magico",
+    }
+
+
+def resolver_sintonizacao(fatos: dict) -> dict[str, Any]:
+    item = _item_magico_de_fatos(fatos)
+    if not item:
         return {"resultado": "bloqueado", "motivo": "item_magico_desconhecido"}
     sintonizados = list(fatos.get("sintonizados", []))
-    nome = fatos["item"].lower()
-    if not item.get("sintonizacao"):
+    nome = str(fatos["item"]).lower()
+    requires_attunement = item.get("sintonizacao")
+    if requires_attunement == "varia":
+        if fatos.get("sintonizacao_requerida") is None:
+            return {"resultado": "requer_dados", "motivo": "sintonizacao_depende_do_item_escolhido"}
+        requires_attunement = bool(fatos["sintonizacao_requerida"])
+    if not requires_attunement:
         return {"resultado": "nao_requerida", "item": item["nome"]}
     if fatos.get("acao", "sintonizar") == "encerrar":
         if nome not in {str(x).lower() for x in sintonizados}:
@@ -174,23 +193,30 @@ def resolver_sintonizacao(fatos: dict) -> dict[str, Any]:
         }
     if nome in {str(x).lower() for x in sintonizados}:
         return {"resultado": "bloqueado", "motivo": "item_ja_sintonizado"}
-    if len(sintonizados) >= 3:
-        return {"resultado": "bloqueado", "motivo": "limite_de_tres_itens"}
+    limite = max(1, int(fatos.get("limite_sintonizacao", 3)))
+    if len(sintonizados) >= limite:
+        motivo = "limite_de_tres_itens" if limite == 3 else "limite_de_itens_sintonizados"
+        return {"resultado": "bloqueado", "motivo": motivo, "limite": limite}
     sintonizados.append(nome)
     return {
         "resultado": "sintonizado",
         "item": item["nome"],
         "sintonizados": sintonizados,
-        "limite": 3,
+        "limite": limite,
         "requer_descanso_curto": True,
     }
 
 
 def usar_item_magico(fatos: dict) -> dict[str, Any]:
-    item = consultar_item(fatos["item"])
-    if not item or item.get("categoria") != "item_magico":
+    item = _item_magico_de_fatos(fatos)
+    if not item:
         return {"resultado": "bloqueado", "motivo": "item_magico_desconhecido"}
-    if item.get("sintonizacao") and fatos["item"].lower() not in {
+    requires_attunement = item.get("sintonizacao")
+    if requires_attunement == "varia":
+        if fatos.get("sintonizacao_requerida") is None:
+            return {"resultado": "requer_dados", "motivo": "sintonizacao_depende_do_item_escolhido"}
+        requires_attunement = bool(fatos["sintonizacao_requerida"])
+    if requires_attunement and str(fatos["item"]).lower() not in {
         str(x).lower() for x in fatos.get("sintonizados", [])
     }:
         return {"resultado": "bloqueado", "motivo": "requer_sintonizacao"}
