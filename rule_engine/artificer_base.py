@@ -5,6 +5,7 @@ itens, cargas e espaços) continua pertencendo ao chamador do Rule Engine.
 """
 from __future__ import annotations
 
+import unicodedata
 from typing import Any
 
 # Progressão publicada da classe base, sem características de subclasse.
@@ -87,7 +88,8 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
         }
 
     if key == "tinkers_magic":
-        item = str(facts.get("item", "")).strip().lower().replace(" ", "_")
+        item = unicodedata.normalize("NFKD", str(facts.get("item", "")).strip().lower())
+        item = "".join(ch for ch in item if not unicodedata.combining(ch)).replace(" ", "_").replace("-", "_")
         uses = max(1, int_mod)
         if facts.get("acao") in {"criar", "create"}:
             if not item:
@@ -190,8 +192,15 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
         spell = facts.get("magia")
         if not spell:
             return {**base, "resultado": "escolha", "requer": ["magia_de_artifice_de_1_a_3_circulo",
-                        "sem_componente_material_consumido"]}
-        uses = max(1, 2 * int_mod)
+                        "tempo_de_conjuracao_de_uma_acao", "sem_componente_material_consumido"]}
+        from .spellcasting import ARTIFICER_SPELL_LEVELS, normalizar_nome_magia
+        spell_level_in_list = next((v for name, v in ARTIFICER_SPELL_LEVELS.items()
+                                    if normalizar_nome_magia(name) == normalizar_nome_magia(spell)), None)
+        if spell_level_in_list is None or spell_level_in_list != spell_level:
+            return {**base, "resultado": "bloqueado", "motivo": "magia_nao_esta_na_lista_do_artifice_no_nivel_informado"}
+        if facts.get("tempo_conjuracao_acao") is not True:
+            return {**base, "resultado": "requer_dados", "motivo": "confirmar_tempo_de_conjuracao_de_uma_acao",
+                    "requer": "tempo_conjuracao_acao=True"}
         return {**base, "resultado": "armazenado", "magia": spell, "nivel_magia": spell_level,
                 "usos": max(2, 2 * int_mod), "acao_para_lancar": "acao_magica", "habilidade_conjuracao": "inteligencia",
                 "objeto": facts.get("objeto"), "requer_objeto_adequado": True}
