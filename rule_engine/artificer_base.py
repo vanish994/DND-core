@@ -223,7 +223,7 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             if not nome_magia:
                 return {**base, "resultado": "requer_dados", "motivo": "nome_da_magia_necessario"}
             chave_magia = normalizar_nome_magia(nome_magia)
-            nivel_magia = next(
+            nivel_magia = 0 if chave_magia == normalizar_nome_magia("Reparar") else next(
                 (circulo for nome, circulo in ARTIFICER_SPELL_LEVELS.items()
                  if normalizar_nome_magia(nome) == chave_magia),
                 None,
