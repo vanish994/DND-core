@@ -306,7 +306,7 @@ class PaladinoGuardiaoFeatureTests(unittest.TestCase):
     def test_artifice_alma_artifice_recupera_20_pv_por_item(self):
         resultado = caracteristica("artifice", "Alma do Artífice", 20,
                                    acao="evitar_morte", caiu_a_0_pv=True,
-                                   itens_destruidos=[{"raridade":"incomum", "replicado":True}, {"raridade":"raro", "replicado":True}])
+                                   itens_destruidos=[{"id":"replica-1", "raridade":"incomum", "replicado":True}, {"id":"replica-2", "raridade":"raro", "replicado":True}])
         self.assertEqual(resultado["resultado"], "sobreviveu")
         self.assertEqual(resultado["pv_atuais"], 40)
 
