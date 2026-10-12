@@ -733,6 +733,7 @@ MAGIAS["passos longos"] = {
     "concentracao": False,
     "ritual": False,
     "duracao": "1 hora",
+    "efeito": "Aumenta o deslocamento da criatura tocada em 3 m por 1 hora, sem concentração.",
 }
 
 for _antigo, _novo in _ALIAS_PARA_2024:
