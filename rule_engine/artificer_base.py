@@ -420,6 +420,27 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             components = str(magic_entry.get("componentes", ""))
             has_material = "M" in {part.strip() for part in components.replace("(", ",").replace(")", ",").split(",")}
             material_normalized = normalizar_nome_magia(components)
+            is_true_strike = chave_magia == normalizar_nome_magia("Golpe Certeiro")
+            if is_true_strike:
+                weapon_in_hand = facts.get("arma_em_maos", facts.get("weapon_in_hand"))
+                if weapon_in_hand is None:
+                    return {**base, "resultado": "requer_dados", "motivo": "arma_de_golpe_certeiro_em_maos_necessaria"}
+                if weapon_in_hand is not True:
+                    return {**base, "resultado": "bloqueado", "motivo": "golpe_certeiro_exige_arma_em_maos"}
+                weapon_proficient = facts.get("proficiencia_com_arma", facts.get("weapon_proficient"))
+                if weapon_proficient is None:
+                    return {**base, "resultado": "requer_dados", "motivo": "proficiencia_com_arma_necessaria_para_golpe_certeiro"}
+                if weapon_proficient is not True:
+                    return {**base, "resultado": "bloqueado", "motivo": "sem_proficiencia_com_arma_para_golpe_certeiro"}
+                weapon_value = facts.get("valor_arma_pc", facts.get("weapon_value_cp"))
+                if weapon_value is None:
+                    return {**base, "resultado": "requer_dados", "motivo": "valor_da_arma_em_pc_necessario"}
+                try:
+                    weapon_value = float(weapon_value)
+                except (TypeError, ValueError):
+                    return {**base, "resultado": "bloqueado", "motivo": "valor_da_arma_invalido"}
+                if weapon_value < 1:
+                    return {**base, "resultado": "bloqueado", "motivo": "arma_de_golpe_certeiro_deve_valer_ao_menos_1_pc"}
             needs_special_material = has_material and (
                 "consumido" in material_normalized
                 or ("po" in material_normalized and any(ch.isdigit() for ch in components))
