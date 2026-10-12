@@ -133,8 +133,10 @@ Continuam **abertos** (cada item exige regra + teste próprios):
   (`MECANICAS_MAGIA` cobre ~60; o restante tem só o catálogo);
 - durações detalhadas das magias adicionadas via listas (as listas trazem
   círculo/escola/marcadores, não duração);
-- três características do Artífice (`Artesão/Adepto/Mestre de Item Mágico`) —
-  o PHB 2024 não traz a classe; aguarda fonte do projeto;
+- subclasses e integração completa do Artífice (a classe base 5.5e está em
+  implementação incremental no módulo `artificer_base.py`; catálogo completo
+  de planos de itens mágicos e algumas interações de estado ainda exigem
+  metadados do item e integração com inventário/descansos);
 - dois talentos de Dádiva Sombria (`anatomia_aberrante`, `toque_da_morte`) —
   efeitos não catalogados nas fontes locais;
 - equipamento inicial por classe/origem (PHB caps. 2 e 5);
