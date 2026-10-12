@@ -416,7 +416,11 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             magic_entry = obter_magia(nome_magia)
             components = str((magic_entry or {}).get("componentes", ""))
             has_material = "M" in {part.strip() for part in components.replace("(", ",").replace(")", ",").split(",")}
-            needs_special_material = has_material and any(token in normalizar_nome_magia(components) for token in ("po", "consumido", "consumida"))
+            material_normalized = normalizar_nome_magia(components)
+            needs_special_material = has_material and (
+                "consumido" in material_normalized
+                or ("po" in material_normalized and any(ch.isdigit() for ch in components))
+            )
             if needs_special_material:
                 special_material = facts.get("materiais_especiais_disponiveis")
                 if special_material is None:
@@ -971,20 +975,41 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             ids_itens_tinkers = [str(item["id"]) for item in tinker_items]
             if len(set(ids_itens_tinkers)) != len(ids_itens_tinkers):
                 return {**base, "resultado": "bloqueado", "motivo": "ids_de_itens_tinkers_duplicados"}
+            from .spellcasting import ARTIFICER_SLOTS
+
+            slots_restaurados = {
+                str(i + 1): quantidade
+                for i, quantidade in enumerate(ARTIFICER_SLOTS[level])
+                if quantidade > 0
+            }
             resources = {
                 "magia_de_artifice": {"usos_gastos": 0, "usos_maximos": uses_max},
-                "espacos_de_magia": "todos",
+                "espacos_de_magia": {
+                    "espacos_restantes": dict(slots_restaurados),
+                    "usos_gastos": {circulo: 0 for circulo in slots_restaurados},
+                },
             }
             if level >= 6:
                 resources["drenar_item_magico"] = {"usado_no_descanso_longo": False}
                 resources["transmutar_item_magico"] = {"usado_no_descanso_longo": False}
             if level >= 7:
                 resources["lampejo_de_genio"] = {"usos_gastos": 0, "usos_maximos": uses_max}
-            return {**base, "resultado": "recursos_recuperados", "tipo_descanso": "longo",
-                    "recursos": resources, "replicar_item_magico_disponivel": level >= 2,
-                    "pode_armazenar_outra_magia": level >= 11,
-                    "itens_tinkers_que_expiram": tinker_items,
-                    "delta_inventario": {"remover_ids": ids_itens_tinkers}}
+            return {
+                **base,
+                "resultado": "recursos_recuperados",
+                "tipo_descanso": "longo",
+                "recursos": resources,
+                "replicar_item_magico_disponivel": level >= 2,
+                "pode_armazenar_outra_magia": level >= 11,
+                "itens_tinkers_que_expiram": tinker_items,
+                "delta_inventario": {"remover_ids": ids_itens_tinkers},
+                "delta_mundo": {"remover_ids": ids_itens_tinkers},
+                "delta_conjuracao": {
+                    "espacos_restantes": dict(slots_restaurados),
+                    "troca_truque_disponivel": True,
+                    "mudanca_magias_preparadas_disponivel": True,
+                },
+            }
         if rest in {"curto", "short", "descanso_curto", "short_rest"}:
             if level >= 20 and facts.get("sintonizado_item_magico") is None:
                 return {**base, "resultado": "requer_dados", "motivo": "confirmar_sintonizacao_para_recuperar_lampejo"}
