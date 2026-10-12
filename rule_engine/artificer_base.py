@@ -987,6 +987,8 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 return {**base, "resultado": "requer_dados", "motivo": "lista_de_itens_tinkers_atuais_necessaria"}
             if any(not isinstance(item, dict) or not item.get("id") for item in tinker_items):
                 return {**base, "resultado": "requer_dados", "motivo": "todos_os_itens_tinkers_precisam_de_id_unico_para_expirar"}
+            if any(item.get("criado_por") != "tinkers_magic" for item in tinker_items):
+                return {**base, "resultado": "bloqueado", "motivo": "a_lista_de_expiracao_deve_conter_apenas_itens_criados_por_magia_de_artifice"}
             ids_itens_tinkers = [str(item["id"]) for item in tinker_items]
             if len(set(ids_itens_tinkers)) != len(ids_itens_tinkers):
                 return {**base, "resultado": "bloqueado", "motivo": "ids_de_itens_tinkers_duplicados"}
