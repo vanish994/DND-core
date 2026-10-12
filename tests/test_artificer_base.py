@@ -286,6 +286,57 @@ class ArtificerProgressionTests(unittest.TestCase):
                 unsupported.append((name, result.get("resultado"), result.get("motivo")))
         self.assertEqual(unsupported, [], f"Magias de nível 1 sem efeito executável: {unsupported}")
 
+    def test_every_first_circle_artificer_spell_runs_through_class_feature_resolver(self):
+        from rule_engine.class_features import resolver_caracteristica
+        from rule_engine.spellcasting import ARTIFICER_SPELL_LEVELS
+
+        failures = []
+        first_level_spells = [
+            name for name, circle in ARTIFICER_SPELL_LEVELS.items() if circle == 1
+        ]
+        for spell in first_level_spells:
+            prepared = [spell, "Detectar Magia"]
+            if spell == "Detectar Magia":
+                prepared = ["Detectar Magia", "Curar Ferimentos"]
+            facts = {
+                "classe": "artifice", "nivel": 1, "recurso": "conjuracao", "acao": "conjurar",
+                "magia": spell, "inteligencia": 16,
+                "truques_conhecidos": ["Bolha Ácida", "Luz"],
+                "magias_preparadas": prepared,
+                "espacos_restantes": {"1": 2},
+                "foco_conjuracao_em_maos": True,
+                "foco_conjuracao": "Ferramentas de Funileiro",
+                "ferramentas_de_funileiro_em_maos": True,
+                "materiais_especiais_disponiveis": True,
+                "gatilho_reacao_ocorrido": True,
+                "reacao_disponivel": True,
+                "componentes_disponiveis": ["V", "S", "M"],
+            }
+            result = resolver_caracteristica(facts)
+            if result.get("resultado") != "conjurada" or not result.get("mecanica"):
+                failures.append((spell, result.get("resultado"), result.get("motivo")))
+        self.assertEqual(failures, [], f"Magias que falham na rota real do Artífice: {failures}")
+
+    def test_tinkers_magic_granted_mending_cantrip_is_executable(self):
+        from rule_engine.class_features import resolver_caracteristica
+        from rule_engine.spells import resolver_magia
+
+        # Reparar é concedido pela característica e não ocupa uma das duas escolhas.
+        result = resolver_magia({
+            "magia": "Reparar",
+            "nivel_personagem": 1,
+        })
+        self.assertEqual(result.get("resultado"), "conjurada")
+        self.assertEqual(result.get("circulo_base"), 0)
+        self.assertTrue(result.get("mecanica"))
+
+        feature = resolver_caracteristica({
+            "classe": "artifice", "nivel": 1, "recurso": "tinkers_magic",
+            "inteligencia": 16,
+        })
+        self.assertEqual(feature.get("resultado"), "resolvido")
+        self.assertEqual(feature.get("truque_conhecido"), "Reparar")
+
     def test_artificer_can_cast_prepared_ritual_without_spending_a_slot(self):
         ritual = resolver_caracteristica({
             "classe": "artifice", "nivel": 1, "recurso": "conjuracao", "acao": "conjurar",
