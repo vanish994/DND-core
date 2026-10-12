@@ -218,16 +218,18 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
         if facts.get("acao") in {"criar", "create"}:
             if facts.get("usos_gastos") is None:
                 return {**base, "resultado": "requer_dados", "motivo": "estado_de_usos_de_magia_de_artifice_necessario"}
+            if facts.get("ferramentas_tinkering_em_maos") is None:
+                return {**base, "resultado": "requer_dados", "motivo": "confirmar_ferramentas_de_tinkering_em_maos"}
             if facts.get("ferramentas_tinkering_em_maos") is not True:
-                return {**base, "resultado": "requer_dados", "motivo": "confirmar_ferramentas_de_tinkering_em_maos",
-                        "requer": "ferramentas_tinkering_em_maos=True"}
+                return {**base, "resultado": "bloqueado", "motivo": "ferramentas_de_funileiro_nao_estao_em_maos"}
             if facts.get("distancia_m") is None:
                 return {**base, "resultado": "requer_dados", "motivo": "distancia_ate_o_espaco_de_criacao_necessaria"}
             if float(facts["distancia_m"]) > 1.5:
                 return {**base, "resultado": "bloqueado", "motivo": "espaco_de_criacao_fora_de_1_5_metro"}
+            if facts.get("espaco_desocupado") is None:
+                return {**base, "resultado": "requer_dados", "motivo": "confirmar_espaco_desocupado"}
             if facts.get("espaco_desocupado") is not True:
-                return {**base, "resultado": "requer_dados", "motivo": "confirmar_espaco_desocupado",
-                        "requer": "espaco_desocupado=True"}
+                return {**base, "resultado": "bloqueado", "motivo": "nao_ha_espaco_desocupado"}
             if not item:
                 return {**base, "resultado": "escolha", "opcoes": [{"id": gear, "nome": ARTIFICER_GEAR_LABELS[gear]} for gear in sorted(ARTIFICER_GEAR)],
                         "acao": "acao_magica", "ferramentas_requeridas": "ferramentas_de_tinkering"}
@@ -299,11 +301,14 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                     "metadados": metadata, "planos_conhecidos": [*known, new_plan],
                     "quantidade_planos_conhecidos": plans_count}
         if facts.get("acao") in {"criar", "create"}:
+            if facts.get("ferramentas_artesao_em_maos") is None:
+                return {**base, "resultado": "requer_dados", "motivo": "confirmar_ferramentas_de_artesao_em_maos"}
             if facts.get("ferramentas_artesao_em_maos") is not True:
-                return {**base, "resultado": "requer_dados", "motivo": "confirmar_ferramentas_de_artesao_em_maos",
-                        "requer": "ferramentas_artesao_em_maos=True"}
-            if facts.get("descanso_longo_concluido") is not True:
+                return {**base, "resultado": "bloqueado", "motivo": "ferramentas_de_artesao_nao_estao_em_maos"}
+            if facts.get("descanso_longo_concluido") is None:
                 return {**base, "resultado": "requer_dados", "motivo": "confirmar_conclusao_de_descanso_longo"}
+            if facts.get("descanso_longo_concluido") is not True:
+                return {**base, "resultado": "bloqueado", "motivo": "descanso_longo_nao_concluido"}
             chosen = facts.get("planos", facts.get("plans", []))
             known = facts.get("planos_conhecidos")
             if not isinstance(chosen, list) or any(not isinstance(plan, str) for plan in chosen):
@@ -444,6 +449,10 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             return {**base, "resultado": "requer_dados", "motivo": "estado_de_usos_de_lampejo_necessario"}
         if not facts.get("criatura_falhou", facts.get("creature_failed", False)):
             return {**base, "resultado": "bloqueado", "motivo": "so_apos_falha_em_teste_ou_salvaguarda"}
+        if facts.get("reacao_disponivel") is None:
+            return {**base, "resultado": "requer_dados", "motivo": "confirmar_disponibilidade_de_reacao"}
+        if facts.get("reacao_disponivel") is not True:
+            return {**base, "resultado": "bloqueado", "motivo": "reacao_indisponivel"}
         test_type = str(facts.get("tipo_teste", "")).lower()
         if test_type not in {"teste_de_habilidade", "salvaguarda", "ability_check", "saving_throw"}:
             return {**base, "resultado": "bloqueado", "motivo": "lampejo_so_afeta_teste_de_habilidade_ou_salvaguarda"}
