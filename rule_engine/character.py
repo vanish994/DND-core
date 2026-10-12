@@ -25,9 +25,13 @@ ESPECIES = {
 }
 EQUIPAMENTO_INICIAL_ARTIFICE = {
     "A": {
-        "itens": ["Armadura de Couro Batido", "Adaga", "Ferramentas de Ladrão",
-                  "Ferramentas de Artesão (mesmas escolhidas na proficiência)",
-                  "Mochila de Explorador de Masmorras"],
+        "itens": [
+            "Armadura de Couro Batido",
+            "Adaga",
+            "Ferramentas de Ladrão",
+            "Ferramentas de Funileiro",
+            "Pacote de Exploração de Masmorras",
+        ],
         "ouro": 16,
     },
     "B": {"itens": [], "ouro": 150},
@@ -299,6 +303,7 @@ class Personagem:
     equipamento_classe: str | None = None
     truques_artifice: list[str] = field(default_factory=list)
     magias_preparadas_artifice: list[str] = field(default_factory=list)
+    id: str | None = None
 
     @property
     def bonus_proficiencia(self) -> int:
@@ -454,6 +459,7 @@ def criar_personagem(fatos: Mapping[str, Any]) -> Personagem:
         equipamento_classe=equipamento_classe,
         truques_artifice=truques_artifice,
         magias_preparadas_artifice=magias_preparadas_artifice,
+        id=(str(fatos.get("character_id") or fatos.get("id") or "").strip() or None),
     )
 
 
@@ -474,6 +480,121 @@ def _talento_do_antecedente(antecedente: str, escolha: Any = None) -> str | None
 
 def modificador(valor: int) -> int:
     return (valor - 10) // 2
+
+
+def _inventario_inicial_artifice(personagem: Personagem) -> dict[str, Any] | None:
+    """Constrói itens reais do pacote inicial, prontos para persistir no inventário."""
+    if personagem.classe != "artifice":
+        return None
+    escolha = personagem.equipamento_classe
+    if escolha is None:
+        return {
+            "resultado": "escolha",
+            "opcoes": {
+                chave: {"itens": list(dados["itens"]), "ouro": dados["ouro"]}
+                for chave, dados in EQUIPAMENTO_INICIAL_ARTIFICE.items()
+            },
+        }
+    if escolha == "B":
+        return {"resultado": "pronto", "escolha": "B", "itens": [], "ouro": 150}
+    if not personagem.id:
+        return {
+            "resultado": "requer_dados",
+            "motivo": "character_id_necessario_para_ids_unicos_de_inventario",
+            "escolha": "A",
+            "itens_sem_ids": list(EQUIPAMENTO_INICIAL_ARTIFICE["A"]["itens"]),
+            "ouro": 16,
+        }
+
+    from .catalog import CATALOGO_ARMADURAS, CATALOGO_ARMAS, CATALOGO_EQUIPAMENTOS
+
+    prefix = f"{personagem.id}:artifice-inicial"
+    inventario: list[dict[str, Any]] = []
+    indice = 0
+    for nome in EQUIPAMENTO_INICIAL_ARTIFICE["A"]["itens"]:
+        indice += 1
+        item_id = f"{prefix}:{indice}"
+        if nome == "Armadura de Couro Batido":
+            dados = CATALOGO_ARMADURAS.get("Couro Batido")
+            tipo_item = "armadura"
+        elif nome in CATALOGO_ARMAS:
+            dados = CATALOGO_ARMAS[nome]
+            tipo_item = "arma"
+        elif nome == "Pacote de Exploração de Masmorras":
+            dados = CATALOGO_EQUIPAMENTOS.get(nome)
+            tipo_item = "pacote"
+        else:
+            dados = CATALOGO_EQUIPAMENTOS.get(nome)
+            tipo_item = "ferramenta" if dados and dados.get("categoria") == "ferramenta" else "equipamento"
+
+        if not isinstance(dados, dict):
+            return {"resultado": "erro_catalogo", "motivo": "item_inicial_sem_dados_mecanicos", "item": nome}
+        if tipo_item != "pacote":
+            inventario.append({
+                **dict(dados),
+                "id": item_id,
+                "nome": nome,
+                "quantidade": 1,
+                "tipo_item": tipo_item,
+                "origem": "equipamento_inicial_artifice",
+            })
+            continue
+
+        # O pacote existe como recipiente, mas seu peso é contabilizado pelos
+        # itens internos, não novamente pelo peso total agregado do pacote.
+        conteudo_catalogo = dados.get("conteudo")
+        if not isinstance(conteudo_catalogo, list):
+            return {"resultado": "erro_catalogo", "motivo": "pacote_sem_conteudo_estruturado", "item": nome}
+        ids_conteudo: list[str] = []
+        id_pacote = item_id
+        inventario.append({
+            **dict(dados),
+            "id": id_pacote,
+            "nome": nome,
+            "peso": 0,
+            "quantidade": 1,
+            "tipo_item": "recipiente",
+            "peso_declarado_com_conteudo": dados.get("peso", 0),
+            "conteudo_ids": ids_conteudo,
+            "origem": "equipamento_inicial_artifice",
+        })
+        for conteudo in conteudo_catalogo:
+            nome_conteudo = str(conteudo.get("nome", ""))
+            dados_conteudo = CATALOGO_EQUIPAMENTOS.get(nome_conteudo)
+            if not isinstance(dados_conteudo, dict):
+                return {"resultado": "erro_catalogo", "motivo": "conteudo_de_pacote_sem_dados_mecanicos",
+                        "pacote": nome, "item": nome_conteudo}
+            indice += 1
+            id_conteudo = f"{prefix}:{indice}"
+            ids_conteudo.append(id_conteudo)
+            inventario.append({
+                **dict(dados_conteudo),
+                "id": id_conteudo,
+                "nome": nome_conteudo,
+                "quantidade": int(conteudo.get("quantidade", 1)),
+                "container_id": id_pacote,
+                "tipo_item": "equipamento",
+                "origem": "pacote_exploracao_masmorras",
+            })
+        inventario[indice - len(conteudo_catalogo) - 1]["conteudo_ids"] = list(ids_conteudo)
+
+    soma_peso = sum(float(item.get("peso", 0)) * int(item.get("quantidade", 1)) for item in inventario)
+    peso_catalogo_pacote = float(CATALOGO_EQUIPAMENTOS["Pacote de Exploração de Masmorras"]["peso"])
+    if abs(soma_peso - (peso_catalogo_pacote + sum(
+        float(d.get("peso", 0)) for name, d in
+        [(n, CATALOGO_ARMADURAS.get("Couro Batido", {})) if n == "Armadura de Couro Batido"
+         else (n, CATALOGO_ARMAS.get(n, CATALOGO_EQUIPAMENTOS.get(n, {})))
+         for n in EQUIPAMENTO_INICIAL_ARTIFICE["A"]["itens"] if n != "Pacote de Exploração de Masmorras"]
+    ))) > 0.01:
+        return {"resultado": "erro_catalogo", "motivo": "peso_do_pacote_nao_confere_com_seus_itens"}
+    return {
+        "resultado": "pronto",
+        "escolha": "A",
+        "itens": inventario,
+        "ouro": 16,
+        "peso_total": soma_peso,
+        "aplicar_com": "resolver_inventario",
+    }
 
 
 def ficha_personagem(personagem: Personagem) -> dict[str, Any]:
@@ -616,6 +737,7 @@ def ficha_personagem(personagem: Personagem) -> dict[str, Any]:
             else None
         ),
         "equipamento_classe_pendente": equipamento_classe_pendente,
+        "inventario_inicial": _inventario_inicial_artifice(personagem),
         "caracteristicas_classe": caracteristicas_no_nivel(personagem.classe, personagem.nivel),
         "conjuracao": conjuracao_artifice,
         "escolhas_pendentes": list(dict.fromkeys(escolhas_pendentes)),
