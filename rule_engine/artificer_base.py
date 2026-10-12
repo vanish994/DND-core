@@ -50,7 +50,7 @@ ARTIFICER_REPLICATE_PLANS = {
     "ring_of_swimming": {"nome": "Anel de Natação", "nivel_minimo": 6, "raridade": "incomum", "sintonizacao": False},
     "ring_of_water_walking": {"nome": "Anel de Caminhar sobre a Água", "nivel_minimo": 6, "raridade": "incomum", "sintonizacao": False},
     "sentinel_shield": {"nome": "Escudo Sentinela", "nivel_minimo": 6, "raridade": "incomum", "sintonizacao": False},
-    "spell_refueling_ring": {"nome": "Anel de Reabastecimento de Magia", "nivel_minimo": 6, "raridade": "incomum", "sintonizacao": True, "efeito": "recupera_espaco_de_magia_3_ou_menor_uma_vez_ao_amanhecer"},
+    "spell_refueling_ring": {"nome": "Anel de Reabastecimento de Magia", "nivel_minimo": 6, "raridade": "incomum", "sintonizacao": True, "sintonizacao_requer_classe": "conjurador", "efeito": "recupera_espaco_de_magia_3_ou_menor_uma_vez_ao_amanhecer"},
     "wand_of_magic_missiles": {"nome": "Varinha de Mísseis Mágicos", "nivel_minimo": 6, "raridade": "incomum", "sintonizacao": False},
     "wand_of_web": {"nome": "Varinha de Teia", "nivel_minimo": 6, "raridade": "incomum", "sintonizacao": True},
     "weapon_of_warning": {"nome": "Arma de Aviso", "nivel_minimo": 6, "raridade": "incomum", "sintonizacao": True},
