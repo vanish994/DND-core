@@ -140,6 +140,7 @@ def progresso_artifice(nivel: int, inteligencia: int) -> dict[str, Any]:
         raise ValueError("O nível do Artífice deve estar entre 1 e 20")
     slots = {str(i + 1): quantidade for i, quantidade in enumerate(ARTIFICER_SLOTS[int(nivel)])}
     circulo_maximo = max(int(circulo) for circulo in slots)
+    nivel = int(nivel)
     truques = 2 if nivel < 10 else 3 if nivel < 14 else 4
     preparadas = ARTIFICER_PREPARED_SPELLS[int(nivel)]
     return {
