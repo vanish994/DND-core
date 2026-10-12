@@ -349,10 +349,11 @@ def resolver_caracteristica(f: dict) -> dict:
         if recurso == "contatar_patrono":
             return {"resultado": "resolvido", "consulta": True, "telepatia": True, "recarga": "descanso_longo"}
         if recurso == "arcana_mistica":
-            circulo = {11: 6, 13: 7, 15: 8, 17: 9}.get(nivel)
+            circulo = max((n for n in (11, 13, 15, 17) if nivel >= n), default=None)
+            circulo_magia = {11: 6, 13: 7, 15: 8, 17: 9}.get(circulo) if circulo else None
             return {
-                "resultado": "resolvido" if circulo else "bloqueado",
-                "circulo": circulo,
+                "resultado": "resolvido" if circulo_magia else "bloqueado",
+                "circulo": circulo_magia,
                 "recarga": "descanso_longo",
             }
         if recurso == "mestre_mistico":
@@ -443,6 +444,10 @@ def resolver_caracteristica(f: dict) -> dict:
         if recurso == "matador_de_inimigos_favoritos":
             return {"resultado": "resolvido", "dado_marca_do_predador": "d10"}
 
+    delegado = _delegar_para_especialista(classe, chave, nivel, f)
+    if delegado is not None:
+        return delegado
+
     classes_conhecidas = {
         "barbaro",
         "bardo",
@@ -467,3 +472,173 @@ def resolver_caracteristica(f: dict) -> dict:
         "nivel": nivel,
         "motivo": "caracteristica_catalogada_sem_resolver_especifico",
     }
+
+
+def _delegar_para_especialista(classe: str, chave: str, nivel: int, f: dict) -> dict | None:
+    """Encaminha características para os módulos especializados já implementados.
+
+    Todos os resolvedores especializados seguem o contrato unificado
+    ``resolver_*(fatos: dict)`` com as chaves ``classe`` e ``nivel``. Retorna
+    ``None`` quando não há delegação definida (a característica segue para o
+    diagnóstico de ``nao_implementado``).
+    """
+    from .advanced_casters import resolver_bruxo, resolver_feiticeiro, resolver_guardiao, resolver_paladino
+    from .feats import FEATS
+    from .martial import (
+        resolver_ataque_extra,
+        resolver_ataque_furtivo,
+        resolver_defletir_ataques,
+        resolver_esquiva_sobrenatural,
+        resolver_evasao,
+        resolver_foco_monge,
+        resolver_furia,
+        resolver_maestria_arma,
+        resolver_recuperar_folego,
+    )
+    from .martial_subclasses import resolver_subclasse_marcial
+    from .spellcasters import (
+        resolver_canalizar_divindade,
+        resolver_forma_selvagem,
+        resolver_inspiracao_bardo,
+        resolver_livro_de_magias,
+        resolver_progressao_conjuracao,
+    )
+    from .warlock_invocations import INVOCATIONS, resolver_invocacao, validar_invocacao
+
+    nivel = int(nivel)
+    base = {**f, "classe": classe, "nivel": nivel}
+
+    def completar(dados: dict) -> dict:
+        saida = dict(dados)
+        saida.setdefault("classe", classe)
+        saida.setdefault("nivel", nivel)
+        saida.setdefault("fonte", f"class_features:{chave}")
+        return saida
+
+    def invocar(fn, fatos: dict) -> dict:
+        """Executa o resolvedor; fatos obrigatórios ausentes viram contrato."""
+        try:
+            return fn(fatos)
+        except KeyError as exc:
+            faltante = str(exc.args[0]) if exc.args else str(exc)
+            return {"resultado": "contrato", "fatos_exigidos": [faltante]}
+
+    # --- Marcos estruturais -------------------------------------------------
+    if chave == "subclasse":
+        from .class_progression import subclasses_da_classe
+
+        try:
+            opcoes = subclasses_da_classe(classe)
+        except Exception:  # classe fora do catálogo de subclasse
+            opcoes = []
+        return completar(
+            {
+                "resultado": "escolha",
+                "marco": "subclasse",
+                "opcoes": sorted(opcoes),
+            }
+        )
+    if chave == "caracteristica_de_subclasse":
+        subclasse = f.get("subclasse")
+        if not subclasse:
+            return completar({"resultado": "escolha", "motivo": "subclasse_ausente"})
+        if classe in {"barbaro", "guerreiro", "monge", "ladino"}:
+            dados = invocar(resolver_subclasse_marcial, {**base, "subclasse": subclasse})
+            return completar(dados)
+        return completar(
+            {
+                "resultado": "nao_implementado",
+                "motivo": "subclasse_sem_resolvedor_especifico",
+                "subclasse": subclasse,
+            }
+        )
+    if chave == "dadiva_epica":
+        opcoes = sorted(nome for nome, dados in FEATS.items() if dados.get("categoria") == "dadiva_epica")
+        return completar({"resultado": "escolha", "marco": "dadiva_epica", "exige_nivel": 19, "opcoes": opcoes})
+    if chave == "estilo_de_luta":
+        # Talentos de Estilo de Luta (PHB 2024, cap. 5) — exigem a característica
+        # de classe Estilo de Luta; concedidos e resolvidos por este marco.
+        estilos = {
+            "arquearia": {"ataque_distancia": 2},
+            "combate_com_armas_de_arremesso": {"dano_arremesso": 2},
+            "combate_com_armas_grandes": {"reroll_dado_baixo_como": 3, "restricao": "duas_maos_ou_versatil"},
+            "combate_com_duas_armas": {"dano_ataque_extra_leve": "modificador_de_atributo"},
+            "combate_desarmado": {
+                "dano_desarmado": "1d6+forca",
+                "dado_sem_armas_ou_escudo": "d8",
+                "dano_imobilizado": "1d4",
+            },
+            "defensivo": {"ca": 1, "requer": "armadura"},
+            "duelismo": {"dano": 2, "restricao": "uma_arma_corpo_a_corpo_sem_outra"},
+            "interceptacao": {"reducao_dano": "1d10+bonus_proficiencia", "acao": "reacao", "requer": "escudo_ou_arma"},
+            "luta_as_cegas": {"visao_as_cegas_m": 3},
+            "protetivo": {"acao": "reacao", "desvantagem_ataque": True, "alcance_m": 1.5, "requer": "escudo"},
+        }
+        talento = f.get("talento")
+        if not talento:
+            return completar({"resultado": "escolha", "marco": "estilo_de_luta", "opcoes": sorted(estilos)})
+        chave_estilo = _normalizar(str(talento))
+        if chave_estilo not in estilos:
+            return completar({"resultado": "bloqueado", "motivo": "talento_invalido", "talento": talento})
+        return completar(
+            {"resultado": "resolvido", "talento": chave_estilo, "categoria": "estilo_de_luta", **estilos[chave_estilo]}
+        )
+
+    # --- Características marciais ------------------------------------------
+    if chave in {"ataque_extra", "dois_ataques_extras", "tres_ataques_extras"}:
+        return completar(invocar(resolver_ataque_extra, base))
+    if chave == "maestria_em_arma":
+        return completar(invocar(resolver_maestria_arma, base))
+    if chave == "furia":
+        return completar(invocar(resolver_furia, base))
+    if chave == "recuperar_folego":
+        return completar(invocar(resolver_recuperar_folego, base))
+    if chave == "ataque_furtivo":
+        return completar(invocar(resolver_ataque_furtivo, base))
+    if chave == "foco_do_monge":
+        return completar(invocar(resolver_foco_monge, base))
+    if chave == "defletir_ataques":
+        return completar(invocar(resolver_defletir_ataques, base))
+    if chave == "esquiva_sobrenatural":
+        return completar(invocar(resolver_esquiva_sobrenatural, base))
+    if chave == "evasao":
+        return completar(invocar(resolver_evasao, base))
+
+    # --- Conjuração --------------------------------------------------------
+    if chave == "conjuracao":
+        if classe in {"bardo", "clerigo", "druida", "mago"}:
+            return completar(invocar(resolver_progressao_conjuracao, base))
+        if classe == "feiticeiro":
+            return completar(invocar(resolver_feiticeiro, {**base, "acao": "progressao"}))
+        if classe == "bruxo":
+            return completar(invocar(resolver_bruxo, {**base, "acao": "progressao"}))
+        if classe == "guardiao":
+            return completar(invocar(resolver_guardiao, {**base, "acao": "progressao"}))
+        if classe == "paladino":
+            return completar(invocar(resolver_paladino, {**base, "acao": "progressao"}))
+        return None
+    if chave == "magia_de_pacto":
+        return completar(invocar(resolver_bruxo, {**base, "acao": "progressao"}))
+    if chave == "invocacoes_misticas":
+        invocacao = f.get("invocacao") or f.get("escolha")
+        if not invocacao:
+            return completar({"resultado": "escolha", "opcoes": sorted(INVOCATIONS), "marco": "invocacoes_misticas"})
+        validacao = validar_invocacao({**base, "invocacao": invocacao})
+        if validacao.get("resultado") != "disponivel":
+            return completar(validacao)
+        return completar(invocar(resolver_invocacao, {**base, "invocacao": invocacao}))
+    if chave == "feiticaria_inata":
+        return completar(invocar(resolver_feiticeiro, {**base, "acao": "feitiçaria_inata"}))
+    if chave == "inspiracao_de_bardo":
+        return completar(invocar(resolver_inspiracao_bardo, base))
+    if chave == "canalizar_divindade" and classe == "clerigo":
+        return completar(invocar(resolver_canalizar_divindade, base))
+    if chave == "forma_selvagem":
+        return completar(invocar(resolver_forma_selvagem, base))
+    if chave == "livro_de_magias":
+        return completar(invocar(resolver_livro_de_magias, base))
+    if chave == "destruicao_do_paladino":
+        return completar(invocar(resolver_paladino, {**base, "acao": "destruicao_do_paladino"}))
+    if chave in {"inimigo_favorito", "explorador_habil", "predador_implacavel", "veu_da_natureza"}:
+        return completar(invocar(resolver_guardiao, {**base, "acao": chave}))
+    return None
