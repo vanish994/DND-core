@@ -684,6 +684,22 @@ for _nome_c, (_circ, _esc, _comp, _conc, _dur) in _PHB2024_COMPLEMENTAR.items():
             "duracao": _dur or ("concentração, até 10 minutos" if _conc else "instantânea"),
         }
 
+# Servo Homúnculo foi publicado em Eberron: Forge of the Artificer (2025).
+_homunculo = next((m for m in MAGIAS.values() if _normalizar_nome_magia(m["nome"]) == "servo homunculo"), None)
+if _homunculo is not None:
+    _homunculo.update({
+        "circulo": 2,
+        "escola": "conjuração",
+        "componentes": "V, S, M (uma gema que vale 100 PO ou mais)",
+        "concentracao": False,
+        "ritual": True,
+        "duracao": "instantânea",
+        "tempo_conjuracao": "1 hora ou ritual",
+        "alcance_m": 3,
+        "efeito": "Invoca um Servo Homúnculo; se já houver um invocado por esta magia, ele é substituído.",
+        "escalonamento": "usa o nível do espaço para o nível da ficha de estatísticas",
+    })
+
 # Círculo de magias do catálogo extraído que não tinham círculo (cabeçalhos do PHB 2024).
 _CIRCULOS_PHB2024 = json.loads(
     (pathlib.Path(__file__).parent / "dados" / "circulos_phb2024.json").read_text(encoding="utf-8")
