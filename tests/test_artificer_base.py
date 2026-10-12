@@ -134,6 +134,23 @@ class ArtificerProgressionTests(unittest.TestCase):
         self.assertEqual(sheet["equipamento_classe"]["ouro"], 16)
         self.assertFalse(sheet["equipamento_classe_pendente"])
 
+    def test_artificer_attunement_limit_accepts_replicated_item_metadata(self):
+        from rule_engine.economy import resolver_sintonizacao
+        known = ["item_a", "item_b", "item_c"]
+        metadata = {"nome": "Ferramenta Multifuncional +1", "raridade": "incomum", "sintonizacao": True}
+        result = resolver_sintonizacao({
+            "item": "all_purpose_tool_plus_1", "metadados_item": metadata,
+            "sintonizados": known, "limite_sintonizacao": 4,
+        })
+        self.assertEqual(result["resultado"], "sintonizado")
+        self.assertEqual(result["limite"], 4)
+        blocked = resolver_sintonizacao({
+            "item": "wand_of_the_war_mage_plus_1",
+            "metadados_item": {"nome": "Varinha do Mago de Guerra +1", "sintonizacao": True},
+            "sintonizados": ["a", "b", "c", "d"], "limite_sintonizacao": 4,
+        })
+        self.assertEqual(blocked["motivo"], "limite_de_itens_sintonizados")
+
     def test_drain_item_uses_rarity_and_is_bonus_action(self):
         result = resolver_caracteristica({
             "classe": "artifice", "recurso": "Ajustador de Item Mágico", "nivel": 6,
