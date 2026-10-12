@@ -114,7 +114,7 @@ class ArtificerProgressionTests(unittest.TestCase):
         duplicate = resolver_caracteristica({
             "classe": "artifice", "recurso": "Replicar Item Mágico", "nivel": 2,
             "acao": "criar", "planos": ["plano_a", "plano_a"],
-            "ferramentas_artesao_em_maos": True,
+            "ferramentas_artesao_em_maos": True, "descanso_longo_concluido": True,
         })
         self.assertEqual(duplicate["motivo"], "cada_item_deve_usar_plano_diferente")
 
