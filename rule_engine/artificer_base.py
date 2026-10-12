@@ -137,7 +137,6 @@ ARTIFICER_GEAR = {
     "talha_e_polias", "balde", "estrepes", "vela", "pe_de_cabra", "frasco",
     "jarro", "lampada", "rede", "oleo", "papel", "pergaminho", "vara", "bolsa",
     "corda", "saco", "pa", "barbante", "caixa_de_isca", "tocha", "frasco_de_vidro",
-    "arpeu", "armadilha_de_caca", "algemas", "estacas_de_ferro", "garrafa_de_vidro",
 }
 ARTIFICER_GEAR_LABELS = {
     "esferas_de_rolamento": "Esferas de rolamento", "cesta": "Cesta",
@@ -148,9 +147,7 @@ ARTIFICER_GEAR_LABELS = {
     "papel": "Papel", "pergaminho": "Pergaminho", "vara": "Vara", "bolsa": "Bolsa",
     "corda": "Corda", "saco": "Saco", "pa": "Pá", "barbante": "Barbante",
     "caixa_de_isca": "Caixa de isqueiro", "tocha": "Tocha",
-    "frasco_de_vidro": "Frasco de vidro", "arpeu": "Arpéu",
-    "armadilha_de_caca": "Armadilha de Caça", "algemas": "Algemas",
-    "estacas_de_ferro": "Estacas de Ferro", "garrafa_de_vidro": "Garrafa de Vidro",
+    "frasco_de_vidro": "Frasco de vidro",
 }
 ARTIFICER_GEAR_CATALOG_NAMES = {
     "esferas_de_rolamento": "Esferas de rolamento", "cesta": "Cesta",
@@ -161,9 +158,7 @@ ARTIFICER_GEAR_CATALOG_NAMES = {
     "papel": "Papel", "pergaminho": "Pergaminho", "vara": "Vara", "bolsa": "Bolsa",
     "corda": "Corda", "saco": "Saco", "pa": "Pá", "barbante": "Barbante",
     "caixa_de_isca": "Caixa de isqueiro", "tocha": "Tocha",
-    "frasco_de_vidro": "Frasco de vidro", "arpeu": "Arpéu",
-    "armadilha_de_caca": "Armadilha de Caça", "algemas": "Algemas",
-    "estacas_de_ferro": "Estacas de Ferro", "garrafa_de_vidro": "Garrafa de Vidro",
+    "frasco_de_vidro": "Frasco de vidro",
 }
 ARTIFICER_GEAR_ALIASES = {
     "basket": "cesta", "bell": "sino", "blanket": "cobertor",
@@ -174,13 +169,7 @@ ARTIFICER_GEAR_ALIASES = {
     "paper": "papel", "parchment": "pergaminho", "pole": "vara", "pouch": "bolsa",
     "rope": "corda", "sack": "saco", "shovel": "pa", "string": "barbante",
     "tinderbox": "caixa_de_isca", "caixa_de_isqueiro": "caixa_de_isca",
-    "torch": "tocha", "vial": "frasco_de_vidro", "bottle,_glass": "garrafa_de_vidro",
-    "bottle_glass": "garrafa_de_vidro", "garrafa_de_vidro": "garrafa_de_vidro",
-    "grappling_hook": "arpeu", "grappling_hook_": "arpeu",
-    "hunting_trap": "armadilha_de_caca", "manacles": "algemas",
-    "iron_spikes": "estacas_de_ferro", "spikes,_iron": "estacas_de_ferro",
-    "armadilha_de_caca": "armadilha_de_caca", "algemas": "algemas",
-    "estacas_de_ferro": "estacas_de_ferro", "arpeu": "arpeu",
+    "torch": "tocha", "vial": "frasco_de_vidro",
 }
 ARTIFICER_FEATURE_ALIASES = {
     "conjuracao": "conjuracao",
@@ -367,8 +356,8 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 return {**base, "resultado": "bloqueado", "motivo": "usos_esgotados",
                         "usos_maximos": uses, "usos_gastos": gastos}
             item_id = facts.get("item_id")
-            if not isinstance(item_id, str) or not item_id.strip():
-                return {**base, "resultado": "requer_dados", "motivo": "id_unico_para_persistir_item_no_inventario_necessario"}
+            if item_id is not None and (not isinstance(item_id, str) or not item_id.strip()):
+                return {**base, "resultado": "bloqueado", "motivo": "id_de_item_invalido"}
             from .catalog import CATALOGO_EQUIPAMENTOS
             nome_catalogo = ARTIFICER_GEAR_CATALOG_NAMES[item]
             dados_catalogo = CATALOGO_EQUIPAMENTOS.get(nome_catalogo)
@@ -389,8 +378,8 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             return {**base, "resultado": "criado", "item": item, "nome_item": nome_catalogo,
                     "dados_catalogo": dict(dados_catalogo), "quantidade": 1,
                     "unidades_por_item": int(dados_catalogo.get("unidades_por_item", 1)),
-                    "item_criado": item_criado, "requer_id_unico_ao_persistir": False,
-                    "delta_inventario": {"item_novo": item_criado},
+                    "item_criado": item_criado, "requer_id_unico_ao_persistir": not bool(item_id),
+                    **({"delta_inventario": {"item_novo": item_criado}} if item_id else {}),
                     "alcance_m": 1.5, "requer_espaco_desocupado": True,
                     "acao": "acao_magica", "usos_maximos": uses,
                     "usos_gastos_depois": gastos + 1, "delta_usos": -1,
