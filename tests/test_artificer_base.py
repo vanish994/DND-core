@@ -244,6 +244,16 @@ class ArtificerProgressionTests(unittest.TestCase):
         })
         self.assertEqual(repair["truque_conhecido"], "Reparar")
 
+    def test_level_one_artificer_passos_longos_has_executable_mechanics(self):
+        from rule_engine.spells import mecanica_de_magia, resolver_magia
+        mechanic = mecanica_de_magia("Passos Longos")
+        self.assertIsNotNone(mechanic)
+        self.assertEqual(mechanic["tipo"], "buff_deslocamento")
+        self.assertEqual(mechanic["bonus_deslocamento_m"], 3)
+        cast = resolver_magia({"magia": "Passos Longos", "has_slot": True, "espaco": 1})
+        self.assertEqual(cast["resultado"], "conjurada")
+        self.assertEqual(cast["mecanica"]["bonus_deslocamento_m"], 3)
+
     def test_spell_storing_preserves_concentration_requirement(self):
         result = resolver_caracteristica({
             "classe": "artifice", "recurso": "Item Armazenador de Magia", "nivel": 11,
