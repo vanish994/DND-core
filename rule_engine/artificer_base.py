@@ -176,6 +176,8 @@ ARTIFICER_FEATURE_ALIASES = {
     "dádiva_épica": "epic_boon",
     "dadiva_epica": "epic_boon",
     "epic_boon": "epic_boon",
+    "resource_recovery": "resource_recovery",
+    "recuperacao_recursos": "resource_recovery",
 }
 
 
@@ -237,10 +239,10 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 return {**base, "resultado": "bloqueado", "motivo": "nao_ha_espaco_desocupado"}
             if not item:
                 return {**base, "resultado": "escolha", "opcoes": [{"id": gear, "nome": ARTIFICER_GEAR_LABELS[gear]} for gear in sorted(ARTIFICER_GEAR)],
-                        "acao": "acao_magica", "ferramentas_requeridas": "ferramentas_de_tinkering"}
+                        "acao": "acao_magica", "ferramentas_requeridas": "ferramentas_de_funileiro"}
             if item not in ARTIFICER_GEAR:
                 return {**base, "resultado": "bloqueado", "motivo": "item_nao_permitido",
-                        "opcoes": sorted(ARTIFICER_GEAR)}
+                        "opcoes": [{"id": gear, "nome": ARTIFICER_GEAR_LABELS[gear]} for gear in sorted(ARTIFICER_GEAR)]}
             gastos = int(facts.get("usos_gastos", 0))
             if gastos < 0 or gastos >= uses:
                 return {**base, "resultado": "bloqueado", "motivo": "usos_esgotados",
