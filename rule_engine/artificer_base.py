@@ -577,19 +577,25 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
         int_mod = _modifier(int(facts.get("inteligencia", 10)))
         uses_max = max(1, int_mod)
         if rest in {"longo", "long", "descanso_longo", "long_rest"}:
+            tinker_items = facts.get("itens_tinkers_atuais")
+            if not isinstance(tinker_items, list):
+                return {**base, "resultado": "requer_dados", "motivo": "lista_de_itens_tinkers_atuais_necessaria"}
             resources = {
                 "magia_de_artifice": {"usos_gastos": 0, "usos_maximos": uses_max},
                 "espacos_de_magia": "todos",
-                "drenar_item_magico": {"usado_no_descanso_longo": False} if level >= 6 else None,
-                "transmutar_item_magico": {"usado_no_descanso_longo": False} if level >= 6 else None,
             }
+            if level >= 6:
+                resources["drenar_item_magico"] = {"usado_no_descanso_longo": False}
+                resources["transmutar_item_magico"] = {"usado_no_descanso_longo": False}
             if level >= 7:
                 resources["lampejo_de_genio"] = {"usos_gastos": 0, "usos_maximos": uses_max}
             return {**base, "resultado": "recursos_recuperados", "tipo_descanso": "longo",
                     "recursos": resources, "replicar_item_magico_disponivel": level >= 2,
                     "pode_armazenar_outra_magia": level >= 11,
-                    "itens_tinkers_que_expiram": facts.get("itens_tinkers_atuais", [])}
+                    "itens_tinkers_que_expiram": tinker_items}
         if rest in {"curto", "short", "descanso_curto", "short_rest"}:
+            if level >= 20 and facts.get("sintonizado_item_magico") is None:
+                return {**base, "resultado": "requer_dados", "motivo": "confirmar_sintonizacao_para_recuperar_lampejo"}
             if level >= 20 and facts.get("sintonizado_item_magico") is True:
                 return {**base, "resultado": "recursos_recuperados", "tipo_descanso": "curto",
                         "recursos": {"lampejo_de_genio": {"usos_gastos": 0, "usos_maximos": uses_max}},
