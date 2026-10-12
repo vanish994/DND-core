@@ -34,6 +34,8 @@ class ArtificerProgressionTests(unittest.TestCase):
         self.assertNotEqual(result.get("motivo"), "magia_nao_preparada")
         self.assertNotEqual(result.get("motivo"), "magia_fora_da_lista_do_artifice")
         self.assertEqual(result.get("slot_consumido"), 1)
+        self.assertEqual(result["delta_espacos"], {"1": -1})
+        self.assertEqual(result["espacos_restantes_depois"], {"1": 1})
 
     def test_fixed_prepared_spell_table_for_all_levels(self):
         self.assertEqual(
@@ -73,13 +75,18 @@ class ArtificerProgressionTests(unittest.TestCase):
         result = resolver_caracteristica({
             "classe": "artifice", "recurso": "recuperacao_recursos", "nivel": 7,
             "tipo_descanso": "longo", "inteligencia": 16,
-            "itens_tinkers_atuais": [{"id": "mundane-1", "nome": "Corda"}],
+            "itens_tinkers_atuais": [{"id": "mundane-1", "nome": "Corda", "criado_por": "tinkers_magic"}],
         })
         self.assertEqual(result["resultado"], "recursos_recuperados")
         self.assertEqual(result["recursos"]["magia_de_artifice"]["usos_maximos"], 3)
         self.assertEqual(result["recursos"]["lampejo_de_genio"]["usos_gastos"], 0)
         self.assertEqual(result["recursos"]["drenar_item_magico"]["usado_no_descanso_longo"], False)
         self.assertEqual(result["itens_tinkers_que_expiram"][0]["id"], "mundane-1")
+        self.assertEqual(result["delta_inventario"]["remover_ids"], ["mundane-1"])
+        self.assertEqual(result["delta_mundo"]["remover_ids"], ["mundane-1"])
+        self.assertEqual(result["delta_conjuracao"]["espacos_restantes"], {"1": 3, "2": 2, "3": 1})
+        self.assertTrue(result["delta_conjuracao"]["troca_truque_disponivel"])
+        self.assertTrue(result["delta_conjuracao"]["mudanca_magias_preparadas_disponivel"])
 
     def test_short_rest_recovers_flash_of_genius_according_to_level(self):
         level_14 = resolver_caracteristica({
@@ -279,6 +286,43 @@ class ArtificerProgressionTests(unittest.TestCase):
                 unsupported.append((name, result.get("resultado"), result.get("motivo")))
         self.assertEqual(unsupported, [], f"Magias de nível 1 sem efeito executável: {unsupported}")
 
+    def test_artificer_can_cast_prepared_ritual_without_spending_a_slot(self):
+        ritual = resolver_caracteristica({
+            "classe": "artifice", "nivel": 1, "recurso": "conjuracao", "acao": "conjurar",
+            "magia": "Alarme", "ritual": True, "inteligencia": 15,
+            "truques_conhecidos": ["Bolha Ácida", "Luz"],
+            "magias_preparadas": ["Alarme", "Detectar Magia"],
+            "ferramentas_de_funileiro_em_maos": True,
+            "foco_conjuracao_em_maos": True, "foco_conjuracao": "Ferramentas de Funileiro",
+        })
+        self.assertEqual(ritual["resultado"], "conjurada")
+        self.assertTrue(ritual["ritual"])
+        self.assertEqual(ritual["tempo_conjuracao_base"], "1_minuto")
+        self.assertEqual(ritual["minutos_adicionais_ritual"], 10)
+        self.assertIsNone(ritual["slot_consumido"])
+        self.assertNotIn("delta_espacos", ritual)
+
+        not_ritual = resolver_caracteristica({
+            "classe": "artifice", "nivel": 1, "recurso": "conjuracao", "acao": "conjurar",
+            "magia": "Fogo das Fadas", "ritual": True, "inteligencia": 15,
+            "truques_conhecidos": ["Bolha Ácida", "Luz"],
+            "magias_preparadas": ["Fogo das Fadas", "Detectar Magia"],
+            "espacos_restantes": {"1": 2},
+        })
+        self.assertEqual(not_ritual["resultado"], "bloqueado")
+        self.assertEqual(not_ritual["motivo"], "magia_nao_tem_tag_ritual")
+
+    def test_level_one_artificer_rejects_more_slots_than_progression_allows(self):
+        result = resolver_caracteristica({
+            "classe": "artifice", "nivel": 1, "recurso": "conjuracao", "acao": "conjurar",
+            "magia": "Curar Ferimentos", "inteligencia": 15,
+            "truques_conhecidos": ["Bolha Ácida", "Luz"],
+            "magias_preparadas": ["Curar Ferimentos", "Detectar Magia"],
+            "espacos_restantes": {"1": 3},
+        })
+        self.assertEqual(result["resultado"], "bloqueado")
+        self.assertEqual(result["motivo"], "estado_de_espacos_restantes_invalido")
+
     def test_level_one_artificer_passos_longos_has_executable_mechanics(self):
         from rule_engine.spells import mecanica_de_magia, resolver_magia
         mechanic = mecanica_de_magia("Passos Longos")
@@ -397,6 +441,13 @@ class ArtificerProgressionTests(unittest.TestCase):
         self.assertEqual(sheet["conjuracao"]["magias_preparadas"], ["Curar Ferimentos", "Detectar Magia"])
         self.assertEqual(sheet["conjuracao"]["espacos_totais"], {"1": 2})
         self.assertEqual(sheet["conjuracao"]["cd_magia"], 12)
+        self.assertEqual(sheet["id"], "pc-artifice-test-1")
+        self.assertEqual(sheet["classe_de_armadura"]["sem_armadura"], 12)
+        self.assertEqual(sheet["classe_de_armadura"]["armadura_inicial"]["ca"], 14)
+        self.assertFalse(sheet["classe_de_armadura"]["armadura_inicial"]["equipada_automaticamente"])
+        self.assertEqual(sheet["recursos_iniciais"]["magia_de_artifice"]["usos_maximos"], 2)
+        self.assertEqual(sheet["recursos_iniciais"]["espacos_de_magia"]["espacos_restantes"], {"1": 2})
+        self.assertFalse(sheet["recursos_iniciais"]["troca_truque_disponivel"])
         inventory = sheet["inventario_inicial"]
         self.assertEqual(inventory["resultado"], "pronto")
         self.assertEqual(inventory["ouro"], 16)
