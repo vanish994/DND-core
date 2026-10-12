@@ -283,7 +283,7 @@ class PaladinoGuardiaoFeatureTests(unittest.TestCase):
 
     def test_artifice_ajustador_item_magico_carrega_cargas(self):
         resultado = caracteristica("artifice", "Ajustador de Item Mágico", 6,
-                                   acao="carregar", nivel_espaco=2, item_replicado=True, distancia_m=1.0, espaco_disponivel=True,
+                                   acao="carregar", nivel_espaco=2, item_replicado=True, item_id="replica-1", distancia_m=1.0, espaco_disponivel=True,
                                    cargas_atuais=1, cargas_maximas=5)
         self.assertEqual(resultado["cargas_restauradas"], 2)
         self.assertEqual(resultado["cargas_atuais"], 3)
