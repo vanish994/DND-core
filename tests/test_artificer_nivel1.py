@@ -241,6 +241,22 @@ def test_artifice_nivel_1_orquestrador_casting_reparo_e_recupera_slots_no_descan
     assert ficha["conjuracao"].get("espacos_restantes", {"1": 2}) == {"1": 2}
     assert "Reparar" not in ficha["conjuracao"]["truques_conhecidos"]
 
+    ataque_truque = orquestrador.executar_ferramenta(
+        "resolver_regra",
+        {"fatos": {
+            "type": "attack",
+            "character_id": ficha["id"],
+            "magia": "Raio de Fogo",
+            "target_name": "Goblin",
+            "seed": "artificer-level-1-fire-bolt",
+        }},
+        personagens,
+    )
+    assert ataque_truque.status == "resolved"
+    assert ataque_truque.dados["spell_attack_ability"] == "inteligencia"
+    assert ataque_truque.dados["target_name"] == "Goblin"
+    assert ficha["conjuracao"].get("espacos_restantes", {"1": 2}) == {"1": 2}
+
     primeira = orquestrador.executar_ferramenta(
         "resolver_regra",
         {"fatos": {
