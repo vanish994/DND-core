@@ -198,3 +198,91 @@ def test_artifice_nivel_1_ponta_a_ponta_pelo_motor():
     assert segunda.outcome["slot_consumido"] == 1
     assert segunda.outcome["espacos_restantes_depois"] == {"1": 1}
 
+
+def test_artifice_nivel_1_orquestrador_casting_reparo_e_recupera_slots_no_descanso():
+    from orchestrator import OrquestradorAcoes
+    from rule_engine.rules import build_default_engine
+    from rule_engine.survival import EstadoVital
+
+    engine = build_default_engine()
+    criado = engine.evaluate({
+        "type": "character_creation",
+        "name": "Ada",
+        "species": "humano",
+        "class": "artifice",
+        "level": 1,
+        "ability_scores": {
+            "forca": 8,
+            "destreza": 14,
+            "constituicao": 12,
+            "inteligencia": 16,
+            "sabedoria": 10,
+            "carisma": 10,
+        },
+        "artificer_cantrips": ["Luz", "Mensagem"],
+        "artificer_prepared_spells": ["Curar Ferimentos", "Alarme"],
+    })
+    assert criado.status == "resolved"
+    ficha = criado.outcome["ficha"]
+    orquestrador = OrquestradorAcoes(engine)
+    personagens = [ficha]
+
+    reparo = orquestrador.executar_ferramenta(
+        "resolver_regra",
+        {"fatos": {
+            "type": "spell",
+            "character_id": ficha["id"],
+            "magia": "Reparar",
+        }},
+        personagens,
+    )
+    assert reparo.status == "resolved"
+    assert reparo.dados["resultado"] == "conjurada"
+    assert ficha["conjuracao"].get("espacos_restantes", {"1": 2}) == {"1": 2}
+    assert "Reparar" not in ficha["conjuracao"]["truques_conhecidos"]
+
+    primeira = orquestrador.executar_ferramenta(
+        "resolver_regra",
+        {"fatos": {
+            "type": "spell",
+            "character_id": ficha["id"],
+            "magia": "Curar Ferimentos",
+        }},
+        personagens,
+    )
+    assert primeira.status == "resolved"
+    assert primeira.dados["resultado"] == "conjurada"
+    assert primeira.dados["espacos_restantes"] == {"1": 1}
+    assert ficha["conjuracao"]["espacos_restantes"] == {"1": 1}
+
+    estado = EstadoVital(pv_maximos=12, pv_atuais=7)
+    descanso = orquestrador.executar_ferramenta(
+        "resolver_regra",
+        {"fatos": {
+            "type": "long_rest",
+            "character_id": ficha["id"],
+            "estado": estado,
+            "duration_hours": 8,
+        }},
+        personagens,
+    )
+    assert descanso.status == "resolved"
+    assert descanso.dados["descanso"] == "longo"
+    assert estado.pv_atuais == 12
+    assert ficha["conjuracao"]["espacos_restantes"] == {"1": 2}
+    assert descanso.dados["recuperacao_recursos_artifice"]["resultado"] == "recursos_recuperados"
+
+    segunda = orquestrador.executar_ferramenta(
+        "resolver_regra",
+        {"fatos": {
+            "type": "spell",
+            "character_id": ficha["id"],
+            "magia": "Curar Ferimentos",
+        }},
+        personagens,
+    )
+    assert segunda.status == "resolved"
+    assert segunda.dados["resultado"] == "conjurada"
+    assert segunda.dados["espacos_restantes"] == {"1": 1}
+    assert ficha["conjuracao"]["espacos_restantes"] == {"1": 1}
+
