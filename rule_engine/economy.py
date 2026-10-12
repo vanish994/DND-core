@@ -277,7 +277,8 @@ def usar_item_magico(fatos: dict) -> dict[str, Any]:
                     "duracao_condicao": "ate_o_fim_do_proximo_turno_do_atacante", "reacao": True}
         return {"resultado": "passivo", "item": item["nome"], "bonus_ataque": 1, "bonus_dano": 1}
     if plan == "helm_of_awareness":
-        return {"resultado": "passivo", "item": item["nome"], "vantagem_iniciativa": True}
+        return {"resultado": "passivo", "item": item["nome"], "vantagem_iniciativa": True,
+                "nao_pode_ser_surpreendido_enquanto_consciente": True}
     if plan == "mind_sharpener":
         if action not in {"manter_concentracao", "maintain_concentration"}:
             return {"resultado": "escolha", "item": item["nome"], "opcoes": ["manter_concentracao"]}
