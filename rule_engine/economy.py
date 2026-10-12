@@ -193,7 +193,11 @@ def resolver_sintonizacao(fatos: dict) -> dict[str, Any]:
         }
     if nome in {str(x).lower() for x in sintonizados}:
         return {"resultado": "bloqueado", "motivo": "item_ja_sintonizado"}
-    limite = max(1, int(fatos.get("limite_sintonizacao", 3)))
+    limite_informado = fatos.get("limite_sintonizacao")
+    if limite_informado is None and str(fatos.get("classe", "")).lower() in {"artifice", "artificer"}:
+        from .artificer_base import ARTIFICER_ATTUNEMENT_LIMIT, _tier_value
+        limite_informado = _tier_value(ARTIFICER_ATTUNEMENT_LIMIT, int(fatos.get("nivel", 1)))
+    limite = max(1, int(limite_informado if limite_informado is not None else 3))
     if len(sintonizados) >= limite:
         motivo = "limite_de_tres_itens" if limite == 3 else "limite_de_itens_sintonizados"
         return {"resultado": "bloqueado", "motivo": motivo, "limite": limite}
