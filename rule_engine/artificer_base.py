@@ -149,6 +149,34 @@ ARTIFICER_GEAR_LABELS = {
     "barbante": "Barbante", "caixa_de_isca": "Caixa de isqueiro", "tocha": "Tocha",
     "frasco_de_vidro": "Frasco de vidro",
 }
+ARTIFICER_GEAR_CATALOG_NAMES = {
+    "esferas_de_rolamento": "Esferas de rolamento",
+    "cesta": "Cesta",
+    "saco_de_dormir": "Saco de Dormir",
+    "sino": "Sino",
+    "cobertor": "Cobertor",
+    "talha_e_polias": "Roldana e Polias",
+    "balde": "Balde",
+    "estrepes": "Estrepes",
+    "vela": "Vela",
+    "pe_de_cabra": "Pé de Cabra",
+    "frasco": "Frasco",
+    "jarro": "Jarro",
+    "lampada": "Lâmpada",
+    "rede": "Rede",
+    "oleo": "Óleo",
+    "papel": "Papel",
+    "pergaminho": "Pergaminho",
+    "vara": "Vara",
+    "bolsa": "Bolsa",
+    "corda": "Corda",
+    "saco": "Saco",
+    "pa": "Pá",
+    "barbante": "Barbante",
+    "caixa_de_isca": "Caixa de isqueiro",
+    "tocha": "Tocha",
+    "frasco_de_vidro": "Frasco de vidro",
+}
 ARTIFICER_GEAR_ALIASES = {
     "basket": "cesta", "bell": "sino", "blanket": "cobertor",
     "bucket": "balde", "candle": "vela", "ball_bearings": "esferas_de_rolamento",
@@ -306,16 +334,24 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 return {**base, "resultado": "bloqueado", "motivo": "usos_esgotados",
                         "usos_maximos": uses, "usos_gastos": gastos}
             item_id = facts.get("item_id")
+            from .catalog import CATALOGO_EQUIPAMENTOS
+            nome_catalogo = ARTIFICER_GEAR_CATALOG_NAMES[item]
+            dados_catalogo = CATALOGO_EQUIPAMENTOS.get(nome_catalogo)
+            if dados_catalogo is None:
+                return {**base, "resultado": "erro_catalogo", "motivo": "equipamento_sem_dados_mecanicos", "item": item}
             item_criado = {
                 "id": str(item_id) if item_id else None,
-                "nome": ARTIFICER_GEAR_LABELS[item],
+                "nome": nome_catalogo,
                 "item": item,
                 "quantidade": 1,
                 "categoria": "equipamento_mundano",
+                "peso": dados_catalogo["peso"],
+                "custo_po": dados_catalogo["custo_po"],
                 "criado_por": "tinkers_magic",
                 "expira": "proximo_descanso_longo",
             }
-            return {**base, "resultado": "criado", "item": item, "nome_item": ARTIFICER_GEAR_LABELS[item], "quantidade": 1,
+            return {**base, "resultado": "criado", "item": item, "nome_item": nome_catalogo,
+                    "dados_catalogo": dict(dados_catalogo), "quantidade": 1,
                     "item_criado": item_criado, "requer_id_unico_ao_persistir": not bool(item_id),
                     "alcance_m": 1.5, "requer_espaco_desocupado": True,
                     "acao": "acao_magica", "usos_maximos": uses,
