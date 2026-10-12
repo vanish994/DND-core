@@ -11,8 +11,8 @@ from typing import Any
 
 from .artificer_base import ARTIFICER_PREPARED_SPELLS
 
-# Subconjunto explícito de magias do Artífice disponível no catálogo executável.
-# Os nomes são os localizados em português usados pela interface.
+# Lista base de magias do Artífice 5.5e, conforme Eberron: Forge of the Artificer.
+# Consertar é concedido separadamente pela característica Magia de Artífice.
 ARTIFICER_SPELL_LEVELS: dict[str, int] = {
     # Truques
     "Acudir os Moribundos": 0,
@@ -138,7 +138,6 @@ def normalizar_nome_magia(nome: object) -> str:
 def progresso_artifice(nivel: int, inteligencia: int) -> dict[str, Any]:
     if not 1 <= int(nivel) <= 20:
         raise ValueError("O nível do Artífice deve estar entre 1 e 20")
-    modificador = (int(inteligencia) - 10) // 2
     slots = {str(i + 1): quantidade for i, quantidade in enumerate(ARTIFICER_SLOTS[int(nivel)])}
     circulo_maximo = max(int(circulo) for circulo in slots)
     truques = 2 if nivel < 10 else 3 if nivel < 14 else 4
