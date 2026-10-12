@@ -2222,6 +2222,8 @@ class RuleEngineTests(unittest.TestCase):
                 "nivel_magia": 3,
                 "tempo_conjuracao_acao": True,
                 "objeto_adequado": True,
+                "descanso_longo_concluido": True,
+                "distancia_m": 1,
             }
         )
         self.assertEqual(stored.outcome["usos"], 8)
