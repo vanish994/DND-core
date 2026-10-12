@@ -244,7 +244,7 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
         # A conjuração passa pelo resolvedor geral, após validar a lista/preparação do Artífice.
         acao = str(facts.get("acao", "")).strip().lower()
         if acao in {"conjurar", "cast", "lancar_magia"}:
-            from .spellcasting import ARTIFICER_SPELL_LEVELS, normalizar_nome_magia
+            from .spellcasting import ARTIFICER_SLOTS, ARTIFICER_SPELL_LEVELS, normalizar_nome_magia
             from .spells import resolver_magia
 
             nome_magia = str(facts.get("magia", facts.get("spell", ""))).strip()
@@ -283,7 +283,7 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 state_slots = facts.get("espacos_restantes", facts.get("slots_remaining"))
                 if state_slots is None:
                     return {**base, "resultado": "requer_dados", "motivo": "estado_de_espacos_restantes_necessario",
-                            "espacos_totais_sugeridos": {str(i + 1): n for i, n in enumerate(__import__("rule_engine.spellcasting", fromlist=["ARTIFICER_SLOTS"]).ARTIFICER_SLOTS[level])}}
+                            "espacos_totais_sugeridos": {str(i + 1): n for i, n in enumerate(ARTIFICER_SLOTS[level])}}
                 if not isinstance(state_slots, dict):
                     return {**base, "resultado": "bloqueado", "motivo": "espacos_restantes_devem_ser_um_mapa"}
                 try:
