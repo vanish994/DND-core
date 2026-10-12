@@ -1097,6 +1097,7 @@ CATALOGO_MAGIAS = {
     "Sonho": {"escola": "Ilusão", "concentracao": False, "ritual": False, "material": False},
     "Sono": {"escola": "Encantamento", "concentracao": True, "ritual": False, "material": False},
     "Sopro de Dragão": {"escola": "Transmutação", "concentracao": True, "ritual": False, "material": False},
+    "Servo Homúnculo": {"escola": "Conjuração", "concentracao": False, "ritual": True, "material": True},
     "Sopro de Dragão           Transmutação      C       Pequeno Refúgio de Leomund": {
         "escola": "Evocação",
         "concentracao": False,
