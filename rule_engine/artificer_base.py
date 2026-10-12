@@ -121,14 +121,17 @@ ARTIFICER_GEAR_LABELS = {
     "frasco_de_vidro": "Frasco de vidro",
 }
 ARTIFICER_GEAR_ALIASES = {
-    "ball_bearings": "esferas_de_rolamento", "bedroll": "saco_de_dormir",
+    "bag": "bolsa", "basket": "cesta", "bell": "sino", "blanket": "cobertor",
+    "bucket": "balde", "candle": "vela", "ball_bearings": "esferas_de_rolamento",
+    "bedroll": "saco_de_dormir",
     "block_and_tackle": "talha_e_polias", "caltrops": "estrepes", "chain": "corrente",
     "climbing_hook": "gancho_de_escalada", "crowbar": "pe_de_cabra",
     "flask": "frasco", "grappling_hook": "gancho_de_escala", "jug": "jarro",
     "lamp": "lampada", "manacles": "algemas", "net": "rede", "oil": "oleo",
     "paper": "papel", "parchment": "pergaminho", "pole": "vara", "pouch": "bolsa",
     "rope": "corda", "sack": "saco", "shovel": "pa", "string": "barbante",
-    "tinderbox": "caixa_de_isca", "torch": "tocha", "vial": "frasco_de_vidro",
+    "tinderbox": "caixa_de_isca", "caixa_de_isqueiro": "caixa_de_isca",
+    "torch": "tocha", "vial": "frasco_de_vidro",
 }
 ARTIFICER_FEATURE_ALIASES = {
     "conjuracao": "conjuracao",
