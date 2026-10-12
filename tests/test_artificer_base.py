@@ -8,6 +8,32 @@ from rule_engine.class_progression import caracteristicas_no_nivel
 from rule_engine.spellcasting import progresso_artifice
 
 
+class InvalidDistanceRegressionTests(unittest.TestCase):
+    def test_invalid_distance_is_rejected_for_item_charge(self):
+        result = resolve_artificer_feature("magic_item_tinker", 6, {
+            "acao": "carregar", "item_id": "replica-1", "item_replicado": True,
+            "distancia_m": "longe", "nivel_espaco": 1, "espaco_disponivel": True,
+            "cargas_atuais": 1, "cargas_maximas": 3,
+        })
+        self.assertEqual(result["resultado"], "bloqueado")
+        self.assertEqual(result["motivo"], "distancia_ate_o_item_invalida")
+
+    def test_invalid_distance_is_rejected_for_flash_of_genius(self):
+        result = resolve_artificer_feature("flash_of_genius", 7, {
+            "usos_gastos": 0, "criatura_falhou": True, "reacao_disponivel": True,
+            "tipo_teste": "salvaguarda", "distancia_m": "longe",
+        })
+        self.assertEqual(result["resultado"], "bloqueado")
+        self.assertEqual(result["motivo"], "distancia_ate_a_criatura_invalida")
+
+    def test_invalid_distance_is_rejected_for_spell_storing_item(self):
+        result = resolve_artificer_feature("spell_storing_item", 11, {
+            "descanso_longo_concluido": True, "distancia_m": "longe",
+        })
+        self.assertEqual(result["resultado"], "bloqueado")
+        self.assertEqual(result["motivo"], "distancia_ate_o_objeto_invalida")
+
+
 class ArtificerProgressionTests(unittest.TestCase):
     def test_level_one_artificer_spellcasting_checks_known_and_prepared_spells(self):
         base = {
