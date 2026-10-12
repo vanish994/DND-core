@@ -6,6 +6,7 @@ itens, cargas e espaços) continua pertencendo ao chamador do Rule Engine.
 from __future__ import annotations
 
 import unicodedata
+import math
 from typing import Any
 
 
@@ -820,7 +821,13 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                         "requer": "item_replicado=True"}
             if facts.get("distancia_m") is None:
                 return {**base, "resultado": "requer_dados", "motivo": "distancia_ate_o_item_necessaria"}
-            if float(facts["distancia_m"]) > 1.5:
+            try:
+                distance = float(facts["distancia_m"])
+            except (TypeError, ValueError, OverflowError):
+                return {**base, "resultado": "bloqueado", "motivo": "distancia_ate_o_item_invalida"}
+            if not math.isfinite(distance) or distance < 0:
+                return {**base, "resultado": "bloqueado", "motivo": "distancia_ate_o_item_invalida"}
+            if distance > 1.5:
                 return {**base, "resultado": "bloqueado", "motivo": "item_fora_de_1_5_metro"}
         if action in {"carregar", "charge"}:
             slot = int(facts.get("nivel_espaco", 0))
@@ -899,9 +906,15 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             return {**base, "resultado": "bloqueado", "motivo": "lampejo_so_afeta_teste_de_habilidade_ou_salvaguarda"}
         if facts.get("distancia_m") is None:
             return {**base, "resultado": "requer_dados", "motivo": "distancia_ate_a_criatura_necessaria"}
-        if float(facts["distancia_m"]) > 9:
+        try:
+            distance = float(facts["distancia_m"])
+        except (TypeError, ValueError, OverflowError):
+            return {**base, "resultado": "bloqueado", "motivo": "distancia_ate_a_criatura_invalida"}
+        if not math.isfinite(distance) or distance < 0:
+            return {**base, "resultado": "bloqueado", "motivo": "distancia_ate_a_criatura_invalida"}
+        if distance > 9:
             return {**base, "resultado": "bloqueado", "motivo": "alvo_fora_do_alcance"}
-        if float(facts["distancia_m"]) > 0 and facts.get("alvo_visivel") is not True:
+        if distance > 0 and facts.get("alvo_visivel") is not True:
             return {**base, "resultado": "requer_dados", "motivo": "confirmar_que_voce_ve_o_alvo",
                     "requer": "alvo_visivel=True"}
         spent = int(facts.get("usos_gastos", 0))
@@ -924,7 +937,13 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             return {**base, "resultado": "requer_dados", "motivo": "confirmar_conclusao_de_descanso_longo"}
         if facts.get("distancia_m") is None:
             return {**base, "resultado": "requer_dados", "motivo": "distancia_ate_o_objeto_necessaria"}
-        if float(facts["distancia_m"]) > 1.5:
+        try:
+            distance = float(facts["distancia_m"])
+        except (TypeError, ValueError, OverflowError):
+            return {**base, "resultado": "bloqueado", "motivo": "distancia_ate_o_objeto_invalida"}
+        if not math.isfinite(distance) or distance < 0:
+            return {**base, "resultado": "bloqueado", "motivo": "distancia_ate_o_objeto_invalida"}
+        if distance > 1.5:
             return {**base, "resultado": "bloqueado", "motivo": "objeto_fora_de_1_5_metro"}
         spell_level = int(facts.get("nivel_magia", facts.get("spell_level", 0)))
         if spell_level < 1 or spell_level > 3:
