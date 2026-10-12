@@ -82,6 +82,18 @@ class ContratoDaAcaoTests(unittest.TestCase):
         self.assertEqual(resultado.status, "bloqueado")
         self.assertEqual(resultado.motivo, "ferramenta_desconhecida")
 
+    def test_argumentos_nao_objeto_sao_bloqueados_sem_excecao(self):
+        acao = Acao.de_ferramenta("resolver_regra", ["não", "é", "objeto"])
+        resultado = OrquestradorAcoes().executar(acao)
+        self.assertEqual(resultado.status, "bloqueado")
+        self.assertEqual(resultado.motivo, "argumentos_deve_ser_objeto")
+
+    def test_fatos_nao_objeto_sao_bloqueados_sem_excecao(self):
+        acao = Acao.de_ferramenta("resolver_regra", {"fatos": "attack"})
+        resultado = OrquestradorAcoes().executar(acao)
+        self.assertEqual(resultado.status, "bloqueado")
+        self.assertEqual(resultado.motivo, "fatos_deve_ser_objeto")
+
 
 class PrecondicoesTests(unittest.TestCase):
     """Responsabilidade 3: sem informação suficiente, recusa explícita."""
