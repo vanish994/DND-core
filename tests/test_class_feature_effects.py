@@ -290,7 +290,7 @@ class PaladinoGuardiaoFeatureTests(unittest.TestCase):
 
     def test_artifice_lampejo_de_genio_requer_falha(self):
         resultado = caracteristica("artifice", "Lampejo de Gênio", 7,
-                                   inteligencia=16, criatura_falhou=True, tipo_teste="salvaguarda", total=9, distancia_m=6, alvo_visivel=True, usos_gastos=0)
+                                   inteligencia=16, criatura_falhou=True, tipo_teste="salvaguarda", total=9, distancia_m=6, alvo_visivel=True, usos_gastos=0, reacao_disponivel=True)
         self.assertEqual(resultado["resultado"], "aplicado")
         self.assertEqual(resultado["bonus"], 3)
         self.assertEqual(resultado["novo_total"], 12)
