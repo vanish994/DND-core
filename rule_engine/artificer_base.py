@@ -82,7 +82,13 @@ def _plan_metadata(plan_id: str, level: int) -> dict[str, Any] | None:
         if match is None:
             return None
         prefix, min_level, rarity, label = match
-        data = {"nome": f"{label}: {plan_id[len(prefix):].replace('_', ' ')}",
+        custom_name = plan_id[len(prefix):].strip()
+        custom_norm = unicodedata.normalize("NFKD", custom_name.lower())
+        custom_norm = "".join(ch for ch in custom_norm if not unicodedata.combining(ch))
+        forbidden = ("potion", "poção", "pocao", "scroll", "pergaminho", "cursed", "amaldiçoado", "amaldiçoado")
+        if any(token in custom_norm for token in forbidden):
+            return None
+        data = {"nome": f"{label}: {custom_name.replace('_', ' ')}",
                 "nivel_minimo": min_level, "raridade": rarity, "sintonizacao": "varia"}
     if level < data["nivel_minimo"]:
         return None
@@ -219,8 +225,8 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                         "requer": "ferramentas_artesao_em_maos=True"}
             chosen = facts.get("planos", facts.get("plans", []))
             known = facts.get("planos_conhecidos")
-            if not isinstance(chosen, list):
-                return {**base, "resultado": "bloqueado", "motivo": "planos_devem_ser_lista"}
+            if not isinstance(chosen, list) or any(not isinstance(plan, str) for plan in chosen):
+                return {**base, "resultado": "bloqueado", "motivo": "planos_devem_ser_lista_de_ids"}
             if not chosen:
                 return {**base, "resultado": "escolha", "requer": "ao_menos_um_plano_conhecido"}
             if len(set(chosen)) != len(chosen):
@@ -229,6 +235,8 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 return {**base, "resultado": "bloqueado", "motivo": "limite_de_itens_excedido", "limite": capacity}
             if not isinstance(known, list):
                 return {**base, "resultado": "requer_dados", "motivo": "lista_de_planos_conhecidos_necessaria"}
+            if any(not isinstance(plan, str) for plan in known):
+                return {**base, "resultado": "bloqueado", "motivo": "planos_conhecidos_devem_ser_ids"}
             if len(known) != plans_count:
                 return {**base, "resultado": "bloqueado", "motivo": "quantidade_de_planos_conhecidos_incorreta",
                         "quantidade_esperada": plans_count}
@@ -298,6 +306,8 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             if slot < 1 or maximum < 1 or current < 0 or current > maximum:
                 return {**base, "resultado": "bloqueado", "motivo": "dados_de_carga_ou_espaco_invalidos"}
             restored = min(slot, maximum - current)
+            if restored <= 0:
+                return {**base, "resultado": "bloqueado", "motivo": "item_ja_esta_com_cargas_maximas"}
             return {**base, "resultado": "carregado", "cargas_restauradas": restored,
                     "cargas_atuais": current + restored, "espaco_gasto": slot,
                     "requer_item_replicado": True, "acao": "acao_bonus"}
