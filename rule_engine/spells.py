@@ -593,6 +593,13 @@ for nome, (circulo, escola, componentes, conc, efeito, upcast) in _DETALHADAS.it
         "upcasting": upcast,
     }
 
+# Tags de Ritual das magias de 1º círculo relevantes para o Artífice.
+# Mantemos o catálogo mecânico como fonte de efeito e corrigimos a tag aqui.
+for _ritual_name in ("alarme", "detectar magia", "identificar", "purificar alimentos e bebidas"):
+    if _ritual_name in MAGIAS:
+        MAGIAS[_ritual_name]["ritual"] = True
+
+
 # Durações específicas que a regra genérica (concentração ou instantânea) não cobre.
 for _nome, _duracao in {
     "auxílio": "8 horas",
