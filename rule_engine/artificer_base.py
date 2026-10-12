@@ -572,6 +572,44 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 "restaura_lampejo_apos_descanso_curto": True,
                 "requer_sintonizado_a_item_magico": True}
 
+    if key == "resource_recovery":
+        rest = str(facts.get("tipo_descanso", facts.get("rest_type", ""))).lower()
+        int_mod = _modifier(int(facts.get("inteligencia", 10)))
+        uses_max = max(1, int_mod)
+        if rest in {"longo", "long", "descanso_longo", "long_rest"}:
+            resources = {
+                "magia_de_artifice": {"usos_gastos": 0, "usos_maximos": uses_max},
+                "espacos_de_magia": "todos",
+                "drenar_item_magico": {"usado_no_descanso_longo": False} if level >= 6 else None,
+                "transmutar_item_magico": {"usado_no_descanso_longo": False} if level >= 6 else None,
+            }
+            if level >= 7:
+                resources["lampejo_de_genio"] = {"usos_gastos": 0, "usos_maximos": uses_max}
+            return {**base, "resultado": "recursos_recuperados", "tipo_descanso": "longo",
+                    "recursos": resources, "replicar_item_magico_disponivel": level >= 2,
+                    "pode_armazenar_outra_magia": level >= 11,
+                    "itens_tinkers_que_expiram": facts.get("itens_tinkers_atuais", [])}
+        if rest in {"curto", "short", "descanso_curto", "short_rest"}:
+            if level >= 20 and facts.get("sintonizado_item_magico") is True:
+                return {**base, "resultado": "recursos_recuperados", "tipo_descanso": "curto",
+                        "recursos": {"lampejo_de_genio": {"usos_gastos": 0, "usos_maximos": uses_max}},
+                        "usos_lampejo_recuperados": "todos"}
+            if level >= 14:
+                spent = facts.get("lampejo_usos_gastos")
+                if spent is None:
+                    return {**base, "resultado": "requer_dados", "motivo": "usos_gastos_de_lampejo_necessarios"}
+                spent = int(spent)
+                if spent < 0 or spent > uses_max:
+                    return {**base, "resultado": "bloqueado", "motivo": "estado_de_usos_de_lampejo_invalido"}
+                restored = min(1, spent)
+                return {**base, "resultado": "recursos_recuperados", "tipo_descanso": "curto",
+                        "recursos": {"lampejo_de_genio": {"usos_gastos": spent - restored,
+                                                          "usos_maximos": uses_max}},
+                        "usos_lampejo_recuperados": restored}
+            return {**base, "resultado": "nenhum_recurso_de_artifice_recuperado",
+                    "tipo_descanso": "curto"}
+        return {**base, "resultado": "requer_dados", "motivo": "tipo_descanso_deve_ser_curto_ou_longo"}
+
     if key == "epic_boon":
         return {**base, "resultado": "escolha", "opcoes": ["dadiva_epica", "outro_talento"],
                 "nivel_minimo": 19}
