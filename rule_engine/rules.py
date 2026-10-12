@@ -93,6 +93,7 @@ from .martial import (
 )
 from .martial_subclasses import resolver_subclasse_marcial
 from .species import resolver_tracos_especie
+from .spell_lists import listar_magias_da_classe
 from .spellcasters import (
     resolver_canalizar_divindade,
     resolver_forma_selvagem,
@@ -1276,6 +1277,21 @@ def build_default_engine() -> RuleEngine:
             when=lambda f: f["type"] == "spell_catalog" and f.get("operation") == "list",
             resolve=lambda f: {"resultado": "listado", "magias": listar_magias(f.get("escola"), f.get("circulo"))},
             source="D&D 2024 — Magias",
+        )
+    )
+    engine.register(
+        Rule(
+            rule_id="spell.list-by-class",
+            description="Lista as magias da lista de classe do PHB 2024, opcionalmente por círculo.",
+            priority=70,
+            when=lambda f: f["type"] == "spell_catalog" and f.get("operation") == "by_class",
+            resolve=lambda f: {
+                "resultado": "listado",
+                "classe": f.get("classe"),
+                "circulo": f.get("circulo"),
+                "magias": listar_magias_da_classe(f.get("classe"), f.get("circulo")),
+            },
+            source="D&D 2024 — Listas de magias por classe (cap. 3)",
         )
     )
     engine.register(

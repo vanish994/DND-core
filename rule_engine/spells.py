@@ -693,6 +693,27 @@ for _nome_d, _circ_d in _CIRCULOS_PHB2024.items():
         if _m["nome"] == _nome_d and _m.get("circulo") is None:
             _m["circulo"] = int(_circ_d)
 
+# Completa círculo e adiciona magias ausentes a partir das listas de classe do
+# PHB 2024 (rule_engine/spell_lists.py). Os marcadores C/R/M vêm das listas;
+# duração não consta das listas e fica com o padrão do catálogo extraído.
+from .spell_lists import META_POR_NOME as _META_LISTAS
+
+for _chave_l, _meta_l in _META_LISTAS.items():
+    _existente_l = next((m for m in MAGIAS.values() if _normalizar_nome_magia(m["nome"]) == _chave_l), None)
+    if _existente_l is not None:
+        if _existente_l.get("circulo") is None:
+            _existente_l["circulo"] = _meta_l["circulo"]
+    else:
+        MAGIAS[_chave_l] = {
+            "nome": _meta_l["nome"],
+            "circulo": _meta_l["circulo"],
+            "escola": _meta_l["escola"],
+            "componentes": "V, S" + (", M" if _meta_l["material"] else ""),
+            "concentracao": bool(_meta_l["concentracao"]),
+            "ritual": bool(_meta_l["ritual"]),
+            "duracao": "concentração" if _meta_l["concentracao"] else "instantânea",
+        }
+
 for _antigo, _novo in _ALIAS_PARA_2024:
     _entrada = MAGIAS.get(_antigo.lower())
     if _entrada is not None:

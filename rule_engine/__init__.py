@@ -146,6 +146,7 @@ from .species import (
     resolver_tracos_especie,
     tracos_de_especie,
 )
+from .spell_lists import CLASSES_CONJURADORAS, LISTAS_POR_CLASSE, listar_magias_da_classe, magia_na_lista
 from .spellcasters import (
     resolver_canalizar_divindade,
     resolver_forma_selvagem,
@@ -286,6 +287,10 @@ __all__ = [
     "MAGIAS",
     "listar_magias",
     "obter_magia",
+    "CLASSES_CONJURADORAS",
+    "LISTAS_POR_CLASSE",
+    "listar_magias_da_classe",
+    "magia_na_lista",
     "resolver_magia",
     "ITENS_MAGICOS",
     "converter_de_po",
