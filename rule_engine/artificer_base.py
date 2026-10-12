@@ -108,6 +108,28 @@ ARTIFICER_GEAR = {
     "rede", "oleo", "papel", "pergaminho", "vara", "bolsa", "corda", "saco",
     "pa", "barbante", "caixa_de_isca", "tocha", "frasco_de_vidro",
 }
+ARTIFICER_GEAR_LABELS = {
+    "esferas_de_rolamento": "Esferas de rolamento", "cesta": "Cesta",
+    "saco_de_dormir": "Saco de dormir", "sino": "Sino", "cobertor": "Cobertor",
+    "talha_e_polias": "Talha e polias", "balde": "Balde", "estrepes": "Estrepes",
+    "vela": "Vela", "corrente": "Corrente", "gancho_de_escalada": "Gancho de escalada",
+    "pe_de_cabra": "Pé de cabra", "frasco": "Frasco", "gancho_de_escala": "Gancho de agarrar",
+    "jarro": "Jarro", "lampada": "Lâmpada", "algemas": "Algemas", "rede": "Rede",
+    "oleo": "Óleo", "papel": "Papel", "pergaminho": "Pergaminho", "vara": "Vara",
+    "bolsa": "Bolsa", "corda": "Corda", "saco": "Saco", "pa": "Pá",
+    "barbante": "Barbante", "caixa_de_isca": "Caixa de isqueiro", "tocha": "Tocha",
+    "frasco_de_vidro": "Frasco de vidro",
+}
+ARTIFICER_GEAR_ALIASES = {
+    "ball_bearings": "esferas_de_rolamento", "bedroll": "saco_de_dormir",
+    "block_and_tackle": "talha_e_polias", "caltrops": "estrepes", "chain": "corrente",
+    "climbing_hook": "gancho_de_escalada", "crowbar": "pe_de_cabra",
+    "flask": "frasco", "grappling_hook": "gancho_de_escala", "jug": "jarro",
+    "lamp": "lampada", "manacles": "algemas", "net": "rede", "oil": "oleo",
+    "paper": "papel", "parchment": "pergaminho", "pole": "vara", "pouch": "bolsa",
+    "rope": "corda", "sack": "saco", "shovel": "pa", "string": "barbante",
+    "tinderbox": "caixa_de_isca", "torch": "tocha", "vial": "frasco_de_vidro",
+}
 ARTIFICER_FEATURE_ALIASES = {
     "conjuracao": "conjuracao",
     "magia_de_artifice": "tinkers_magic",
@@ -175,6 +197,7 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
     if key == "tinkers_magic":
         item = unicodedata.normalize("NFKD", str(facts.get("item", "")).strip().lower())
         item = "".join(ch for ch in item if not unicodedata.combining(ch)).replace(" ", "_").replace("-", "_")
+        item = ARTIFICER_GEAR_ALIASES.get(item, item)
         uses = max(1, int_mod)
         if facts.get("acao") in {"criar", "create"}:
             if facts.get("ferramentas_tinkering_em_maos") is not True:
@@ -188,7 +211,7 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 return {**base, "resultado": "requer_dados", "motivo": "confirmar_espaco_desocupado",
                         "requer": "espaco_desocupado=True"}
             if not item:
-                return {**base, "resultado": "escolha", "opcoes": sorted(ARTIFICER_GEAR),
+                return {**base, "resultado": "escolha", "opcoes": [{"id": gear, "nome": ARTIFICER_GEAR_LABELS[gear]} for gear in sorted(ARTIFICER_GEAR)],
                         "acao": "acao_magica", "ferramentas_requeridas": "ferramentas_de_tinkering"}
             if item not in ARTIFICER_GEAR:
                 return {**base, "resultado": "bloqueado", "motivo": "item_nao_permitido",
@@ -197,7 +220,7 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             if gastos < 0 or gastos >= uses:
                 return {**base, "resultado": "bloqueado", "motivo": "usos_esgotados",
                         "usos_maximos": uses, "usos_gastos": gastos}
-            return {**base, "resultado": "criado", "item": item, "quantidade": 1,
+            return {**base, "resultado": "criado", "item": item, "nome_item": ARTIFICER_GEAR_LABELS[item], "quantidade": 1,
                     "alcance_m": 1.5, "requer_espaco_desocupado": True,
                     "acao": "acao_magica", "usos_maximos": uses,
                     "usos_restantes": uses - gastos - 1, "desaparece": "proximo_descanso_longo"}
