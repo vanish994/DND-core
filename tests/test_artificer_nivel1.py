@@ -108,6 +108,9 @@ def test_artifice_nivel_1_ponta_a_ponta_pelo_motor():
             "sabedoria": 10,
             "carisma": 10,
         },
+        "class_skill_proficiencies": ["arcanismo", "investigacao"],
+        "artisan_tool_proficiency": "Suprimentos de Alquimista",
+        "class_equipment": "A",
         "artificer_cantrips": ["Luz", "Mensagem"],
         "artificer_prepared_spells": ["Curar Ferimentos", "Alarme"],
     })
@@ -219,11 +222,16 @@ def test_artifice_nivel_1_orquestrador_casting_reparo_e_recupera_slots_no_descan
             "sabedoria": 10,
             "carisma": 10,
         },
+        "class_skill_proficiencies": ["arcanismo", "investigacao"],
+        "artisan_tool_proficiency": "Suprimentos de Alquimista",
+        "class_equipment": "A",
         "artificer_cantrips": ["Luz", "Raio de Fogo"],
         "artificer_prepared_spells": ["Curar Ferimentos", "Alarme"],
     })
     assert criado.status == "resolved"
     ficha = criado.outcome["ficha"]
+    assert ficha["escolhas_pendentes"] == []
+    assert ficha["proficiencias_pendentes"] is False
     orquestrador = OrquestradorAcoes(engine)
     personagens = [ficha]
 
@@ -323,6 +331,9 @@ def test_artifice_nivel_1_orquestrador_persiste_usos_e_expira_itens_tinkers():
             "sabedoria": 10,
             "carisma": 10,
         },
+        "class_skill_proficiencies": ["arcanismo", "investigacao"],
+        "artisan_tool_proficiency": "Suprimentos de Alquimista",
+        "class_equipment": "A",
         "artificer_cantrips": ["Luz", "Mensagem"],
         "artificer_prepared_spells": ["Curar Ferimentos", "Alarme"],
     })
