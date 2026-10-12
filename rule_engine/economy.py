@@ -163,17 +163,46 @@ def resolver_inventario(fatos: dict) -> dict[str, Any]:
             else:
                 retained.append(item)
         itens = retained
-    new_item = fatos.get("item_novo")
-    if new_item is not None:
+
+    current_ids = {
+        str(item.get("id"))
+        for item in itens
+        if isinstance(item, dict) and item.get("id") is not None
+    }
+    new_items = fatos.get("itens_novos", [])
+    if new_items is None:
+        new_items = []
+    if not isinstance(new_items, list):
+        return {"resultado": "requer_dados", "motivo": "itens_novos_deve_ser_uma_lista"}
+
+    one_new_item = fatos.get("item_novo")
+    if one_new_item is not None:
+        new_items = [*new_items, one_new_item]
+
+    validated_items: list[dict[str, Any]] = []
+    incoming_ids: set[str] = set()
+    for new_item in new_items:
         if not isinstance(new_item, dict) or not new_item.get("id"):
-            return {"resultado": "requer_dados", "motivo": "item_novo_precisa_de_metadados_e_id_unico"}
+            return {"resultado": "requer_dados", "motivo": "cada_item_novo_precisa_de_metadados_e_id_unico"}
         new_id = str(new_item["id"])
-        if any(isinstance(item, dict) and str(item.get("id", "")) == new_id for item in itens):
+        if new_id in current_ids or new_id in incoming_ids:
             return {"resultado": "bloqueado", "motivo": "id_de_item_ja_existe", "item_id": new_id}
+        try:
+            new_weight = float(new_item.get("peso", 0))
+            quantity = int(new_item.get("quantidade", 1))
+        except (TypeError, ValueError):
+            return {"resultado": "bloqueado", "motivo": "peso_ou_quantidade_de_item_invalida", "item_id": new_id}
+        if isinstance(new_item.get("quantidade", 1), bool) or new_weight < 0 or quantity < 1:
+            return {"resultado": "bloqueado", "motivo": "peso_ou_quantidade_de_item_invalida", "item_id": new_id}
         item_copy = dict(new_item)
-        item_copy.setdefault("quantidade", 1)
+        item_copy["quantidade"] = quantity
+        validated_items.append(item_copy)
+        incoming_ids.add(new_id)
+
+    for item_copy in validated_items:
         itens.append(item_copy)
         peso += float(item_copy.get("peso", 0)) * int(item_copy.get("quantidade", 1))
+
     if fatos.get("adicionar"):
         itens.append({"nome": fatos["adicionar"], "quantidade": int(fatos.get("quantidade", 1))})
     sintonizados = list(fatos.get("sintonizados", []))
@@ -185,6 +214,7 @@ def resolver_inventario(fatos: dict) -> dict[str, Any]:
         "peso": peso,
         "capacidade": capacidade,
         "itens": itens,
+        "itens_adicionados": validated_items,
         "itens_removidos": removidos,
         "sintonizados": sintonizados,
     }
