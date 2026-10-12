@@ -77,6 +77,20 @@ class ArtificerProgressionTests(unittest.TestCase):
         self.assertIn("Dádiva Épica", caracteristicas_no_nivel("artifice", 19))
         self.assertIn("Alma do Artífice", caracteristicas_no_nivel("artifice", 20))
 
+    def test_inventory_preserves_replicated_item_metadata_and_removes_destroyed_items(self):
+        from rule_engine.economy import resolver_inventario
+        old = {"id": "old-item", "plano": "dazzling_weapon", "nome": "Arma Deslumbrante",
+               "raridade": "raro", "sintonizacao": True, "replicado": True, "peso": 1}
+        added = {"id": "new-item", "plano": "manifold_tool", "nome": "Ferramenta Multiforme",
+                 "raridade": "comum", "sintonizacao": True, "replicado": True, "peso": 1}
+        result = resolver_inventario({
+            "itens": [old], "item_novo": added, "remover_ids": ["old-item"],
+            "sintonizados": ["old-item"],
+        })
+        self.assertEqual([x["id"] for x in result["itens"]], ["new-item"])
+        self.assertEqual(result["itens_removidos"][0]["id"], "old-item")
+        self.assertEqual(result["sintonizados"], [])
+
     def test_new_eberron_magic_items_have_deterministic_actions(self):
         from rule_engine.economy import usar_item_magico
 
