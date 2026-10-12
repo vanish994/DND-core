@@ -441,7 +441,7 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 return {**base, "resultado": "requer_dados", "motivo": "estado_de_drenar_apos_descanso_longo_necessario"}
             if facts.get("usado_no_descanso_longo", False):
                 return {**base, "resultado": "bloqueado", "motivo": "drenar_item_ja_usado_apos_descanso_longo"}
-            rarity = str(facts.get("raridade", item_metadata.get("raridade", ""))).lower()
+            rarity = str(facts.get("raridade", "")).lower()
             if rarity not in {"comum", "incomum", "raro", "common", "uncommon", "rare"}:
                 return {**base, "resultado": "requer_dados", "motivo": "raridade_do_item_replicado_necessaria"}
             slot_level = 1 if rarity in {"comum", "common"} else 2
