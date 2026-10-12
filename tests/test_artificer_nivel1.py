@@ -219,7 +219,7 @@ def test_artifice_nivel_1_orquestrador_casting_reparo_e_recupera_slots_no_descan
             "sabedoria": 10,
             "carisma": 10,
         },
-        "artificer_cantrips": ["Luz", "Mensagem"],
+        "artificer_cantrips": ["Luz", "Raio de Fogo"],
         "artificer_prepared_spells": ["Curar Ferimentos", "Alarme"],
     })
     assert criado.status == "resolved"
