@@ -268,10 +268,45 @@ class PaladinoGuardiaoFeatureTests(unittest.TestCase):
         self.assertEqual(resultado["resultado"], "resolvido")
         self.assertEqual(resultado["foco"], "ferramentas_de_artifice")
 
-    def test_artifice_sem_fonte_fica_explicito(self):
-        resultado = caracteristica("artifice", "Artesão de Item Mágico", 6)
-        self.assertEqual(resultado["resultado"], "nao_implementado")
-        self.assertEqual(resultado["motivo"], "sem_fonte_de_regra_no_repositorio")
+    def test_artifice_magia_de_artifice_e_conjuracao(self):
+        resultado = caracteristica("artifice", "Conjuração", 1, inteligencia=16)
+        self.assertEqual(resultado["resultado"], "resolvido")
+        self.assertEqual(resultado["cd_magia"], 13)
+        self.assertEqual(resultado["magias_preparadas"], 2)
+        self.assertEqual(resultado["espacos"], {"1": 2})
+
+    def test_artifice_replicar_item_magico_progressao_55(self):
+        resultado = caracteristica("artifice", "Replicar Item Mágico", 14)
+        self.assertEqual(resultado["planos_conhecidos"], 7)
+        self.assertEqual(resultado["limite_itens_criados"], 5)
+        self.assertEqual(resultado["nivel_minimo_do_plano"], 14)
+
+    def test_artifice_ajustador_item_magico_carrega_cargas(self):
+        resultado = caracteristica("artifice", "Ajustador de Item Mágico", 6,
+                                   acao="carregar", nivel_espaco=2,
+                                   cargas_atuais=1, cargas_maximas=5)
+        self.assertEqual(resultado["cargas_restauradas"], 2)
+        self.assertEqual(resultado["cargas_atuais"], 3)
+
+    def test_artifice_lampejo_de_genio_requer_falha(self):
+        resultado = caracteristica("artifice", "Lampejo de Gênio", 7,
+                                   inteligencia=16, criatura_falhou=True, total=9)
+        self.assertEqual(resultado["resultado"], "aplicado")
+        self.assertEqual(resultado["bonus"], 3)
+        self.assertEqual(resultado["novo_total"], 12)
+
+    def test_artifice_item_armazenador_ate_terceiro_circulo(self):
+        resultado = caracteristica("artifice", "Item Armazenador de Magia", 11,
+                                   inteligencia=16, magia="Dissipar Magia", nivel_magia=3)
+        self.assertEqual(resultado["resultado"], "armazenado")
+        self.assertEqual(resultado["usos"], 6)
+
+    def test_artifice_alma_artifice_recupera_20_pv_por_item(self):
+        resultado = caracteristica("artifice", "Alma do Artífice", 20,
+                                   acao="evitar_morte",
+                                   itens_destruidos=[{"raridade":"incomum"}, {"raridade":"raro"}])
+        self.assertEqual(resultado["resultado"], "sobreviveu")
+        self.assertEqual(resultado["pv_atuais"], 40)
 
 
 if __name__ == "__main__":
