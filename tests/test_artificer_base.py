@@ -206,6 +206,9 @@ class ArtificerProgressionTests(unittest.TestCase):
         self.assertEqual(result["delta_usos"], -1)
         self.assertEqual(result["item_criado"]["id"], "tinker-gear-1")
         self.assertEqual(result["item_criado"]["expira"], "proximo_descanso_longo")
+        self.assertIn("peso", result["item_criado"])
+        self.assertIn("custo_po", result["item_criado"])
+        self.assertEqual(result["dados_catalogo"]["peso"], result["item_criado"]["peso"])
         self.assertFalse(result["requer_id_unico_ao_persistir"])
         self.assertEqual(result["desaparece"], "proximo_descanso_longo")
 
