@@ -300,6 +300,8 @@ class PaladinoGuardiaoFeatureTests(unittest.TestCase):
                                    inteligencia=16, magia="Dissipar Magia", nivel_magia=3, tempo_conjuracao_acao=True, objeto_adequado=True, descanso_longo_concluido=True, distancia_m=1)
         self.assertEqual(resultado["resultado"], "armazenado")
         self.assertEqual(resultado["usos"], 6)
+        self.assertIn("bloqueio_por_criatura_ate", resultado)
+        self.assertTrue(resultado["componentes_materiais_consumidos"] is False)
 
     def test_artifice_alma_artifice_recupera_20_pv_por_item(self):
         resultado = caracteristica("artifice", "Alma do Artífice", 20,
