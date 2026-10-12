@@ -170,13 +170,37 @@ class ArtificerProgressionTests(unittest.TestCase):
     def test_tinkers_magic_creates_gear_with_tools_and_uses(self):
         result = resolver_caracteristica({
             "classe": "artifice", "recurso": "Magia de Artífice", "nivel": 1,
-            "inteligencia": 16, "acao": "criar", "item": "Estrepes",
+            "inteligencia": 16, "acao": "criar", "item": "Estrepes", "item_id": "tinker-gear-1",
             "ferramentas_tinkering_em_maos": True, "distancia_m": 1, "espaco_desocupado": True, "usos_gastos": 1,
         })
         self.assertEqual(result["resultado"], "criado")
         self.assertEqual(result["usos_maximos"], 3)
         self.assertEqual(result["usos_restantes"], 1)
+        self.assertEqual(result["usos_gastos_depois"], 2)
+        self.assertEqual(result["delta_usos"], -1)
+        self.assertEqual(result["item_criado"]["id"], "tinker-gear-1")
+        self.assertEqual(result["item_criado"]["expira"], "proximo_descanso_longo")
+        self.assertFalse(result["requer_id_unico_ao_persistir"])
         self.assertEqual(result["desaparece"], "proximo_descanso_longo")
+
+    def test_tinkers_magic_accepts_canonical_tool_name_and_rejects_invalid_distance(self):
+        result = resolver_caracteristica({
+            "classe": "artifice", "recurso": "Magia de Artífice", "nivel": 1,
+            "inteligencia": 12, "acao": "criar", "item": "Corda",
+            "ferramentas_de_funileiro_em_maos": True, "distancia_m": 1.5,
+            "espaco_desocupado": True, "usos_gastos": 0,
+        })
+        self.assertEqual(result["resultado"], "criado")
+        self.assertTrue(result["requer_id_unico_ao_persistir"])
+
+        invalid = resolver_caracteristica({
+            "classe": "artifice", "recurso": "Magia de Artífice", "nivel": 1,
+            "inteligencia": 12, "acao": "criar", "item": "Corda",
+            "ferramentas_de_funileiro_em_maos": True, "distancia_m": -0.1,
+            "espaco_desocupado": True, "usos_gastos": 0,
+        })
+        self.assertEqual(invalid["resultado"], "bloqueado")
+        self.assertEqual(invalid["motivo"], "espaco_de_criacao_fora_de_1_5_metro")
 
     def test_tinkers_magic_grants_repair_without_counting_it_as_a_selected_cantrip(self):
         from rule_engine.spellcasting import validar_escolhas_artifice, ARTIFICER_SPELL_LEVELS
