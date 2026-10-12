@@ -85,7 +85,7 @@ class ArtificerProgressionTests(unittest.TestCase):
     def test_spell_storing_rejects_non_action_spell_even_if_caller_claims_action(self):
         result = resolver_caracteristica({
             "classe": "artifice", "recurso": "Item Armazenador de Magia", "nivel": 11,
-            "magia": "Servo Homúnculo", "nivel_magia": 2, "objeto_adequado": True,
+            "magia": "Retirada Acelerada", "nivel_magia": 1, "objeto_adequado": True,
             "descanso_longo_concluido": True, "distancia_m": 1,
             "tempo_conjuracao_acao": True,
         })
