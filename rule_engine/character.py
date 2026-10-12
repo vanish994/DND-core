@@ -647,9 +647,16 @@ def ficha_personagem(personagem: Personagem) -> dict[str, Any]:
         "dexterity_modifier": modificador_destreza,
         "armor_proficient": True,
     })["ca"]
-    classe_de_armadura["com_escudo"] = classe_de_armadura["sem_armadura"] + 2
-    classe_de_armadura["nota_escudo"] = "Hipótese de escudo equipado; o equipamento inicial do Artífice não inclui escudo."
+    classe_de_armadura["sem_armadura_com_escudo"] = calcular_ca({
+        "armor": "nenhuma",
+        "dexterity_modifier": modificador_destreza,
+        "shield": True,
+        "shield_bonus": 2,
+        "armor_proficient": True,
+    })["ca"]
+    classe_de_armadura["nota_escudo"] = "Valores com escudo são hipotéticos; o equipamento inicial do Artífice não inclui escudo."
     classe_de_armadura["armadura_inicial"] = None
+    classe_de_armadura["armadura_inicial_com_escudo"] = None
     if personagem.classe == "artifice" and personagem.equipamento_classe == "A":
         from .catalog import CATALOGO_ARMADURAS
 
@@ -666,6 +673,15 @@ def ficha_personagem(personagem: Personagem) -> dict[str, Any]:
             "base": int(armadura_inicial["ca"]),
             "equipada_automaticamente": False,
         }
+        ca_armadura_escudo = calcular_ca({
+            "armor": armadura_inicial["categoria"],
+            "armor_bonus": int(armadura_inicial["ca"]) - 10,
+            "dexterity_modifier": modificador_destreza,
+            "shield": True,
+            "shield_bonus": 2,
+            "armor_proficient": True,
+        })
+        classe_de_armadura["armadura_inicial_com_escudo"] = ca_armadura_escudo["ca"]
 
     conjuracao_artifice = None
     recursos_iniciais_artifice = None
