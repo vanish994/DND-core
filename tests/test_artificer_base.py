@@ -62,6 +62,29 @@ class ArtificerProgressionTests(unittest.TestCase):
         self.assertEqual(result["usos_restantes"], 1)
         self.assertEqual(result["desaparece"], "proximo_descanso_longo")
 
+    def test_replicate_catalog_is_tiered_and_returns_item_metadata(self):
+        level_2 = resolve_artificer_feature("replicar_item_magico", 2, {})
+        level_6 = resolve_artificer_feature("replicar_item_magico", 6, {})
+        level_10 = resolve_artificer_feature("replicar_item_magico", 10, {})
+        level_14 = resolve_artificer_feature("replicar_item_magico", 14, {})
+        self.assertIn("alchemy_jug", [p["id"] for p in level_2["planos_disponiveis"]])
+        self.assertNotIn("armor_plus_1", [p["id"] for p in level_2["planos_disponiveis"]])
+        self.assertIn("armor_plus_1", [p["id"] for p in level_6["planos_disponiveis"]])
+        self.assertIn("armor_of_resistance", [p["id"] for p in level_10["planos_disponiveis"]])
+        self.assertIn("ring_of_the_ram", [p["id"] for p in level_14["planos_disponiveis"]])
+
+    def test_replicate_creation_replaces_oldest_when_at_capacity(self):
+        result = resolver_caracteristica({
+            "classe": "artifice", "recurso": "Replicar Item Mágico", "nivel": 2,
+            "acao": "criar", "ferramentas_artesao_em_maos": True,
+            "planos_conhecidos": ["alchemy_jug", "bag_of_holding", "cap_of_water_breathing", "wand_of_secrets"],
+            "planos": ["alchemy_jug", "bag_of_holding"],
+            "itens_atuais": [{"plano": "cap_of_water_breathing", "nome": "Bolsa antiga"}],
+        })
+        self.assertEqual(result["resultado"], "criado")
+        self.assertEqual(result["itens_que_desaparecem"][0]["plano"], "cap_of_water_breathing")
+        self.assertEqual(len(result["itens_atuais_apos_criacao"]), 2)
+
     def test_replicate_item_requires_artisan_tools_and_distinct_plans(self):
         missing_tools = resolver_caracteristica({
             "classe": "artifice", "recurso": "Replicar Item Mágico", "nivel": 2,
