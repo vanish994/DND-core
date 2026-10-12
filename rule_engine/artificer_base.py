@@ -31,7 +31,7 @@ ARTIFICER_REPLICATE_PLANS = {
     "boots_of_elvenkind": {"nome": "Botas Élficas", "nivel_minimo": 6, "raridade": "incomum", "sintonizacao": False},
     "boots_of_the_winding_path": {"nome": "Botas do Caminho Sinuoso", "nivel_minimo": 6, "raridade": "incomum", "sintonizacao": True},
     "cloak_of_elvenkind": {"nome": "Manto Élfico", "nivel_minimo": 6, "raridade": "incomum", "sintonizacao": True},
-    "cloak_of_the_manta_ray": {"nome": "Manto da Arraia", "nivel_minimo": 6, "raridade": "incomum", "sintonizacao": False},
+    "cloak_of_the_manta_ray": {"nome": "Manto da Arraia", "nivel_minimo": 6, "raridade": "incomum", "sintonizacao": True},
     "dazzling_weapon": {"nome": "Arma Deslumbrante", "nivel_minimo": 6, "raridade": "incomum", "sintonizacao": True},
     "eyes_of_charming": {"nome": "Olhos Encantadores", "nivel_minimo": 6, "raridade": "incomum", "sintonizacao": True},
     "eyes_of_minute_seeing": {"nome": "Olhos de Visão Minuciosa", "nivel_minimo": 6, "raridade": "incomum", "sintonizacao": False},
