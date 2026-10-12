@@ -146,13 +146,47 @@ def resolver_inventario(fatos: dict) -> dict[str, Any]:
     peso = float(fatos.get("peso_atual", 0)) + float(fatos.get("peso_adicionado", 0))
     capacidade = max(0, forca) * 7.5
     itens = list(fatos.get("itens", []))
+    removidos: list[dict[str, Any]] = []
+    remove_ids = {str(x) for x in fatos.get("remover_ids", [])}
+    remove_plans = {str(x) for x in fatos.get("remover_planos", [])}
+    if remove_ids or remove_plans:
+        retained = []
+        for item in itens:
+            if not isinstance(item, dict):
+                retained.append(item)
+                continue
+            item_id = str(item.get("id", ""))
+            plan = str(item.get("plano", ""))
+            if (item_id and item_id in remove_ids) or (plan and plan in remove_plans):
+                removidos.append(item)
+                peso -= float(item.get("peso", 0)) * int(item.get("quantidade", 1))
+            else:
+                retained.append(item)
+        itens = retained
+    new_item = fatos.get("item_novo")
+    if new_item is not None:
+        if not isinstance(new_item, dict) or not new_item.get("id"):
+            return {"resultado": "requer_dados", "motivo": "item_novo_precisa_de_metadados_e_id_unico"}
+        new_id = str(new_item["id"])
+        if any(isinstance(item, dict) and str(item.get("id", "")) == new_id for item in itens):
+            return {"resultado": "bloqueado", "motivo": "id_de_item_ja_existe", "item_id": new_id}
+        item_copy = dict(new_item)
+        item_copy.setdefault("quantidade", 1)
+        itens.append(item_copy)
+        peso += float(item_copy.get("peso", 0)) * int(item_copy.get("quantidade", 1))
     if fatos.get("adicionar"):
         itens.append({"nome": fatos["adicionar"], "quantidade": int(fatos.get("quantidade", 1))})
+    sintonizados = list(fatos.get("sintonizados", []))
+    if removidos:
+        removed_ids = {str(item.get("id")) for item in removidos if item.get("id") is not None}
+        sintonizados = [x for x in sintonizados if str(x) not in removed_ids]
     return {
         "resultado": "sobrecarregado" if peso > capacidade else "normal",
         "peso": peso,
         "capacidade": capacidade,
         "itens": itens,
+        "itens_removidos": removidos,
+        "sintonizados": sintonizados,
     }
 
 
