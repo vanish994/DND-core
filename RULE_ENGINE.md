@@ -69,7 +69,8 @@ Famílias registradas em `build_default_engine()` (`rule_engine/rules.py`):
 - **Magias** — `spell_cast` (com `magia` resolve componentes, concentração,
   upcasting e espaço; sem `magia`, valida espaço/círculo), `spell_cast_complete`
   (preparação, ritual, componentes), `spell_targets`, `spell_area`,
-  `spell_catalog` (list/lookup).
+  `spell_catalog` (list/lookup/by_class — as listas de classe do PHB 2024:
+  8 classes, 882 entradas, 372 magias).
 - **Combate** — `opportunity_attack`, `shove`, `grapple`, `grapple_escape`,
   `two_weapon_attack`, `attack_geometry`, `range`, `cover`, `line_of_sight`,
   `fall`, `senses`, `special_movement`, `mounted_combat`, `underwater_attack`,
@@ -81,9 +82,11 @@ Famílias registradas em `build_default_engine()` (`rule_engine/rules.py`):
   (attune/use), `catalog_lookup`, `catalog_list`.
 - **Personagem** — `character_creation`, `ability_generation`, `level_up`,
   `multiclass`, `species_traits` (traços completos das 10 espécies do PHB
-  2024), `feat` (validate/resolve).
-- **Classes** — `class_feature`, `martial_feature` (ataque extra, maestria,
-  fúria, fôlego, ataque furtivo, foco, defletir, esquiva, evasão),
+  2024), `feat` (validate/resolve — benefícios mecânicos dos 76 talentos).
+- **Classes** — `class_feature` (ladder próprio + delegação para os
+  módulos especializados; marcos estruturais Subclasse, Característica de
+  Subclasse, Dádiva Épica e Estilo de Luta), `martial_feature` (ataque extra,
+  maestria, fúria, fôlego, ataque furtivo, foco, defletir, esquiva, evasão),
   `martial_subclass_feature`, `spellcaster_feature` (progressão, inspiração de
   bardo, canalizar divindade, forma selvagem, livro de magias),
   `advanced_caster_feature` (bruxo, feiticeiro, guardião, paladino),
@@ -112,14 +115,29 @@ Famílias registradas em `build_default_engine()` (`rule_engine/rules.py`):
 
 ## Estado de cobertura
 
-A suíte (`python -m pytest`) valida o núcleo mecânico. Continuam **abertos**
-(os efeitos listados devem ser resolvidos caso a caso, com teste por regra):
+A suíte (`python -m pytest`) valida o núcleo mecânico. **Concluído:**
 
-- efeitos individuais da maioria das 390 magias catalogadas;
-- efeitos de talentos ainda sem ramo mecânico próprio (`nao_implementado`);
-- características e subclasses além dos lotes já resolvidos em
-  `class_features.py`, `martial*.py`, `spellcasters.py`, `advanced_casters.py`;
-- listas de magias por classe e equipamento inicial por classe/origem;
+- características de classe do PHB 2024 resolvidas (ladder + delegação para
+  `martial`, `spellcasters`, `advanced_casters`, `warlock_invocations`,
+  `martial_subclasses`); saídas `escolha`/`contrato` documentam o que falta
+  informar, `bloqueado` registra pré-requisitos;
+- talentos: benefícios mecânicos dos 76 talentos (Origem, Gerais, Dádivas
+  Épicas e Sombrias);
+- listas de magias por classe (8 classes) com círculos e marcadores C/R/M,
+  integradas ao catálogo `MAGIAS`;
+- espécies do PHB 2024 (cap. 4) e encontros do DMG 2024.
+
+Continuam **abertos** (cada item exige regra + teste próprios):
+
+- efeitos mecânicos individuais da maioria das magias catalogadas
+  (`MECANICAS_MAGIA` cobre ~60; o restante tem só o catálogo);
+- durações detalhadas das magias adicionadas via listas (as listas trazem
+  círculo/escola/marcadores, não duração);
+- três características do Artífice (`Artesão/Adepto/Mestre de Item Mágico`) —
+  o PHB 2024 não traz a classe; aguarda fonte do projeto;
+- dois talentos de Dádiva Sombria (`anatomia_aberrante`, `toque_da_morte`) —
+  efeitos não catalogados nas fontes locais;
+- equipamento inicial por classe/origem (PHB caps. 2 e 5);
 - veículos e fabricação detalhada.
 
 A conclusão de uma regra exige: implementação no módulo correto, registro em
@@ -127,8 +145,8 @@ A conclusão de uma regra exige: implementação no módulo correto, registro em
 
 ## Próximas extensões
 
-- listas de magias por classe e progressões derivadas;
-- efeitos mecânicos das magias restantes;
+- efeitos mecânicos das magias restantes (maior lacuna);
+- equipamento inicial por classe/origem;
 - integração de recursos de classe com descansos (contrato de recursos);
 - separação por edição (`2024`) e configuração da mesa;
 - carregamento de regras em JSON/YAML com versionamento e fonte.
