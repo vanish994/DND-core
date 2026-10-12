@@ -23,6 +23,16 @@ ESPECIES = {
     "orc": {"tamanho": "medio", "deslocamento": 9},
     "tiefling": {"tamanho": "pequeno_ou_medio", "deslocamento": 9},
 }
+EQUIPAMENTO_INICIAL_ARTIFICE = {
+    "A": {
+        "itens": ["Armadura de Couro Batido", "Adaga", "Ferramentas de Ladrão",
+                  "Ferramentas de Artesão (mesmas escolhidas na proficiência)",
+                  "Mochila de Explorador de Masmorras"],
+        "ouro": 16,
+    },
+    "B": {"itens": [], "ouro": 150},
+}
+
 CLASSES = {
     "barbaro": {"dado_vida": 12, "atributo_primario": "forca"},
     "bardo": {"dado_vida": 8, "atributo_primario": "carisma"},
@@ -287,6 +297,7 @@ class Personagem:
     heranca_draconica: str | None = None
     ferramenta_antecedente: str | None = None
     equipamento_antecedente: str | None = None
+    equipamento_classe: str | None = None
 
     @property
     def bonus_proficiencia(self) -> int:
@@ -357,6 +368,11 @@ def criar_personagem(fatos: Mapping[str, Any]) -> Personagem:
         invalidas = pericias_classe - PERICIAS_CLASSE_OPCOES[classe]
         if invalidas:
             raise ValueError("Perícia não disponível para esta classe: " + ", ".join(sorted(invalidas)))
+    equipamento_classe = fatos.get("class_equipment", fatos.get("equipamento_classe"))
+    if equipamento_classe is not None:
+        equipamento_classe = str(equipamento_classe).strip().upper()
+        if classe != "artifice" or equipamento_classe not in EQUIPAMENTO_INICIAL_ARTIFICE:
+            raise ValueError("Escolha de equipamento inicial inválida para esta classe")
     ferramenta_artesao = fatos.get("artisan_tool_proficiency", fatos.get("ferramenta_artesao"))
     if ferramenta_artesao:
         ferramenta_artesao = str(ferramenta_artesao).strip()
@@ -410,6 +426,7 @@ def criar_personagem(fatos: Mapping[str, Any]) -> Personagem:
         heranca_draconica=heranca_draconica,
         ferramenta_antecedente=ferramenta_antecedente,
         equipamento_antecedente=equipamento_antecedente,
+        equipamento_classe=equipamento_classe,
     )
 
 
@@ -469,6 +486,9 @@ def ficha_personagem(personagem: Personagem) -> dict[str, Any]:
         escolhas_pendentes.append(f"{escolha_ferramenta['rotulo']} (antecedente)")
     if equipamento_pendente:
         escolhas_pendentes.append("Equipamento de antecedente (A ou B)")
+    equipamento_classe_pendente = personagem.classe == "artifice" and not personagem.equipamento_classe
+    if equipamento_classe_pendente:
+        escolhas_pendentes.append("Equipamento inicial de Artífice (A ou B)")
     return {
         "nome": personagem.nome,
         "especie": personagem.especie,
@@ -524,6 +544,21 @@ def ficha_personagem(personagem: Personagem) -> dict[str, Any]:
         "ferramenta_pendente": ferramenta_pendente,
         "equipamento_antecedente": {**pacotes, "escolha": personagem.equipamento_antecedente},
         "equipamento_pendente": equipamento_pendente,
+        "equipamento_classe": (
+            {
+                **EQUIPAMENTO_INICIAL_ARTIFICE[personagem.equipamento_classe],
+                "escolha": personagem.equipamento_classe,
+                "itens": [
+                    personagem.ferramenta_artesao if item == "Ferramentas de Artesão (mesmas escolhidas na proficiência)" else item
+                    for item in EQUIPAMENTO_INICIAL_ARTIFICE[personagem.equipamento_classe]["itens"]
+                ],
+            }
+            if personagem.classe == "artifice" and personagem.equipamento_classe
+            else {"A": EQUIPAMENTO_INICIAL_ARTIFICE["A"], "B": EQUIPAMENTO_INICIAL_ARTIFICE["B"], "escolha": None}
+            if personagem.classe == "artifice"
+            else None
+        ),
+        "equipamento_classe_pendente": equipamento_classe_pendente,
         "escolhas_pendentes": escolhas_pendentes,
     }
 
@@ -537,7 +572,10 @@ def resolver_progressao(fatos: Mapping[str, Any]) -> dict[str, Any]:
     resultado: dict[str, Any] = {"resultado": "nivel_adquirido", "nivel": novo_nivel}
     asi_niveis = {"guerreiro": {4, 6, 8, 12, 14, 16, 19}, "ladino": {4, 8, 10, 12, 16, 19}}
     if novo_nivel in asi_niveis.get(classe, {4, 8, 12, 16, 19}):
-        resultado["escolha"] = "aumento_de_atributo_ou_talento"
+        resultado["escolha"] = (
+            "dadiva_epica_ou_talento" if classe == "artifice" and novo_nivel == 19
+            else "aumento_de_atributo_ou_talento"
+        )
     if novo_nivel == 3:
         resultado["escolha_subclasse"] = True
     resultado["bonus_proficiencia"] = 2 + (novo_nivel - 1) // 4
