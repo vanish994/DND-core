@@ -214,7 +214,7 @@ class ArtificerProgressionTests(unittest.TestCase):
             "classe": "artifice", "recurso": "Magia de Artífice", "nivel": 1,
             "inteligencia": 16, "acao": "criar", "item": "Estrepes", "item_id": "tinker-gear-1",
             "ferramentas_tinkering_em_maos": True, "distancia_m": 1, "espaco_desocupado": True,
-            "posicao_criacao": {"x": 1, "y": 2}, "usos_gastos": 1,
+            "posicao_criacao": {"x": 1, "y": 2}, "usos_gastos": 1, "ids_objetos_existentes": [],
         })
         self.assertEqual(result["resultado"], "criado")
         self.assertEqual(result["delta_mundo"]["adicionar_objeto"]["id"], "tinker-gear-1")
@@ -229,7 +229,7 @@ class ArtificerProgressionTests(unittest.TestCase):
         self.assertIn("peso", result["item_criado"])
         self.assertIn("custo_po", result["item_criado"])
         self.assertEqual(result["dados_catalogo"]["peso"], result["item_criado"]["peso"])
-        self.assertFalse(result["requer_id_unico_ao_persistir"])
+        self.assertTrue(result["requer_id_unico_ao_persistir"])
         self.assertEqual(result["desaparece"], "proximo_descanso_longo")
 
     def test_tinkers_magic_accepts_canonical_tool_name_and_rejects_invalid_distance(self):
@@ -238,10 +238,10 @@ class ArtificerProgressionTests(unittest.TestCase):
             "inteligencia": 12, "acao": "criar", "item": "Corda",
             "ferramentas_de_funileiro_em_maos": True, "distancia_m": 1.5,
             "espaco_desocupado": True, "posicao_criacao": {"x": 3, "y": 5},
-            "item_id": "tinker-canonical-1", "usos_gastos": 0,
+            "item_id": "tinker-canonical-1", "usos_gastos": 0, "ids_objetos_existentes": [],
         })
         self.assertEqual(result["resultado"], "criado")
-        self.assertFalse(result["requer_id_unico_ao_persistir"])
+        self.assertTrue(result["requer_id_unico_ao_persistir"])
 
         invalid = resolver_caracteristica({
             "classe": "artifice", "recurso": "Magia de Artífice", "nivel": 1,
@@ -251,6 +251,54 @@ class ArtificerProgressionTests(unittest.TestCase):
         })
         self.assertEqual(invalid["resultado"], "bloqueado")
         self.assertEqual(invalid["motivo"], "espaco_de_criacao_fora_de_1_5_metro")
+
+    def test_every_tinkers_magic_item_creates_full_catalogued_world_object(self):
+        from rule_engine.artificer_base import ARTIFICER_GEAR, ARTIFICER_GEAR_CATALOG_NAMES
+        from rule_engine.class_features import resolver_caracteristica
+        from rule_engine.catalog import CATALOGO_EQUIPAMENTOS
+
+        failures = []
+        for gear_id in sorted(ARTIFICER_GEAR):
+            result = resolver_caracteristica({
+                "classe": "artifice", "nivel": 1, "recurso": "tinkers_magic", "acao": "criar",
+                "inteligencia": 16, "usos_gastos": 0,
+                "ferramentas_de_funileiro_em_maos": True,
+                "distancia_m": 1.5, "espaco_desocupado": True,
+                "posicao_criacao": {"x": 1, "y": 1},
+                "item": gear_id, "item_id": f"tinker-{gear_id}",
+                "ids_objetos_existentes": [],
+            })
+            if result.get("resultado") != "criado":
+                failures.append((gear_id, result.get("resultado"), result.get("motivo")))
+                continue
+            created = result.get("delta_mundo", {}).get("adicionar_objeto", {})
+            catalog_name = ARTIFICER_GEAR_CATALOG_NAMES[gear_id]
+            catalog_data = CATALOGO_EQUIPAMENTOS[catalog_name]
+            if (
+                created.get("nome") != catalog_name
+                or created.get("peso") != catalog_data.get("peso")
+                or created.get("custo_po") != catalog_data.get("custo_po")
+                or not created.get("id")
+                or created.get("expira") != "proximo_descanso_longo"
+                or result.get("delta_usos") != -1
+            ):
+                failures.append((gear_id, "metadados_ou_delta_incorretos", created))
+        self.assertEqual(failures, [], f"Itens de Tinker's Magic sem criação funcional: {failures}")
+
+    def test_tinkers_magic_rejects_world_object_id_collision(self):
+        from rule_engine.class_features import resolver_caracteristica
+
+        result = resolver_caracteristica({
+            "classe": "artifice", "nivel": 1, "recurso": "tinkers_magic", "acao": "criar",
+            "inteligencia": 16, "usos_gastos": 0,
+            "ferramentas_de_funileiro_em_maos": True,
+            "distancia_m": 1, "espaco_desocupado": True,
+            "posicao_criacao": {"x": 1, "y": 1},
+            "item": "corda", "item_id": "already-exists",
+            "ids_objetos_existentes": ["already-exists"],
+        })
+        self.assertEqual(result["resultado"], "bloqueado")
+        self.assertEqual(result["motivo"], "id_do_objeto_ja_existe_no_mundo")
 
     def test_tinkers_magic_grants_repair_without_counting_it_as_a_selected_cantrip(self):
         from rule_engine.spellcasting import validar_escolhas_artifice, ARTIFICER_SPELL_LEVELS
