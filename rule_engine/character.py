@@ -638,7 +638,37 @@ def ficha_personagem(personagem: Personagem) -> dict[str, Any]:
     if equipamento_classe_pendente:
         escolhas_pendentes.append("Equipamento inicial de Artífice (A ou B)")
 
+    classe_de_armadura: dict[str, Any] = {}
+    from .magic_equipment import calcular_ca
+
+    modificador_destreza = modificador(personagem.atributos["destreza"])
+    classe_de_armadura["sem_armadura"] = calcular_ca({
+        "armor": "nenhuma",
+        "dexterity_modifier": modificador_destreza,
+        "armor_proficient": True,
+    })["ca"]
+    classe_de_armadura["com_escudo"] = classe_de_armadura["sem_armadura"] + 2
+    classe_de_armadura["nota_escudo"] = "Hipótese de escudo equipado; o equipamento inicial do Artífice não inclui escudo."
+    classe_de_armadura["armadura_inicial"] = None
+    if personagem.classe == "artifice" and personagem.equipamento_classe == "A":
+        from .catalog import CATALOGO_ARMADURAS
+
+        armadura_inicial = CATALOGO_ARMADURAS["Couro Batido"]
+        ca_armadura = calcular_ca({
+            "armor": armadura_inicial["categoria"],
+            "armor_bonus": int(armadura_inicial["ca"]) - 10,
+            "dexterity_modifier": modificador_destreza,
+            "armor_proficient": True,
+        })
+        classe_de_armadura["armadura_inicial"] = {
+            "nome": "Armadura de Couro Batido",
+            "ca": ca_armadura["ca"],
+            "base": int(armadura_inicial["ca"]),
+            "equipada_automaticamente": False,
+        }
+
     conjuracao_artifice = None
+    recursos_iniciais_artifice = None
     if personagem.classe == "artifice":
         from .spellcasting import progresso_artifice
 
@@ -650,6 +680,16 @@ def ficha_personagem(personagem: Personagem) -> dict[str, Any]:
         if not preparadas_corretas:
             escolhas_pendentes.append("Magias preparadas de Artífice")
         modificador_int = modificador(personagem.atributos["inteligencia"])
+        recursos_iniciais_artifice = {
+            "magia_de_artifice": {"usos_gastos": 0, "usos_maximos": max(1, modificador_int)},
+            "espacos_de_magia": {
+                "espacos_restantes": dict(progresso_magico["espacos_totais"]),
+                "usos_gastos": {circulo: 0 for circulo in progresso_magico["espacos_totais"]},
+            },
+            "troca_truque_disponivel": False,
+            "mudanca_magias_preparadas_disponivel": False,
+            "itens_tinkers_criados": [],
+        }
         conjuracao_artifice = {
             **progresso_magico,
             "atributo_conjuracao": "inteligencia",
@@ -668,6 +708,7 @@ def ficha_personagem(personagem: Personagem) -> dict[str, Any]:
         }
 
     return {
+        "id": personagem.id,
         "nome": personagem.nome,
         "especie": personagem.especie,
         "classe": personagem.classe,
@@ -740,6 +781,8 @@ def ficha_personagem(personagem: Personagem) -> dict[str, Any]:
         "inventario_inicial": _inventario_inicial_artifice(personagem),
         "caracteristicas_classe": caracteristicas_no_nivel(personagem.classe, personagem.nivel),
         "conjuracao": conjuracao_artifice,
+        "recursos_iniciais": recursos_iniciais_artifice,
+        "classe_de_armadura": classe_de_armadura,
         "escolhas_pendentes": list(dict.fromkeys(escolhas_pendentes)),
     }
 
