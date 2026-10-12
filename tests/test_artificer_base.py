@@ -43,6 +43,32 @@ class ArtificerProgressionTests(unittest.TestCase):
         })
         self.assertEqual(early_boon["nivel_minimo"], 19)
 
+    def test_long_rest_recovers_artificer_resources_and_expires_tinker_items(self):
+        result = resolver_caracteristica({
+            "classe": "artifice", "recurso": "recuperacao_recursos", "nivel": 7,
+            "tipo_descanso": "longo", "inteligencia": 16,
+            "itens_tinkers_atuais": [{"id": "mundane-1", "nome": "Corda"}],
+        })
+        self.assertEqual(result["resultado"], "recursos_recuperados")
+        self.assertEqual(result["recursos"]["magia_de_artifice"]["usos_maximos"], 3)
+        self.assertEqual(result["recursos"]["lampejo_de_genio"]["usos_gastos"], 0)
+        self.assertEqual(result["recursos"]["drenar_item_magico"]["usado_no_descanso_longo"], False)
+        self.assertEqual(result["itens_tinkers_que_expiram"][0]["id"], "mundane-1")
+
+    def test_short_rest_recovers_flash_of_genius_according_to_level(self):
+        level_14 = resolver_caracteristica({
+            "classe": "artifice", "recurso": "recuperacao_recursos", "nivel": 14,
+            "tipo_descanso": "curto", "inteligencia": 16, "lampejo_usos_gastos": 2,
+        })
+        self.assertEqual(level_14["recursos"]["lampejo_de_genio"]["usos_gastos"], 1)
+        level_20 = resolver_caracteristica({
+            "classe": "artifice", "recurso": "recuperacao_recursos", "nivel": 20,
+            "tipo_descanso": "curto", "inteligencia": 16, "sintonizado_item_magico": True,
+            "lampejo_usos_gastos": 2,
+        })
+        self.assertEqual(level_20["recursos"]["lampejo_de_genio"]["usos_gastos"], 0)
+        self.assertEqual(level_20["usos_lampejo_recuperados"], "todos")
+
     def test_level_6_10_14_18_and_epic_boon_are_in_progression(self):
         self.assertIn("Ajustador de Item Mágico", caracteristicas_no_nivel("artifice", 6))
         self.assertIn("Adepto de Item Mágico", caracteristicas_no_nivel("artifice", 10))
