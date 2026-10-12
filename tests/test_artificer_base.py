@@ -211,7 +211,7 @@ class ArtificerProgressionTests(unittest.TestCase):
         self.assertEqual(ring["resultado"], "espaco_recuperado")
         self.assertTrue(ring["usado_hoje"])
 
-    def test_tinkers_magic_uses_exact_published_26_item_list(self):
+    def test_tinkers_magic_uses_exact_published_31_item_list(self):
         self.assertEqual(len(ARTIFICER_GEAR), 31)
         self.assertIn("esferas_de_rolamento", ARTIFICER_GEAR)
         self.assertIn("caixa_de_isca", ARTIFICER_GEAR)
