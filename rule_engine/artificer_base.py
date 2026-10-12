@@ -191,7 +191,7 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             "espacos": {str(i + 1): count for i, count in enumerate(ARTIFICER_SLOTS[level])},
             "circulo_maximo": max(range(1, len(ARTIFICER_SLOTS[level]) + 1)),
             "cd_magia": 8 + prof + int_mod, "ataque_magia": prof + int_mod,
-            "focos_validos": ["ferramentas_de_ladrao", "ferramentas_de_artifice",
+            "focos_validos": ["ferramentas_de_ladrao", "ferramentas_de_remendador",
                               "outras_ferramentas_de_artesao_com_proficiencia", "varinhas_ou_armas_replicadas"],
             "troca_truque_apos_descanso_longo": True,
             "recupera_espacos": "descanso_longo",
@@ -229,7 +229,7 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                     "usos_restantes": uses - gastos - 1, "desaparece": "proximo_descanso_longo"}
         return {**base, "resultado": "resolvido", "truque_conhecido": "consertar",
                 "usos_por_descanso_longo": uses, "acao": "acao_magica",
-                "requer_ferramentas": "ferramentas_de_tinkering", "foco": "ferramentas_de_artifice",
+                "requer_ferramentas": "ferramentas_de_remendador", "foco": "ferramentas_de_remendador",
                 "duracao_itens_criados": "ate_concluir_descanso_longo"}
 
     if key == "replicate_magic_item":
