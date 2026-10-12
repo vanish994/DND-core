@@ -396,7 +396,7 @@ class ArtificerProgressionTests(unittest.TestCase):
         self.assertEqual(sheet["conjuracao"]["truques_conhecidos"], ["Bolha Ácida", "Luz"])
         self.assertEqual(sheet["conjuracao"]["magias_preparadas"], ["Curar Ferimentos", "Detectar Magia"])
         self.assertEqual(sheet["conjuracao"]["espacos_totais"], {"1": 2})
-        self.assertEqual(sheet["conjuracao"]["cd_magia"], 9)
+        self.assertEqual(sheet["conjuracao"]["cd_magia"], 12)
         inventory = sheet["inventario_inicial"]
         self.assertEqual(inventory["resultado"], "pronto")
         self.assertEqual(inventory["ouro"], 16)
@@ -426,6 +426,134 @@ class ArtificerProgressionTests(unittest.TestCase):
             "sintonizados": ["a", "b", "c", "d"], "classe": "artifice", "nivel": 10,
         })
         self.assertEqual(blocked["motivo"], "limite_de_itens_sintonizados")
+
+    def test_inventory_resolver_adds_multiple_items_with_metadata_and_rejects_duplicate_ids(self):
+        from rule_engine.economy import resolver_inventario
+
+        added = resolver_inventario({
+            "forca": 10,
+            "itens": [{"id": "existing", "nome": "Corda", "peso": 2.5, "quantidade": 1}],
+            "itens_novos": [
+                {"id": "new-1", "nome": "Adaga", "peso": 0.5, "quantidade": 1, "dano": "1d4"},
+                {"id": "new-2", "nome": "Tochas", "peso": 0.5, "quantidade": 4},
+            ],
+        })
+        self.assertEqual(added["resultado"], "normal")
+        self.assertAlmostEqual(added["peso"], 5.0)
+        self.assertEqual(len(added["itens_adicionados"]), 2)
+        self.assertEqual(next(x for x in added["itens"] if x["id"] == "new-1")["dano"], "1d4")
+
+        duplicate = resolver_inventario({
+            "itens": [{"id": "already", "nome": "Corda", "peso": 1}],
+            "itens_novos": [
+                {"id": "new", "nome": "Adaga", "peso": 0.5},
+                {"id": "new", "nome": "Tocha", "peso": 0.5},
+            ],
+        })
+        self.assertEqual(duplicate["resultado"], "bloqueado")
+        self.assertEqual(duplicate["motivo"], "id_de_item_ja_existe")
+
+    def test_artificer_initial_inventory_can_be_inserted_into_existing_inventory_engine(self):
+        from rule_engine.economy import resolver_inventario
+
+        character = criar_personagem({
+            "character_id": "pc-artifice-inventory-engine",
+            "name": "Artífice Inventário", "species": "humano", "class": "artifice", "level": 1,
+            "ability_scores": {"forca": 8, "destreza": 14, "constituicao": 13,
+                               "inteligencia": 15, "sabedoria": 12, "carisma": 10},
+            "class_skill_proficiencies": ["arcanismo", "investigacao"],
+            "artisan_tool_proficiency": "Ferramentas de Ferreiro",
+            "artificer_cantrips": ["Bolha Ácida", "Luz"],
+            "artificer_prepared_spells": ["Curar Ferimentos", "Detectar Magia"],
+            "class_equipment": "A",
+        })
+        sheet = ficha_personagem(character)
+        inventory = resolver_inventario({
+            "forca": character.atributos["forca"],
+            "itens": [],
+            "itens_novos": sheet["inventario_inicial"]["itens"],
+        })
+        self.assertEqual(inventory["resultado"], "normal")
+        self.assertEqual(len(inventory["itens"]), len(sheet["inventario_inicial"]["itens"]))
+        self.assertAlmostEqual(inventory["peso"], sheet["inventario_inicial"]["peso_total"])
+        self.assertTrue(all(item.get("id") and item.get("nome") and "peso" in item for item in inventory["itens"]))
+
+    def test_rule_engine_creates_full_artificer_sheet_and_resolves_level_one_spell(self):
+        from rule_engine.rules import build_default_engine
+
+        engine = build_default_engine()
+        created = engine.evaluate({
+            "type": "character_creation",
+            "character_id": "pc-artifice-engine-1",
+            "name": "Artífice Engine",
+            "species": "humano",
+            "class": "artifice",
+            "level": 1,
+            "ability_scores": {"forca": 8, "destreza": 14, "constituicao": 13,
+                               "inteligencia": 15, "sabedoria": 12, "carisma": 10},
+            "class_skill_proficiencies": ["arcanismo", "investigacao"],
+            "artisan_tool_proficiency": "Ferramentas de Ferreiro",
+            "artificer_cantrips": ["Bolha Ácida", "Luz"],
+            "artificer_prepared_spells": ["Curar Ferimentos", "Detectar Magia"],
+            "class_equipment": "A",
+        })
+        self.assertEqual(created.status, "resolved")
+        self.assertEqual(created.outcome["resultado"], "criado")
+        sheet = created.outcome["ficha"]
+        self.assertEqual(sheet["nivel"], 1)
+        self.assertEqual(sheet["proficiencias_salvaguarda"], ["constituicao", "inteligencia"])
+        self.assertEqual(sheet["conjuracao"]["espacos_totais"], {"1": 2})
+        self.assertEqual(sheet["inventario_inicial"]["resultado"], "pronto")
+
+        cast = engine.evaluate({
+            "type": "class_feature",
+            "classe": "artifice",
+            "recurso": "conjuracao",
+            "nivel": 1,
+            "acao": "conjurar",
+            "magia": "Curar Ferimentos",
+            "inteligencia": 15,
+            "truques_conhecidos": ["Bolha Ácida", "Luz"],
+            "magias_preparadas": ["Curar Ferimentos", "Detectar Magia"],
+            "espacos_restantes": {"1": 2},
+        })
+        self.assertEqual(cast.status, "resolved")
+        self.assertIn("class.feature", cast.matched_rules)
+        self.assertEqual(cast.outcome["resultado"], "conjurada")
+        self.assertEqual(cast.outcome["slot_consumido"], 1)
+        self.assertEqual(cast.outcome["delta_espacos"], {"1": -1})
+        self.assertEqual(cast.outcome["espacos_restantes_depois"], {"1": 1})
+
+    def test_artificer_can_swap_cantrip_and_prepared_spells_after_long_rest(self):
+        from rule_engine.class_features import resolver_caracteristica
+
+        base = {
+            "classe": "artifice", "nivel": 1, "recurso": "conjuracao", "inteligencia": 15,
+            "truques_conhecidos": ["Bolha Ácida", "Luz"],
+            "magias_preparadas": ["Curar Ferimentos", "Detectar Magia"],
+            "descanso_longo_concluido": True,
+        }
+        cantrip = resolver_caracteristica({
+            **base, "acao": "trocar_truque", "troca_truque_disponivel": True,
+            "truque_antigo": "Luz", "truque_novo": "Raio de Fogo",
+        })
+        self.assertEqual(cantrip["resultado"], "truque_substituido")
+        self.assertEqual(cantrip["delta_conjuracao"]["truques_conhecidos"], ["Bolha Ácida", "Raio de Fogo"])
+        self.assertFalse(cantrip["delta_conjuracao"]["troca_truque_disponivel"])
+
+        prepared = resolver_caracteristica({
+            **base, "acao": "trocar_magias_preparadas", "mudanca_magias_preparadas_disponivel": True,
+            "magias_preparadas_novas": ["Fogo das Fadas", "Queda Suave"],
+        })
+        self.assertEqual(prepared["resultado"], "magias_preparadas_alteradas")
+        self.assertEqual(prepared["delta_conjuracao"]["magias_preparadas"], ["Fogo das Fadas", "Queda Suave"])
+        self.assertFalse(prepared["delta_conjuracao"]["mudanca_magias_preparadas_disponivel"])
+
+        no_rest = resolver_caracteristica({
+            **base, "acao": "trocar_truque", "descanso_longo_concluido": False,
+            "troca_truque_disponivel": True, "truque_antigo": "Luz", "truque_novo": "Raio de Fogo",
+        })
+        self.assertEqual(no_rest["resultado"], "bloqueado")
 
     def test_drain_item_uses_rarity_and_is_bonus_action(self):
         result = resolver_caracteristica({
