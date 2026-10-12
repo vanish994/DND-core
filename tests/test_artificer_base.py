@@ -73,6 +73,16 @@ class ArtificerProgressionTests(unittest.TestCase):
         self.assertIn("armor_of_resistance", [p["id"] for p in level_10["planos_disponiveis"]])
         self.assertIn("ring_of_the_ram", [p["id"] for p in level_14["planos_disponiveis"]])
 
+    def test_replicate_plan_milestones_add_a_new_plan(self):
+        result = resolver_caracteristica({
+            "classe": "artifice", "recurso": "Replicar Item Mágico", "nivel": 6,
+            "acao": "aprender_plano", "ao_subir_de_nivel": True,
+            "plano_novo": "armor_plus_1",
+            "planos_conhecidos": ["alchemy_jug", "bag_of_holding", "cap_of_water_breathing", "wand_of_secrets"],
+        })
+        self.assertEqual(result["resultado"], "plano_aprendido")
+        self.assertEqual(len(result["planos_conhecidos"]), 5)
+
     def test_replicate_plan_replacement_only_on_level_up(self):
         result = resolver_caracteristica({
             "classe": "artifice", "recurso": "Replicar Item Mágico", "nivel": 2,
