@@ -140,14 +140,14 @@ class ArtificerProgressionTests(unittest.TestCase):
         metadata = {"nome": "Ferramenta Multifuncional +1", "raridade": "incomum", "sintonizacao": True}
         result = resolver_sintonizacao({
             "item": "all_purpose_tool_plus_1", "metadados_item": metadata,
-            "sintonizados": known, "limite_sintonizacao": 4,
+            "sintonizados": known, "classe": "artifice", "nivel": 10,
         })
         self.assertEqual(result["resultado"], "sintonizado")
         self.assertEqual(result["limite"], 4)
         blocked = resolver_sintonizacao({
             "item": "wand_of_the_war_mage_plus_1",
             "metadados_item": {"nome": "Varinha do Mago de Guerra +1", "sintonizacao": True},
-            "sintonizados": ["a", "b", "c", "d"], "limite_sintonizacao": 4,
+            "sintonizados": ["a", "b", "c", "d"], "classe": "artifice", "nivel": 10,
         })
         self.assertEqual(blocked["motivo"], "limite_de_itens_sintonizados")
 
