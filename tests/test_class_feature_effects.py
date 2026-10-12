@@ -266,7 +266,7 @@ class PaladinoGuardiaoFeatureTests(unittest.TestCase):
     def test_magia_de_artifice_corrigida(self):
         resultado = caracteristica("artifice", "Magia de Artífice", 1)
         self.assertEqual(resultado["resultado"], "resolvido")
-        self.assertEqual(resultado["foco"], "ferramentas_de_remendador")
+        self.assertEqual(resultado["foco"], "ferramentas_de_funileiro")
 
     def test_artifice_magia_de_artifice_e_conjuracao(self):
         resultado = caracteristica("artifice", "Conjuração", 1, inteligencia=16)
