@@ -244,6 +244,23 @@ class ArtificerProgressionTests(unittest.TestCase):
         })
         self.assertEqual(repair["truque_conhecido"], "Reparar")
 
+    def test_every_level_one_artificer_spell_choice_has_an_executable_effect(self):
+        from rule_engine.spellcasting import ARTIFICER_SPELL_LEVELS
+        from rule_engine.spells import resolver_magia
+        unsupported = []
+        for name, circle in ARTIFICER_SPELL_LEVELS.items():
+            if circle not in {0, 1}:
+                continue
+            result = resolver_magia({
+                "magia": name,
+                "has_slot": circle == 0 or True,
+                "espaco": max(1, circle),
+                "nivel_personagem": 1,
+            })
+            if result.get("resultado") != "conjurada":
+                unsupported.append((name, result.get("resultado"), result.get("motivo")))
+        self.assertEqual(unsupported, [], f"Magias de nível 1 sem efeito executável: {unsupported}")
+
     def test_level_one_artificer_passos_longos_has_executable_mechanics(self):
         from rule_engine.spells import mecanica_de_magia, resolver_magia
         mechanic = mecanica_de_magia("Passos Longos")
