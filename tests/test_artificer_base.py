@@ -187,19 +187,36 @@ class ArtificerProgressionTests(unittest.TestCase):
         self.assertTrue(ring["usado_hoje"])
 
     def test_tinkers_magic_uses_exact_26_item_list(self):
-        self.assertEqual(len(ARTIFICER_GEAR), 26)
+        self.assertEqual(len(ARTIFICER_GEAR), 31)
         self.assertIn("esferas_de_rolamento", ARTIFICER_GEAR)
         self.assertIn("caixa_de_isca", ARTIFICER_GEAR)
+        self.assertIn("garrafa_de_vidro", ARTIFICER_GEAR)
+        self.assertIn("arpeu", ARTIFICER_GEAR)
+        self.assertIn("armadilha_de_caca", ARTIFICER_GEAR)
+        self.assertIn("algemas", ARTIFICER_GEAR)
+        self.assertIn("estacas_de_ferro", ARTIFICER_GEAR)
         self.assertNotIn("corrente", ARTIFICER_GEAR)
-        self.assertNotIn("algemas", ARTIFICER_GEAR)
+
+        from rule_engine.artificer_base import ARTIFICER_GEAR_CATALOG_NAMES
+        from rule_engine.catalog import CATALOGO_EQUIPAMENTOS
+        self.assertEqual(set(ARTIFICER_GEAR_CATALOG_NAMES), ARTIFICER_GEAR)
+        for gear_id, catalog_name in ARTIFICER_GEAR_CATALOG_NAMES.items():
+            with self.subTest(gear=gear_id):
+                data = CATALOGO_EQUIPAMENTOS[catalog_name]
+                self.assertIn("peso", data)
+                self.assertIn("custo_po", data)
 
     def test_tinkers_magic_creates_gear_with_tools_and_uses(self):
         result = resolver_caracteristica({
             "classe": "artifice", "recurso": "Magia de Artífice", "nivel": 1,
             "inteligencia": 16, "acao": "criar", "item": "Estrepes", "item_id": "tinker-gear-1",
-            "ferramentas_tinkering_em_maos": True, "distancia_m": 1, "espaco_desocupado": True, "usos_gastos": 1,
+            "ferramentas_tinkering_em_maos": True, "distancia_m": 1, "espaco_desocupado": True,
+            "posicao_criacao": {"x": 1, "y": 2}, "usos_gastos": 1,
         })
         self.assertEqual(result["resultado"], "criado")
+        self.assertEqual(result["delta_mundo"]["adicionar_objeto"]["id"], "tinker-gear-1")
+        self.assertEqual(result["delta_mundo"]["adicionar_objeto"]["posicao"], {"x": 1, "y": 2})
+        self.assertEqual(result["item_criado"]["unidades_por_item"], 20)
         self.assertEqual(result["usos_maximos"], 3)
         self.assertEqual(result["usos_restantes"], 1)
         self.assertEqual(result["usos_gastos_depois"], 2)
@@ -217,10 +234,11 @@ class ArtificerProgressionTests(unittest.TestCase):
             "classe": "artifice", "recurso": "Magia de Artífice", "nivel": 1,
             "inteligencia": 12, "acao": "criar", "item": "Corda",
             "ferramentas_de_funileiro_em_maos": True, "distancia_m": 1.5,
-            "espaco_desocupado": True, "usos_gastos": 0,
+            "espaco_desocupado": True, "posicao_criacao": {"x": 3, "y": 5},
+            "item_id": "tinker-canonical-1", "usos_gastos": 0,
         })
         self.assertEqual(result["resultado"], "criado")
-        self.assertTrue(result["requer_id_unico_ao_persistir"])
+        self.assertFalse(result["requer_id_unico_ao_persistir"])
 
         invalid = resolver_caracteristica({
             "classe": "artifice", "recurso": "Magia de Artífice", "nivel": 1,
@@ -353,19 +371,44 @@ class ArtificerProgressionTests(unittest.TestCase):
 
     def test_starting_equipment_is_a_choice_and_uses_selected_artisan_tool(self):
         character = criar_personagem({
+            "character_id": "pc-artifice-test-1",
             "name": "Artífice de Teste", "species": "humano", "class": "artifice",
             "level": 1,
             "ability_scores": {"forca": 8, "destreza": 14, "constituicao": 13,
                                "inteligencia": 15, "sabedoria": 12, "carisma": 10},
             "class_skill_proficiencies": ["arcanismo", "investigacao"],
             "artisan_tool_proficiency": "Ferramentas de Ferreiro",
+            "artificer_cantrips": ["Bolha Ácida", "Luz"],
+            "artificer_prepared_spells": ["Curar Ferimentos", "Detectar Magia"],
             "class_equipment": "A",
         })
         sheet = ficha_personagem(character)
         self.assertEqual(sheet["equipamento_classe"]["escolha"], "A")
-        self.assertIn("Ferramentas de Ferreiro", sheet["equipamento_classe"]["itens"])
+        self.assertEqual(
+            sheet["equipamento_classe"]["itens"],
+            ["Armadura de Couro Batido", "Adaga", "Ferramentas de Ladrão",
+             "Ferramentas de Funileiro", "Pacote de Exploração de Masmorras"],
+        )
+        self.assertNotIn("Ferramentas de Ferreiro", sheet["equipamento_classe"]["itens"])
+        self.assertIn("Ferramentas de Ferreiro", sheet["proficiencias_classe"]["ferramentas"])
         self.assertEqual(sheet["equipamento_classe"]["ouro"], 16)
         self.assertFalse(sheet["equipamento_classe_pendente"])
+        self.assertEqual(sheet["conjuracao"]["truques_conhecidos"], ["Bolha Ácida", "Luz"])
+        self.assertEqual(sheet["conjuracao"]["magias_preparadas"], ["Curar Ferimentos", "Detectar Magia"])
+        self.assertEqual(sheet["conjuracao"]["espacos_totais"], {"1": 2})
+        self.assertEqual(sheet["conjuracao"]["cd_magia"], 9)
+        inventory = sheet["inventario_inicial"]
+        self.assertEqual(inventory["resultado"], "pronto")
+        self.assertEqual(inventory["ouro"], 16)
+        ids = [item["id"] for item in inventory["itens"]]
+        self.assertEqual(len(ids), len(set(ids)))
+        dagger = next(item for item in inventory["itens"] if item["nome"] == "Adaga")
+        self.assertEqual(dagger["dano"], "1d4")
+        armor = next(item for item in inventory["itens"] if item["nome"] == "Armadura de Couro Batido")
+        self.assertEqual(armor["ca"], 12)
+        pack = next(item for item in inventory["itens"] if item["nome"] == "Pacote de Exploração de Masmorras")
+        self.assertEqual(len(pack["conteudo_ids"]), 9)
+        self.assertAlmostEqual(inventory["peso_total"], 42.0)
 
     def test_artificer_attunement_limit_accepts_replicated_item_metadata(self):
         from rule_engine.economy import resolver_sintonizacao
