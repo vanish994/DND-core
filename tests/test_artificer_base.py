@@ -108,6 +108,16 @@ class ArtificerProgressionTests(unittest.TestCase):
         })
         self.assertEqual(repair["truque_conhecido"], "Reparar")
 
+    def test_spell_storing_preserves_concentration_requirement(self):
+        result = resolver_caracteristica({
+            "classe": "artifice", "recurso": "Item Armazenador de Magia", "nivel": 11,
+            "magia": "Teia", "nivel_magia": 2, "objeto_adequado": True,
+            "descanso_longo_concluido": True, "distancia_m": 1,
+            "tempo_conjuracao_acao": True,
+        })
+        self.assertEqual(result["resultado"], "armazenado")
+        self.assertTrue(result["concentracao_requerida"])
+
     def test_spell_storing_rejects_non_action_spell_even_if_caller_claims_action(self):
         result = resolver_caracteristica({
             "classe": "artifice", "recurso": "Item Armazenador de Magia", "nivel": 11,
