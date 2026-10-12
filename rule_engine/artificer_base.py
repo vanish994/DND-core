@@ -92,6 +92,9 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
         item = "".join(ch for ch in item if not unicodedata.combining(ch)).replace(" ", "_").replace("-", "_")
         uses = max(1, int_mod)
         if facts.get("acao") in {"criar", "create"}:
+            if facts.get("ferramentas_tinkering_em_maos") is not True:
+                return {**base, "resultado": "requer_dados", "motivo": "confirmar_ferramentas_de_tinkering_em_maos",
+                        "requer": "ferramentas_tinkering_em_maos=True"}
             if not item:
                 return {**base, "resultado": "escolha", "opcoes": sorted(ARTIFICER_GEAR),
                         "acao": "acao_magica", "ferramentas_requeridas": "ferramentas_de_tinkering"}
@@ -117,8 +120,15 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
         tier = 2 if level < 6 else 6 if level < 10 else 10 if level < 14 else 14
         if facts.get("acao") in {"criar", "create"}:
             chosen = facts.get("planos", facts.get("plans", []))
+            if facts.get("ferramentas_artesao_em_maos") is not True:
+                return {**base, "resultado": "requer_dados", "motivo": "confirmar_ferramentas_de_artesao_em_maos",
+                        "requer": "ferramentas_artesao_em_maos=True"}
             if not isinstance(chosen, list):
                 return {**base, "resultado": "bloqueado", "motivo": "planos_devem_ser_lista"}
+            if not chosen:
+                return {**base, "resultado": "escolha", "requer": "ao_menos_um_plano_conhecido"}
+            if len(set(chosen)) != len(chosen):
+                return {**base, "resultado": "bloqueado", "motivo": "cada_item_deve_usar_plano_diferente"}
             if len(chosen) > capacity:
                 return {**base, "resultado": "bloqueado", "motivo": "limite_de_itens_excedido",
                         "limite": capacity}
@@ -127,7 +137,19 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 return {**base, "resultado": "bloqueado", "motivo": "plano_nao_conhecido"}
             return {**base, "resultado": "criado", "itens": chosen,
                     "quantidade": len(chosen), "requer": "descanso_longo",
-                    "sintonizacao_imediata_se_necessaria": True}
+                    "sintonizacao_imediata_se_necessaria": True,
+                    "desaparece_quando_voce_morre": "apos_1d4_dias",
+                    "itens_de_plano_substituido": "desaparecem_imediatamente",
+                    "conteudo_de_recipiente_desaparecido": "reaparece_inofensivamente_no_espaco"}
+        if facts.get("acao") in {"substituir_plano", "replace_plan"}:
+            old_plan, new_plan = facts.get("plano_antigo"), facts.get("plano_novo")
+            known = facts.get("planos_conhecidos", [])
+            if not old_plan or not new_plan:
+                return {**base, "resultado": "escolha", "requer": ["plano_antigo", "plano_novo"]}
+            if old_plan not in known or new_plan not in known:
+                return {**base, "resultado": "bloqueado", "motivo": "ambos_os_planos_devem_ser_conhecidos"}
+            return {**base, "resultado": "plano_substituido", "remove": old_plan, "adiciona": new_plan,
+                    "itens_criados_com_plano_antigo": "desaparecem_imediatamente"}
         return {**base, "resultado": "resolvido", "planos_conhecidos": plans,
                 "limite_itens_criados": capacity, "nivel_minimo_do_plano": tier,
                 "limiares_de_plano": [2, 6, 10, 14],
@@ -135,6 +157,14 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
 
     if key == "magic_item_tinker":
         action = str(facts.get("acao", "")).lower()
+        if action in {"carregar", "charge", "drenar", "drain", "transmutar", "transmute"}:
+            if facts.get("item_replicado") is not True:
+                return {**base, "resultado": "requer_dados", "motivo": "confirmar_que_o_item_foi_criado_por_replicar_item_magico",
+                        "requer": "item_replicado=True"}
+            if facts.get("distancia_m") is None:
+                return {**base, "resultado": "requer_dados", "motivo": "distancia_ate_o_item_necessaria"}
+            if float(facts["distancia_m"]) > 1.5:
+                return {**base, "resultado": "bloqueado", "motivo": "item_fora_de_1_5_metro"}
         if action in {"carregar", "charge"}:
             slot = int(facts.get("nivel_espaco", 0))
             current = int(facts.get("cargas_atuais", 0))
@@ -146,6 +176,8 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                     "cargas_atuais": current + restored, "espaco_gasto": slot,
                     "requer_item_replicado": True, "acao": "acao_bonus"}
         if action in {"drenar", "drain"}:
+            if facts.get("usado_no_descanso_longo", False):
+                return {**base, "resultado": "bloqueado", "motivo": "drenar_item_ja_usado_apos_descanso_longo"}
             rarity = str(facts.get("raridade", "")).lower()
             if rarity not in {"comum", "incomum", "raro", "common", "uncommon", "rare"}:
                 return {**base, "resultado": "requer_dados", "motivo": "raridade_do_item_replicado_necessaria"}
@@ -154,6 +186,8 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                     "nivel_espaco_recuperado": slot_level, "limite": "uma_vez_por_descanso_longo",
                     "espaco_expira": "descanso_longo", "requer_item_replicado": True, "acao": "acao_bonus"}
         if action in {"transmutar", "transmute"}:
+            if facts.get("usado_no_descanso_longo", False):
+                return {**base, "resultado": "bloqueado", "motivo": "transmutar_item_ja_usado_apos_descanso_longo"}
             origem, destino = facts.get("plano_origem"), facts.get("plano_destino")
             conhecidos = facts.get("planos_conhecidos", [])
             if not origem or not destino:
@@ -189,6 +223,9 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             return {**base, "resultado": "bloqueado", "motivo": "magia_deve_ser_de_1_a_3_circulo"}
         if facts.get("componente_material_consumido", False):
             return {**base, "resultado": "bloqueado", "motivo": "magia_consume_componente_material"}
+        if facts.get("objeto_adequado") is not True:
+            return {**base, "resultado": "requer_dados", "motivo": "objeto_deve_ser_arma_simples_marcial_ou_foco_de_conjuracao",
+                    "requer": "objeto_adequado=True"}
         spell = facts.get("magia")
         if not spell:
             return {**base, "resultado": "escolha", "requer": ["magia_de_artifice_de_1_a_3_circulo",
@@ -208,6 +245,8 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
     if key == "advanced_artifice":
         spent = int(facts.get("usos_gastos", 0))
         if facts.get("acao") in {"recuperar", "recover"}:
+            if facts.get("descanso_curto_concluido") is not True:
+                return {**base, "resultado": "requer_dados", "motivo": "confirmar_conclusao_de_descanso_curto"}
             return {**base, "resultado": "recuperado", "usos_recuperados": 1,
                     "requer": "descanso_curto", "recurso": "lampejo_de_genio"}
         return {**base, "resultado": "resolvido", "limite_sintonizacao": 5,
@@ -217,11 +256,21 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
         return {**base, "resultado": "resolvido", "limite_sintonizacao": 6}
 
     if key == "soul_of_artifice":
+        if facts.get("acao") in {"recuperar_lampejo", "recover_flash"}:
+            if facts.get("descanso_curto_concluido") is not True:
+                return {**base, "resultado": "requer_dados", "motivo": "confirmar_conclusao_de_descanso_curto"}
+            if facts.get("sintonizado_item_magico") is not True:
+                return {**base, "resultado": "bloqueado", "motivo": "requer_sintonizacao_com_item_magico"}
+            return {**base, "resultado": "recuperado", "usos_recuperados": "todos",
+                    "recurso": "lampejo_de_genio"}
         if facts.get("acao") in {"evitar_morte", "cheat_death"}:
+            if facts.get("morte_instantanea", False):
+                return {**base, "resultado": "bloqueado", "motivo": "nao_funciona_contra_morte_instantanea"}
             items = facts.get("itens_destruidos", [])
             if not isinstance(items, list) or not items:
                 return {**base, "resultado": "escolha", "requer": "itens_replicados_incomuns_ou_raros"}
-            if any(not isinstance(item, dict) or str(item.get("raridade", "")).lower() not in {"incomum", "raro", "uncommon", "rare"}
+            if any(not isinstance(item, dict) or item.get("replicado") is not True
+                   or str(item.get("raridade", "")).lower() not in {"incomum", "raro", "uncommon", "rare"}
                    for item in items):
                 return {**base, "resultado": "bloqueado", "motivo": "raridade_nao_elegivel"}
             return {**base, "resultado": "sobreviveu", "pv_atuais": 20 * len(items),
