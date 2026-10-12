@@ -374,6 +374,8 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 return {**base, "resultado": "bloqueado", "motivo": "usos_esgotados",
                         "usos_maximos": uses, "usos_gastos": gastos}
             item_id = facts.get("item_id")
+            if not isinstance(item_id, str) or not item_id.strip():
+                return {**base, "resultado": "requer_dados", "motivo": "id_unico_para_persistir_item_no_inventario_necessario"}
             from .catalog import CATALOGO_EQUIPAMENTOS
             nome_catalogo = ARTIFICER_GEAR_CATALOG_NAMES[item]
             dados_catalogo = CATALOGO_EQUIPAMENTOS.get(nome_catalogo)
@@ -392,7 +394,8 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             }
             return {**base, "resultado": "criado", "item": item, "nome_item": nome_catalogo,
                     "dados_catalogo": dict(dados_catalogo), "quantidade": 1,
-                    "item_criado": item_criado, "requer_id_unico_ao_persistir": not bool(item_id),
+                    "item_criado": item_criado, "requer_id_unico_ao_persistir": False,
+                    "delta_inventario": {"item_novo": item_criado},
                     "alcance_m": 1.5, "requer_espaco_desocupado": True,
                     "acao": "acao_magica", "usos_maximos": uses,
                     "usos_gastos_depois": gastos + 1, "delta_usos": -1,
@@ -741,6 +744,11 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             tinker_items = facts.get("itens_tinkers_atuais")
             if not isinstance(tinker_items, list):
                 return {**base, "resultado": "requer_dados", "motivo": "lista_de_itens_tinkers_atuais_necessaria"}
+            if any(not isinstance(item, dict) or not item.get("id") for item in tinker_items):
+                return {**base, "resultado": "requer_dados", "motivo": "todos_os_itens_tinkers_precisam_de_id_unico_para_expirar"}
+            ids_itens_tinkers = [str(item["id"]) for item in tinker_items]
+            if len(set(ids_itens_tinkers)) != len(ids_itens_tinkers):
+                return {**base, "resultado": "bloqueado", "motivo": "ids_de_itens_tinkers_duplicados"}
             resources = {
                 "magia_de_artifice": {"usos_gastos": 0, "usos_maximos": uses_max},
                 "espacos_de_magia": "todos",
@@ -753,7 +761,8 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             return {**base, "resultado": "recursos_recuperados", "tipo_descanso": "longo",
                     "recursos": resources, "replicar_item_magico_disponivel": level >= 2,
                     "pode_armazenar_outra_magia": level >= 11,
-                    "itens_tinkers_que_expiram": tinker_items}
+                    "itens_tinkers_que_expiram": tinker_items,
+                    "delta_inventario": {"remover_ids": ids_itens_tinkers}}
         if rest in {"curto", "short", "descanso_curto", "short_rest"}:
             if level >= 20 and facts.get("sintonizado_item_magico") is None:
                 return {**base, "resultado": "requer_dados", "motivo": "confirmar_sintonizacao_para_recuperar_lampejo"}
