@@ -180,6 +180,13 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             if facts.get("ferramentas_tinkering_em_maos") is not True:
                 return {**base, "resultado": "requer_dados", "motivo": "confirmar_ferramentas_de_tinkering_em_maos",
                         "requer": "ferramentas_tinkering_em_maos=True"}
+            if facts.get("distancia_m") is None:
+                return {**base, "resultado": "requer_dados", "motivo": "distancia_ate_o_espaco_de_criacao_necessaria"}
+            if float(facts["distancia_m"]) > 1.5:
+                return {**base, "resultado": "bloqueado", "motivo": "espaco_de_criacao_fora_de_1_5_metro"}
+            if facts.get("espaco_desocupado") is not True:
+                return {**base, "resultado": "requer_dados", "motivo": "confirmar_espaco_desocupado",
+                        "requer": "espaco_desocupado=True"}
             if not item:
                 return {**base, "resultado": "escolha", "opcoes": sorted(ARTIFICER_GEAR),
                         "acao": "acao_magica", "ferramentas_requeridas": "ferramentas_de_tinkering"}
@@ -254,6 +261,8 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             if facts.get("ferramentas_artesao_em_maos") is not True:
                 return {**base, "resultado": "requer_dados", "motivo": "confirmar_ferramentas_de_artesao_em_maos",
                         "requer": "ferramentas_artesao_em_maos=True"}
+            if facts.get("descanso_longo_concluido") is not True:
+                return {**base, "resultado": "requer_dados", "motivo": "confirmar_conclusao_de_descanso_longo"}
             chosen = facts.get("planos", facts.get("plans", []))
             known = facts.get("planos_conhecidos")
             if not isinstance(chosen, list) or any(not isinstance(plan, str) for plan in chosen):
@@ -395,6 +404,12 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 "beneficio_fabricacao": "incluido_em_magia_de_artifice"}
 
     if key == "spell_storing_item":
+        if facts.get("descanso_longo_concluido") is not True:
+            return {**base, "resultado": "requer_dados", "motivo": "confirmar_conclusao_de_descanso_longo"}
+        if facts.get("distancia_m") is None:
+            return {**base, "resultado": "requer_dados", "motivo": "distancia_ate_o_objeto_necessaria"}
+        if float(facts["distancia_m"]) > 1.5:
+            return {**base, "resultado": "bloqueado", "motivo": "objeto_fora_de_1_5_metro"}
         spell_level = int(facts.get("nivel_magia", facts.get("spell_level", 0)))
         if spell_level < 1 or spell_level > 3:
             return {**base, "resultado": "bloqueado", "motivo": "magia_deve_ser_de_1_a_3_circulo"}
