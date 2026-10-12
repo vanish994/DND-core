@@ -142,6 +142,8 @@ def test_artifice_nivel_1_ponta_a_ponta_pelo_motor():
     assert primeira.status == "resolved"
     assert "class.feature" in primeira.matched_rules
     assert primeira.outcome["resultado"] == "conjurada"
+    assert primeira.outcome["mecanica"]["tipo"] == "cura"
+    assert primeira.outcome["mecanica"]["dados_cura_base"] == "2d8"
     assert primeira.outcome["slot_consumido"] == 1
     assert primeira.outcome["delta_espacos"] == {"1": -1}
     espacos = dict(primeira.outcome["espacos_restantes_depois"])
