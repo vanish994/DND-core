@@ -16,6 +16,7 @@ from .artificer_base import ARTIFICER_PREPARED_SPELLS
 ARTIFICER_SPELL_LEVELS: dict[str, int] = {
     # Truques
     "Acudir os Moribundos": 0,
+    "Consertar": 0,
     "Bolha Ácida": 0,
     "Chicote de Espinhos": 0,
     "Luz": 0,
