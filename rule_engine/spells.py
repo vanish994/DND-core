@@ -1430,11 +1430,29 @@ def resolver_magia(fatos: dict) -> dict[str, Any]:
         and fatos.get("alvo_veste_armadura") is True
     ):
         return {"resultado": "bloqueado", "motivo": "alvo_ja_veste_armadura"}
+    # Espaço de magia é pré-condição da conjuração: sem espaço disponível a
+    # magia é bloqueada, mesmo quando o chamador envia o nome ("magia").
+    if "has_slot" in fatos and not bool(fatos.get("has_slot")):
+        return {
+            "resultado": "bloqueado",
+            "motivo": "no_slot",
+            "reason": "no_slot",
+            "magia": magia["nome"],
+            "circulo": magia["circulo"],
+        }
     try:
-        usado = int(fatos.get("espaco", fatos.get("spell_level", magia["circulo"])))
+        if "espaco" in fatos and fatos.get("espaco") is not None:
+            usado = int(fatos["espaco"])
+        elif "slot_level" in fatos and fatos.get("slot_level") is not None:
+            usado = int(fatos["slot_level"])
+        elif "spell_level" in fatos and fatos.get("spell_level") is not None:
+            usado = int(fatos["spell_level"])
+        else:
+            usado = int(magia["circulo"])
         aumento = _circulo_efetivo(magia["circulo"], usado)
     except (TypeError, ValueError) as erro:
-        return {"resultado": "bloqueado", "motivo": "circulo_invalido", "detalhe": str(erro)}
+        motivo = "slot_level_too_low" if "inferior ao círculo" in str(erro) else "circulo_invalido"
+        return {"resultado": "bloqueado", "motivo": motivo, "reason": motivo, "detalhe": str(erro)}
     componentes = set(magia["componentes"].replace("(", ",").replace(")", ",").split(","))
     requeridos = {c.strip() for c in componentes if c.strip() in {"V", "S", "M"}}
     disponiveis = set(fatos.get("componentes_disponiveis", ["V", "S", "M"]))

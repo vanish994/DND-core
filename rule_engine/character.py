@@ -18,8 +18,8 @@ ESPECIES = {
     "elfo": {"tamanho": "medio", "deslocamento": 9},
     "gnomo": {"tamanho": "pequeno", "deslocamento": 9},
     "golias": {"tamanho": "medio", "deslocamento": 10.5},
-    "halfling": {"tamanho": "pequeno", "deslocamento": 7.5},
-    "humano": {"tamanho": "medio", "deslocamento": 9},
+    "halfling": {"tamanho": "pequeno", "deslocamento": 9},
+    "humano": {"tamanho": "pequeno_ou_medio", "deslocamento": 9},
     "orc": {"tamanho": "medio", "deslocamento": 9},
     "tiefling": {"tamanho": "pequeno_ou_medio", "deslocamento": 9},
 }

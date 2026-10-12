@@ -83,6 +83,7 @@ from .conditions import (
     resolver_estado_condicao,
 )
 from .core import ResultadoD20, bonus_proficiencia, modificador_atributo, resolver_teste_d20
+from .damage import aplicar_defesas_monstro, normalizar_tipo_dano, possui_defesa
 from .dice import rolar_d20_auditavel
 from .economy import (
     ITENS_MAGICOS,
@@ -94,6 +95,17 @@ from .economy import (
     resolver_sintonizacao,
     usar_item_magico,
     vender_item,
+)
+from .encounters import (
+    XP_BUDGET_POR_PERSONAGEM,
+    atitude_inicial,
+    avaliar_encontro,
+    avaliar_encontro_de_monstros,
+    budgets_do_grupo,
+    orcamento_xp,
+    personalidade_monstro,
+    relacoes_monstros,
+    resolver_encontro,
 )
 from .engine import Resolution, Rule, RuleEngine
 from .exploration_actions import resolver_acao_esconder, resolver_acao_influenciar
@@ -123,6 +135,17 @@ from .martial import (
 )
 from .martial_subclasses import SUBCLASS_FEATURES, caracteristicas_subclasse, resolver_subclasse_marcial
 from .rules import build_default_engine
+from .species import (
+    ANCESTRALIDADES_GIGANTES,
+    LEGADOS_INFEROS,
+    LINHAGENS_ELFICAS,
+    LINHAGENS_GNOMICAS,
+    TRACOS_ESPECIE,
+    listar_especies,
+    normalizar_especie,
+    resolver_tracos_especie,
+    tracos_de_especie,
+)
 from .spellcasters import (
     resolver_canalizar_divindade,
     resolver_forma_selvagem,
@@ -289,10 +312,31 @@ __all__ = [
     "adicionar_exaustao",
     "ajustar_dano",
     "aplicar_dano",
+    "aplicar_defesas_monstro",
+    "normalizar_tipo_dano",
+    "possui_defesa",
     "curar",
     "descanso_curto",
     "descanso_longo",
     "salvaguarda_contra_morte",
     "estabilizar",
     "resolver_descanso",
+    "TRACOS_ESPECIE",
+    "LINHAGENS_ELFICAS",
+    "LINHAGENS_GNOMICAS",
+    "ANCESTRALIDADES_GIGANTES",
+    "LEGADOS_INFEROS",
+    "listar_especies",
+    "normalizar_especie",
+    "tracos_de_especie",
+    "resolver_tracos_especie",
+    "XP_BUDGET_POR_PERSONAGEM",
+    "orcamento_xp",
+    "budgets_do_grupo",
+    "avaliar_encontro",
+    "avaliar_encontro_de_monstros",
+    "atitude_inicial",
+    "personalidade_monstro",
+    "relacoes_monstros",
+    "resolver_encontro",
 ]
