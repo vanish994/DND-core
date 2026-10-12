@@ -138,7 +138,7 @@ FEATURES_BY_CLASS = {
         1: ["Conjuração", "Magia de Artífice"],
         2: ["Replicar Item Mágico"],
         3: ["Subclasse"],
-        6: ["Artesão de Item Mágico"],
+        6: ["Ajustador de Item Mágico"],
         7: ["Lampejo de Gênio"],
         10: ["Adepto de Item Mágico"],
         11: ["Item Armazenador de Magia"],
