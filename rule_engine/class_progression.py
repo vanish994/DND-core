@@ -160,8 +160,8 @@ for _classe, _niveis in _ASI_LEVELS.items():
         nome = "Dádiva Épica" if _nivel == 19 else "Aumento de Atributo ou Talento"
         FEATURES_BY_CLASS[_classe].setdefault(_nivel, []).append(nome)
 
-# Os marcos de subclasse são específicos por classe no PHB 2024.
-# O Artífice mantém a progressão de subclasse da versão adotada pelo projeto.
+# Os marcos de subclasse seguem as versões oficiais usadas pelo projeto.
+# Artífice 5.5e: características de subclasse nos níveis 3, 5, 9 e 15.
 _SUBCLASS_LEVELS = {
     "barbaro": (3, 6, 10, 14),
     "bardo": (3, 6, 14),
