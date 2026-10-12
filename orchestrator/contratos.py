@@ -40,13 +40,26 @@ class Acao:
         Esta é a etapa "interpretar o pedido estruturado": nada de regra é
         decidido aqui, apenas o reconhecimento do formato.
         """
+        if argumentos is not None and not isinstance(argumentos, Mapping):
+            return cls(
+                ferramenta=str(nome),
+                tipo="entrada_invalida",
+                parametros={"_erro_entrada": "argumentos_deve_ser_objeto"},
+            )
         argumentos = dict(argumentos or {})
         if nome == "sugerir_monstros":
             fatos: dict[str, Any] = {"type": "bestiary", "operacao": "sugerir", **argumentos}
         elif nome == "consultar_monstro":
             fatos = {"type": "bestiary", "operacao": "bloco_completo", **argumentos}
         elif nome == "resolver_regra":
-            fatos = dict(argumentos.get("fatos") or {})
+            fatos_brutos = argumentos.get("fatos")
+            if fatos_brutos is not None and not isinstance(fatos_brutos, Mapping):
+                return cls(
+                    ferramenta=nome,
+                    tipo="entrada_invalida",
+                    parametros={"_erro_entrada": "fatos_deve_ser_objeto"},
+                )
+            fatos = dict(fatos_brutos or {})
         else:
             return cls(ferramenta=nome, tipo="desconhecida", parametros=argumentos)
         return cls(
