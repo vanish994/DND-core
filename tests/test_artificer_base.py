@@ -9,6 +9,32 @@ from rule_engine.spellcasting import progresso_artifice
 
 
 class ArtificerProgressionTests(unittest.TestCase):
+    def test_level_one_artificer_spellcasting_checks_known_and_prepared_spells(self):
+        base = {
+            "classe": "artifice", "nivel": 1, "recurso": "conjuracao",
+            "acao": "conjurar", "truques_conhecidos": ["Raio de Fogo", "Luz"],
+            "magias_preparadas": ["Curar Ferimentos", "Alarme"],
+            "espacos_restantes": {"1": 2}, "inteligencia": 16,
+        }
+        known_cantrip = resolver_caracteristica({**base, "magia": "Reparar"})
+        self.assertNotEqual(known_cantrip.get("motivo"), "truque_nao_conhecido")
+        unprepared = resolver_caracteristica({**base, "magia": "Fogo das Fadas"})
+        self.assertEqual(unprepared["resultado"], "bloqueado")
+        self.assertEqual(unprepared["motivo"], "magia_nao_preparada")
+        no_slot = resolver_caracteristica({**base, "magia": "Curar Ferimentos", "espacos_restantes": {"1": 0}})
+        self.assertEqual(no_slot["motivo"], "sem_espacos_de_magia")
+
+    def test_level_one_artificer_spellcasting_delegates_prepared_spell_to_general_resolver(self):
+        result = resolver_caracteristica({
+            "classe": "artifice", "nivel": 1, "recurso": "conjuracao", "acao": "conjurar",
+            "magia": "Curar Ferimentos", "magias_preparadas": ["Curar Ferimentos"],
+            "truques_conhecidos": ["Raio de Fogo", "Luz"], "espacos_restantes": {"1": 2},
+            "inteligencia": 16, "bonus_proficiencia": 2, "alvo_pv_atuais": 2, "alvo_pv_maximos": 10,
+        })
+        self.assertNotEqual(result.get("motivo"), "magia_nao_preparada")
+        self.assertNotEqual(result.get("motivo"), "magia_fora_da_lista_do_artifice")
+        self.assertEqual(result.get("slot_consumido"), 1)
+
     def test_fixed_prepared_spell_table_for_all_levels(self):
         self.assertEqual(
             [progresso_artifice(level, 16)["magias_preparadas"] for level in range(1, 21)],
