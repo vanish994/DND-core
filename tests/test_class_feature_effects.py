@@ -297,7 +297,7 @@ class PaladinoGuardiaoFeatureTests(unittest.TestCase):
 
     def test_artifice_item_armazenador_ate_terceiro_circulo(self):
         resultado = caracteristica("artifice", "Item Armazenador de Magia", 11,
-                                   inteligencia=16, magia="Dissipar Magia", nivel_magia=3, tempo_conjuracao_acao=True, objeto_adequado=True)
+                                   inteligencia=16, magia="Dissipar Magia", nivel_magia=3, tempo_conjuracao_acao=True, objeto_adequado=True, descanso_longo_concluido=True, distancia_m=1)
         self.assertEqual(resultado["resultado"], "armazenado")
         self.assertEqual(resultado["usos"], 6)
 
