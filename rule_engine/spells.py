@@ -725,6 +725,16 @@ _DETALHADAS["passos longos"] = (
     {"bonus_deslocamento_m": 3, "duracao": "1 hora"},
 )
 
+MAGIAS["passos longos"] = {
+    "nome": "Passos Longos",
+    "circulo": 1,
+    "escola": "transmutação",
+    "componentes": "V, S, M",
+    "concentracao": False,
+    "ritual": False,
+    "duracao": "1 hora",
+}
+
 for _antigo, _novo in _ALIAS_PARA_2024:
     _entrada = MAGIAS.get(_antigo.lower())
     if _entrada is not None:
