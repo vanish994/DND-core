@@ -28,6 +28,7 @@ ARTIFICER_FEATURE_ALIASES = {
     "conjuracao": "conjuracao",
     "magia_de_artifice": "tinkers_magic",
     "tinkers_magic": "tinkers_magic",
+    "tinker_s_magic": "tinkers_magic",
     "replicar_item_magico": "replicate_magic_item",
     "replicate_magic_item": "replicate_magic_item",
     "artesao_de_item_magico": "magic_item_tinker",
@@ -167,6 +168,8 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 return {**base, "resultado": "bloqueado", "motivo": "item_fora_de_1_5_metro"}
         if action in {"carregar", "charge"}:
             slot = int(facts.get("nivel_espaco", 0))
+            if facts.get("espaco_disponivel") is not True:
+                return {**base, "resultado": "bloqueado", "motivo": "espaco_de_magia_indisponivel"}
             current = int(facts.get("cargas_atuais", 0))
             maximum = int(facts.get("cargas_maximas", 0))
             if slot < 1 or maximum < 1 or current < 0 or current > maximum:
@@ -202,8 +205,13 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
     if key == "flash_of_genius":
         if not facts.get("criatura_falhou", facts.get("creature_failed", False)):
             return {**base, "resultado": "bloqueado", "motivo": "so_apos_falha_em_teste_ou_salvaguarda"}
-        if facts.get("distancia_m") is not None and float(facts["distancia_m"]) > 9:
+        if facts.get("distancia_m") is None:
+            return {**base, "resultado": "requer_dados", "motivo": "distancia_ate_a_criatura_necessaria"}
+        if float(facts["distancia_m"]) > 9:
             return {**base, "resultado": "bloqueado", "motivo": "alvo_fora_do_alcance"}
+        if facts.get("alvo_visivel") is not True:
+            return {**base, "resultado": "requer_dados", "motivo": "confirmar_que_voce_ve_o_alvo",
+                    "requer": "alvo_visivel=True"}
         spent = int(facts.get("usos_gastos", 0))
         maximum = max(1, int_mod)
         if spent >= maximum:
@@ -264,6 +272,8 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             return {**base, "resultado": "recuperado", "usos_recuperados": "todos",
                     "recurso": "lampejo_de_genio"}
         if facts.get("acao") in {"evitar_morte", "cheat_death"}:
+            if facts.get("caiu_a_0_pv") is not True:
+                return {**base, "resultado": "requer_dados", "motivo": "confirmar_que_os_pv_chegaram_a_zero"}
             if facts.get("morte_instantanea", False):
                 return {**base, "resultado": "bloqueado", "motivo": "nao_funciona_contra_morte_instantanea"}
             items = facts.get("itens_destruidos", [])
