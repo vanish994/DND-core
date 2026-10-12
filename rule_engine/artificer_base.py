@@ -588,6 +588,13 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             item_id = facts.get("item_id")
             if not isinstance(item_id, str) or not item_id.strip():
                 return {**base, "resultado": "requer_dados", "motivo": "id_unico_do_objeto_no_mundo_necessario"}
+            existing_ids = facts.get("ids_objetos_existentes", facts.get("existing_world_object_ids"))
+            if not isinstance(existing_ids, list) or any(not isinstance(value, str) or not value.strip() for value in existing_ids):
+                return {**base, "resultado": "requer_dados",
+                        "motivo": "lista_de_ids_dos_objetos_existentes_necessaria_para_validar_unicidade"}
+            if item_id.strip() in {value.strip() for value in existing_ids}:
+                return {**base, "resultado": "bloqueado", "motivo": "id_do_objeto_ja_existe_no_mundo",
+                        "item_id": item_id.strip()}
             position = facts.get("posicao_criacao", facts.get("creation_position", facts.get("espaco_id")))
             if position is None or position == "" or position == {}:
                 return {**base, "resultado": "escolha", "motivo": "selecione_o_espaco_desocupado_dentro_do_alcance",
@@ -615,7 +622,7 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 **base, "resultado": "criado", "item": item, "nome_item": nome_catalogo,
                 "dados_catalogo": dict(dados_catalogo), "quantidade": 1,
                 "unidades_por_item": int(dados_catalogo.get("unidades_por_item", 1)),
-                "item_criado": item_criado, "requer_id_unico_ao_persistir": False,
+                "item_criado": item_criado, "requer_id_unico_ao_persistir": True,
                 "delta_mundo": {"adicionar_objeto": item_criado},
                 "alcance_m": 1.5, "espaco_desocupado_validado": True,
                 "acao": "acao_magica", "usos_maximos": uses,
