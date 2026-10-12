@@ -50,6 +50,8 @@ def resolver_caracteristica(f: dict) -> dict:
         "magic_item_adept": "adepto_de_item_magico",
         "magic_item_master": "mestre_de_item_magico",
         "epic_boon": "dadiva_epica",
+        "recuperacao_recursos": "resource_recovery",
+        "resource_recovery": "resource_recovery",
         "flash_of_genius": "lampejo_de_genio",
         "spell_storing_item": "item_armazenador_de_magia",
         "advanced_artifice": "artifice_avancado",
