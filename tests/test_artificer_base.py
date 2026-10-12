@@ -1,7 +1,7 @@
 """Regression tests for the Artificer 5.5e base class."""
 import unittest
 
-from rule_engine.artificer_base import ARTIFICER_PREPARED_SPELLS, resolve_artificer_feature
+from rule_engine.artificer_base import ARTIFICER_GEAR, ARTIFICER_PREPARED_SPELLS, resolve_artificer_feature
 from rule_engine.character import criar_personagem, ficha_personagem
 from rule_engine.class_features import resolver_caracteristica
 from rule_engine.class_progression import caracteristicas_no_nivel
@@ -51,6 +51,13 @@ class ArtificerProgressionTests(unittest.TestCase):
         self.assertIn("Dádiva Épica", caracteristicas_no_nivel("artifice", 19))
         self.assertIn("Alma do Artífice", caracteristicas_no_nivel("artifice", 20))
 
+    def test_tinkers_magic_uses_exact_26_item_list(self):
+        self.assertEqual(len(ARTIFICER_GEAR), 26)
+        self.assertIn("esferas_de_rolamento", ARTIFICER_GEAR)
+        self.assertIn("caixa_de_isca", ARTIFICER_GEAR)
+        self.assertNotIn("corrente", ARTIFICER_GEAR)
+        self.assertNotIn("algemas", ARTIFICER_GEAR)
+
     def test_tinkers_magic_creates_gear_with_tools_and_uses(self):
         result = resolver_caracteristica({
             "classe": "artifice", "recurso": "Magia de Artífice", "nivel": 1,
@@ -90,6 +97,10 @@ class ArtificerProgressionTests(unittest.TestCase):
         level_6 = resolve_artificer_feature("replicar_item_magico", 6, {})
         level_10 = resolve_artificer_feature("replicar_item_magico", 10, {})
         level_14 = resolve_artificer_feature("replicar_item_magico", 14, {})
+        self.assertEqual(len(level_2["planos_disponiveis"]), 16)
+        self.assertEqual(len(level_6["planos_disponiveis"]), 38)
+        self.assertEqual(len(level_10["planos_disponiveis"]), 49)
+        self.assertEqual(len(level_14["planos_disponiveis"]), 56)
         self.assertIn("alchemy_jug", [p["id"] for p in level_2["planos_disponiveis"]])
         self.assertNotIn("armor_plus_1", [p["id"] for p in level_2["planos_disponiveis"]])
         self.assertIn("armor_plus_1", [p["id"] for p in level_6["planos_disponiveis"]])
