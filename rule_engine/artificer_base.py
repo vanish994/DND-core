@@ -134,42 +134,113 @@ ARTIFICER_PREPARED_SPELLS = {
 ARTIFICER_ATTUNEMENT_LIMIT = {1: 3, 10: 4, 14: 5, 18: 6}
 ARTIFICER_GEAR = {
     "esferas_de_rolamento", "cesta", "saco_de_dormir", "sino", "cobertor",
-    "talha_e_polias", "balde", "estrepes", "vela", "pe_de_cabra", "frasco",
-    "jarro", "lampada", "rede", "oleo", "papel", "pergaminho", "vara", "bolsa",
-    "corda", "saco", "pa", "barbante", "caixa_de_isca", "tocha", "frasco_de_vidro",
+    "talha_e_polias", "garrafa_de_vidro", "balde", "estrepes", "vela",
+    "pe_de_cabra", "frasco", "arpeu", "armadilha_de_caca", "jarro",
+    "lampada", "algemas", "rede", "oleo", "papel", "pergaminho", "vara",
+    "bolsa", "corda", "saco", "pa", "estacas_de_ferro", "barbante",
+    "caixa_de_isca", "tocha", "frasco_de_vidro",
 }
 ARTIFICER_GEAR_LABELS = {
-    "esferas_de_rolamento": "Esferas de rolamento", "cesta": "Cesta",
-    "saco_de_dormir": "Saco de dormir", "sino": "Sino", "cobertor": "Cobertor",
-    "talha_e_polias": "Talha e polias", "balde": "Balde", "estrepes": "Estrepes",
-    "vela": "Vela", "pe_de_cabra": "Pé de cabra", "frasco": "Frasco",
-    "jarro": "Jarro", "lampada": "Lâmpada", "rede": "Rede", "oleo": "Óleo",
-    "papel": "Papel", "pergaminho": "Pergaminho", "vara": "Vara", "bolsa": "Bolsa",
-    "corda": "Corda", "saco": "Saco", "pa": "Pá", "barbante": "Barbante",
-    "caixa_de_isca": "Caixa de isqueiro", "tocha": "Tocha",
+    "esferas_de_rolamento": "Esferas de rolamento",
+    "cesta": "Cesta",
+    "saco_de_dormir": "Saco de dormir",
+    "sino": "Sino",
+    "cobertor": "Cobertor",
+    "talha_e_polias": "Talha e polias",
+    "garrafa_de_vidro": "Garrafa de vidro",
+    "balde": "Balde",
+    "estrepes": "Estrepes",
+    "vela": "Vela",
+    "pe_de_cabra": "Pé de cabra",
+    "frasco": "Frasco",
+    "arpeu": "Arpéu",
+    "armadilha_de_caca": "Armadilha de caça",
+    "jarro": "Jarro",
+    "lampada": "Lâmpada",
+    "algemas": "Algemas",
+    "rede": "Rede",
+    "oleo": "Óleo",
+    "papel": "Papel",
+    "pergaminho": "Pergaminho",
+    "vara": "Vara",
+    "bolsa": "Bolsa",
+    "corda": "Corda",
+    "saco": "Saco",
+    "pa": "Pá",
+    "estacas_de_ferro": "Estacas de ferro",
+    "barbante": "Barbante",
+    "caixa_de_isca": "Caixa de isqueiro",
+    "tocha": "Tocha",
     "frasco_de_vidro": "Frasco de vidro",
 }
 ARTIFICER_GEAR_CATALOG_NAMES = {
-    "esferas_de_rolamento": "Esferas de rolamento", "cesta": "Cesta",
-    "saco_de_dormir": "Saco de Dormir", "sino": "Sino", "cobertor": "Cobertor",
-    "talha_e_polias": "Roldana e Polias", "balde": "Balde", "estrepes": "Estrepes",
-    "vela": "Vela", "pe_de_cabra": "Pé de Cabra", "frasco": "Frasco",
-    "jarro": "Jarro", "lampada": "Lâmpada", "rede": "Rede", "oleo": "Óleo",
-    "papel": "Papel", "pergaminho": "Pergaminho", "vara": "Vara", "bolsa": "Bolsa",
-    "corda": "Corda", "saco": "Saco", "pa": "Pá", "barbante": "Barbante",
-    "caixa_de_isca": "Caixa de isqueiro", "tocha": "Tocha",
+    "esferas_de_rolamento": "Esferas de rolamento",
+    "cesta": "Cesta",
+    "saco_de_dormir": "Saco de Dormir",
+    "sino": "Sino",
+    "cobertor": "Cobertor",
+    "talha_e_polias": "Roldana e Polias",
+    "garrafa_de_vidro": "Garrafa de Vidro",
+    "balde": "Balde",
+    "estrepes": "Estrepes",
+    "vela": "Vela",
+    "pe_de_cabra": "Pé de Cabra",
+    "frasco": "Frasco",
+    "arpeu": "Arpéu",
+    "armadilha_de_caca": "Armadilha de Caça",
+    "jarro": "Jarro",
+    "lampada": "Lâmpada",
+    "algemas": "Algemas",
+    "rede": "Rede",
+    "oleo": "Óleo",
+    "papel": "Papel",
+    "pergaminho": "Pergaminho",
+    "vara": "Vara",
+    "bolsa": "Bolsa",
+    "corda": "Corda",
+    "saco": "Saco",
+    "pa": "Pá",
+    "estacas_de_ferro": "Estacas de Ferro",
+    "barbante": "Barbante",
+    "caixa_de_isca": "Caixa de isqueiro",
+    "tocha": "Tocha",
     "frasco_de_vidro": "Frasco de vidro",
 }
 ARTIFICER_GEAR_ALIASES = {
-    "basket": "cesta", "bell": "sino", "blanket": "cobertor",
-    "bucket": "balde", "candle": "vela", "ball_bearings": "esferas_de_rolamento",
-    "bedroll": "saco_de_dormir", "block_and_tackle": "talha_e_polias",
-    "caltrops": "estrepes", "crowbar": "pe_de_cabra", "flask": "frasco",
-    "jug": "jarro", "lamp": "lampada", "net": "rede", "oil": "oleo",
-    "paper": "papel", "parchment": "pergaminho", "pole": "vara", "pouch": "bolsa",
-    "rope": "corda", "sack": "saco", "shovel": "pa", "string": "barbante",
-    "tinderbox": "caixa_de_isca", "caixa_de_isqueiro": "caixa_de_isca",
-    "torch": "tocha", "vial": "frasco_de_vidro",
+    "basket": "cesta",
+    "bell": "sino",
+    "blanket": "cobertor",
+    "bucket": "balde",
+    "candle": "vela",
+    "ball_bearings": "esferas_de_rolamento",
+    "bedroll": "saco_de_dormir",
+    "block_and_tackle": "talha_e_polias",
+    "bottle,_glass": "garrafa_de_vidro",
+    "glass_bottle": "garrafa_de_vidro",
+    "caltrops": "estrepes",
+    "crowbar": "pe_de_cabra",
+    "flask": "frasco",
+    "grappling_hook": "arpeu",
+    "hunting_trap": "armadilha_de_caca",
+    "jug": "jarro",
+    "lamp": "lampada",
+    "manacles": "algemas",
+    "net": "rede",
+    "oil": "oleo",
+    "paper": "papel",
+    "parchment": "pergaminho",
+    "pole": "vara",
+    "pouch": "bolsa",
+    "rope": "corda",
+    "sack": "saco",
+    "shovel": "pa",
+    "spikes,_iron": "estacas_de_ferro",
+    "iron_spikes": "estacas_de_ferro",
+    "string": "barbante",
+    "tinderbox": "caixa_de_isca",
+    "caixa_de_isqueiro": "caixa_de_isca",
+    "torch": "tocha",
+    "vial": "frasco_de_vidro",
 }
 ARTIFICER_FEATURE_ALIASES = {
     "conjuracao": "conjuracao",
@@ -335,7 +406,10 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 return {**base, "resultado": "bloqueado", "motivo": "ferramentas_de_funileiro_nao_estao_em_maos"}
             if facts.get("distancia_m") is None:
                 return {**base, "resultado": "requer_dados", "motivo": "distancia_ate_o_espaco_de_criacao_necessaria"}
-            distance = float(facts["distancia_m"])
+            try:
+                distance = float(facts["distancia_m"])
+            except (TypeError, ValueError):
+                return {**base, "resultado": "bloqueado", "motivo": "distancia_de_criacao_invalida"}
             if distance < 0 or distance > 1.5:
                 return {**base, "resultado": "bloqueado", "motivo": "espaco_de_criacao_fora_de_1_5_metro"}
             if facts.get("espaco_desocupado") is None:
@@ -343,51 +417,65 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             if facts.get("espaco_desocupado") is not True:
                 return {**base, "resultado": "bloqueado", "motivo": "nao_ha_espaco_desocupado"}
             if not item:
-                return {**base, "resultado": "escolha", "opcoes": [{"id": gear, "nome": ARTIFICER_GEAR_LABELS[gear]} for gear in sorted(ARTIFICER_GEAR)],
-                        "acao": "acao_magica", "ferramentas_requeridas": "ferramentas_de_funileiro"}
+                return {**base, "resultado": "escolha", "opcoes": [
+                    {"id": gear, "nome": ARTIFICER_GEAR_LABELS[gear]} for gear in sorted(ARTIFICER_GEAR)
+                ], "acao": "acao_magica", "ferramentas_requeridas": "ferramentas_de_funileiro"}
             if item not in ARTIFICER_GEAR:
                 return {**base, "resultado": "bloqueado", "motivo": "item_nao_permitido",
                         "opcoes": [{"id": gear, "nome": ARTIFICER_GEAR_LABELS[gear]} for gear in sorted(ARTIFICER_GEAR)]}
+            gastos = facts.get("usos_gastos")
+            if isinstance(gastos, bool):
+                return {**base, "resultado": "bloqueado", "motivo": "usos_gastos_invalidos"}
             try:
-                gastos = int(facts.get("usos_gastos", 0))
+                gastos = int(gastos)
             except (TypeError, ValueError):
                 return {**base, "resultado": "bloqueado", "motivo": "usos_gastos_invalidos"}
             if gastos < 0 or gastos >= uses:
                 return {**base, "resultado": "bloqueado", "motivo": "usos_esgotados",
                         "usos_maximos": uses, "usos_gastos": gastos}
             item_id = facts.get("item_id")
-            if item_id is not None and (not isinstance(item_id, str) or not item_id.strip()):
-                return {**base, "resultado": "bloqueado", "motivo": "id_de_item_invalido"}
+            if not isinstance(item_id, str) or not item_id.strip():
+                return {**base, "resultado": "requer_dados", "motivo": "id_unico_do_objeto_no_mundo_necessario"}
+            position = facts.get("posicao_criacao", facts.get("creation_position", facts.get("espaco_id")))
+            if position is None or position == "" or position == {}:
+                return {**base, "resultado": "escolha", "motivo": "selecione_o_espaco_desocupado_dentro_do_alcance",
+                        "requer": "posicao_criacao", "alcance_m": 1.5}
             from .catalog import CATALOGO_EQUIPAMENTOS
             nome_catalogo = ARTIFICER_GEAR_CATALOG_NAMES[item]
             dados_catalogo = CATALOGO_EQUIPAMENTOS.get(nome_catalogo)
             if dados_catalogo is None:
                 return {**base, "resultado": "erro_catalogo", "motivo": "equipamento_sem_dados_mecanicos", "item": item}
             item_criado = {
-                "id": str(item_id) if item_id else None,
+                "id": item_id.strip(),
                 "nome": nome_catalogo,
                 "item": item,
                 "quantidade": 1,
-                "categoria": "equipamento_mundano",
+                "categoria": dados_catalogo.get("categoria", "equipamento_mundano"),
                 "peso": dados_catalogo["peso"],
                 "custo_po": dados_catalogo["custo_po"],
                 "unidades_por_item": int(dados_catalogo.get("unidades_por_item", 1)),
                 "criado_por": "tinkers_magic",
                 "expira": "proximo_descanso_longo",
+                "posicao": position,
+                "distancia_m": distance,
             }
-            return {**base, "resultado": "criado", "item": item, "nome_item": nome_catalogo,
-                    "dados_catalogo": dict(dados_catalogo), "quantidade": 1,
-                    "unidades_por_item": int(dados_catalogo.get("unidades_por_item", 1)),
-                    "item_criado": item_criado, "requer_id_unico_ao_persistir": not bool(item_id),
-                    **({"delta_inventario": {"item_novo": item_criado}} if item_id else {}),
-                    "alcance_m": 1.5, "requer_espaco_desocupado": True,
-                    "acao": "acao_magica", "usos_maximos": uses,
-                    "usos_gastos_depois": gastos + 1, "delta_usos": -1,
-                    "usos_restantes": uses - gastos - 1, "desaparece": "proximo_descanso_longo"}
-        return {**base, "resultado": "resolvido", "truque_conhecido": "Reparar",
-                "usos_por_descanso_longo": uses, "acao": "acao_magica",
-                "requer_ferramentas": "ferramentas_de_funileiro", "foco": "ferramentas_de_funileiro",
-                "duracao_itens_criados": "ate_concluir_descanso_longo"}
+            return {
+                **base, "resultado": "criado", "item": item, "nome_item": nome_catalogo,
+                "dados_catalogo": dict(dados_catalogo), "quantidade": 1,
+                "unidades_por_item": int(dados_catalogo.get("unidades_por_item", 1)),
+                "item_criado": item_criado, "requer_id_unico_ao_persistir": False,
+                "delta_mundo": {"adicionar_objeto": item_criado},
+                "alcance_m": 1.5, "espaco_desocupado_validado": True,
+                "acao": "acao_magica", "usos_maximos": uses,
+                "usos_gastos_depois": gastos + 1, "delta_usos": -1,
+                "usos_restantes": uses - gastos - 1, "desaparece": "proximo_descanso_longo",
+            }
+        return {
+            **base, "resultado": "resolvido", "truque_conhecido": "Reparar",
+            "usos_por_descanso_longo": uses, "acao": "acao_magica",
+            "requer_ferramentas": "ferramentas_de_funileiro", "foco": "ferramentas_de_funileiro",
+            "duracao_itens_criados": "ate_concluir_descanso_longo",
+        }
 
     if key == "replicate_magic_item":
         plans_count = _tier_value(ARTIFICER_PLANS_KNOWN, level)
