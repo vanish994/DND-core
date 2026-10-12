@@ -95,6 +95,21 @@ def _plan_metadata(plan_id: str, level: int) -> dict[str, Any] | None:
     return data
 
 
+ARTIFICER_NON_ACTION_SPELLS = {
+    "alarme": "1 minuto",
+    "retirada acelerada": "ação bônus",
+    "identificar": "1 minuto",
+    "queda suave": "reação",
+    "salto": "ação bônus",
+    "santuário": "ação bônus",
+    "boca encantada": "1 minuto",
+    "sopro de dragão": "ação bônus",
+    "servo homunculo": "1 hora ou ritual",
+    "fabricar": "10 minutos",
+    "santuario particular de mordenkainen": "10 minutos",
+    "criacao": "1 minuto",
+}
+
 ARTIFICER_PREPARED_SPELLS = {
     1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 6, 7: 7, 8: 7, 9: 9, 10: 9,
     11: 10, 12: 10, 13: 11, 14: 11, 15: 12, 16: 12, 17: 14, 18: 14,
@@ -227,7 +242,7 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                     "alcance_m": 1.5, "requer_espaco_desocupado": True,
                     "acao": "acao_magica", "usos_maximos": uses,
                     "usos_restantes": uses - gastos - 1, "desaparece": "proximo_descanso_longo"}
-        return {**base, "resultado": "resolvido", "truque_conhecido": "consertar",
+        return {**base, "resultado": "resolvido", "truque_conhecido": "Reparar",
                 "usos_por_descanso_longo": uses, "acao": "acao_magica",
                 "requer_ferramentas": "ferramentas_de_remendador", "foco": "ferramentas_de_remendador",
                 "duracao_itens_criados": "ate_concluir_descanso_longo"}
@@ -464,6 +479,10 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                                     if normalizar_nome_magia(name) == normalizar_nome_magia(spell)), None)
         if spell_level_in_list is None or spell_level_in_list != spell_level:
             return {**base, "resultado": "bloqueado", "motivo": "magia_nao_esta_na_lista_do_artifice_no_nivel_informado"}
+        normalized_spell = normalizar_nome_magia(spell)
+        if normalized_spell in ARTIFICER_NON_ACTION_SPELLS:
+            return {**base, "resultado": "bloqueado", "motivo": "tempo_de_conjuracao_nao_e_uma_acao",
+                    "tempo_conjuracao": ARTIFICER_NON_ACTION_SPELLS[normalized_spell]}
         if facts.get("tempo_conjuracao_acao") is not True:
             return {**base, "resultado": "requer_dados", "motivo": "confirmar_tempo_de_conjuracao_de_uma_acao",
                     "requer": "tempo_conjuracao_acao=True"}
