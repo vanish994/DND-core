@@ -485,9 +485,16 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
         if facts.get("tempo_conjuracao_acao") is not True:
             return {**base, "resultado": "requer_dados", "motivo": "confirmar_tempo_de_conjuracao_de_uma_acao",
                     "requer": "tempo_conjuracao_acao=True"}
+        if facts.get("criatura_ja_usou_neste_turno", False):
+            return {**base, "resultado": "bloqueado", "motivo": "criatura_deve_aguardar_inicio_do_proximo_turno"}
+        from .spells import obter_magia
+        spell_metadata = obter_magia(str(spell)) or {}
         return {**base, "resultado": "armazenado", "magia": spell, "nivel_magia": spell_level,
                 "usos": max(2, 2 * int_mod), "acao_para_lancar": "acao_magica", "habilidade_conjuracao": "inteligencia",
-                "objeto": facts.get("objeto"), "requer_objeto_adequado": True}
+                "objeto": facts.get("objeto"), "requer_objeto_adequado": True,
+                "concentracao_requerida": bool(spell_metadata.get("concentracao", False)),
+                "bloqueio_por_criatura_ate": "inicio_do_proximo_turno_daquela_criatura",
+                "componentes_materiais_consumidos": False, "substitui_armazenamento_anterior": True}
 
     if key == "advanced_artifice":
         spent = int(facts.get("usos_gastos", 0))
