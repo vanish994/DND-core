@@ -34,7 +34,7 @@ ARTIFICER_REPLICATE_PLANS = {
     "cloak_of_the_manta_ray": {"nome": "Manto da Arraia", "nivel_minimo": 6, "raridade": "incomum", "sintonizacao": False},
     "dazzling_weapon": {"nome": "Arma Deslumbrante", "nivel_minimo": 6, "raridade": "incomum", "sintonizacao": True},
     "eyes_of_charming": {"nome": "Olhos Encantadores", "nivel_minimo": 6, "raridade": "incomum", "sintonizacao": True},
-    "eyes_of_minute_seeing": {"nome": "Olhos de Visão Minuciosa", "nivel_minimo": 6, "raridade": "comum", "sintonizacao": False},
+    "eyes_of_minute_seeing": {"nome": "Olhos de Visão Minuciosa", "nivel_minimo": 6, "raridade": "incomum", "sintonizacao": False},
     "gloves_of_thievery": {"nome": "Luvas de Ladroagem", "nivel_minimo": 6, "raridade": "incomum", "sintonizacao": False},
     "helm_of_awareness": {"nome": "Elmo da Consciência", "nivel_minimo": 6, "raridade": "incomum", "sintonizacao": False},
     "lantern_of_revealing": {"nome": "Lanterna da Revelação", "nivel_minimo": 6, "raridade": "incomum", "sintonizacao": False},
@@ -85,7 +85,7 @@ def _plan_metadata(plan_id: str, level: int) -> dict[str, Any] | None:
         custom_name = plan_id[len(prefix):].strip()
         custom_norm = unicodedata.normalize("NFKD", custom_name.lower())
         custom_norm = "".join(ch for ch in custom_norm if not unicodedata.combining(ch))
-        forbidden = ("potion", "poção", "pocao", "scroll", "pergaminho", "cursed", "amaldiçoado", "amaldiçoado")
+        forbidden = ("potion", "pocao", "scroll", "pergaminho", "cursed", "amaldicoado", "amaldi")
         if any(token in custom_norm for token in forbidden):
             return None
         data = {"nome": f"{label}: {custom_name.replace('_', ' ')}",
@@ -258,10 +258,13 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                     "quantidade": len(created), "limite_itens_criados": capacity,
                     "requer": "descanso_longo_concluido_e_ferramentas_de_artesao_em_maos",
                     "sintonizacao_imediata_se_necessaria": True,
+                    "varinha_ou_arma_replicada_pode_ser_foco_de_conjuracao": True,
                     "desaparece_quando_voce_morre": "apos_1d4_dias",
                     "itens_de_plano_substituido": "desaparecem_imediatamente",
                     "conteudo_de_recipiente_desaparecido": "reaparece_inofensivamente_no_espaco"}
         if facts.get("acao") in {"substituir_plano", "replace_plan"}:
+            if facts.get("ao_subir_de_nivel") is not True:
+                return {**base, "resultado": "bloqueado", "motivo": "planos_so_podem_ser_substituidos_ao_subir_de_nivel"}
             old_plan, new_plan = facts.get("plano_antigo"), facts.get("plano_novo")
             known = facts.get("planos_conhecidos")
             if not isinstance(known, list):
@@ -342,17 +345,19 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             return {**base, "resultado": "requer_dados", "motivo": "distancia_ate_a_criatura_necessaria"}
         if float(facts["distancia_m"]) > 9:
             return {**base, "resultado": "bloqueado", "motivo": "alvo_fora_do_alcance"}
-        if facts.get("alvo_visivel") is not True:
+        if float(facts["distancia_m"]) > 0 and facts.get("alvo_visivel") is not True:
             return {**base, "resultado": "requer_dados", "motivo": "confirmar_que_voce_ve_o_alvo",
                     "requer": "alvo_visivel=True"}
         spent = int(facts.get("usos_gastos", 0))
         maximum = max(1, int_mod)
         if spent >= maximum:
             return {**base, "resultado": "bloqueado", "motivo": "usos_esgotados", "usos_maximos": maximum}
-        return {**base, "resultado": "aplicado", "bonus": max(1, int_mod),
-                "novo_total": int(facts.get("total", 0)) + max(1, int_mod),
-                "reacao": True, "usos_maximos": maximum, "usos_restantes": maximum - spent - 1,
-                "alvo": "criatura_que_voce_ve_a_9m_ou_menos"}
+        result = {**base, "resultado": "aplicado", "bonus": max(1, int_mod),
+                  "reacao": True, "usos_maximos": maximum, "usos_restantes": maximum - spent - 1,
+                  "alvo": "voce_ou_criatura_que_voce_ve_a_9m_ou_menos"}
+        if facts.get("total") is not None:
+            result["novo_total"] = int(facts["total"]) + max(1, int_mod)
+        return result
 
     if key == "magic_item_adept":
         return {**base, "resultado": "resolvido", "limite_sintonizacao": 4,
