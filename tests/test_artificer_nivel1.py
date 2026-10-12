@@ -86,3 +86,113 @@ def test_artifice_nivel_1_rejeita_magia_de_segundo_circulo():
             magias_preparadas=pool,
             espacos_totais={"1": 2},
         )
+
+
+def test_artifice_nivel_1_ponta_a_ponta_pelo_motor():
+    """Criação, ficha, conjuração, dano e recuperação usam as rotas registradas."""
+    from rule_engine.rules import build_default_engine
+    from rule_engine.survival import EstadoVital
+
+    engine = build_default_engine()
+    criacao = engine.evaluate({
+        "type": "character_creation",
+        "name": "Ada",
+        "species": "humano",
+        "class": "artifice",
+        "level": 1,
+        "ability_scores": {
+            "forca": 8,
+            "destreza": 14,
+            "constituicao": 12,
+            "inteligencia": 16,
+            "sabedoria": 10,
+            "carisma": 10,
+        },
+        "artificer_cantrips": ["Luz", "Mensagem"],
+        "artificer_prepared_spells": ["Curar Ferimentos", "Alarme"],
+    })
+
+    assert criacao.status == "resolved"
+    assert "character.creation" in criacao.matched_rules
+    ficha = criacao.outcome["ficha"]
+    assert ficha["conjuracao"]["escolhas_completas"] is True
+    assert ficha["conjuracao"]["truque_concedido"] == "Reparar"
+    assert "Reparar" not in ficha["conjuracao"]["truques_conhecidos"]
+    assert ficha["conjuracao"]["espacos_totais"] == {"1": 2}
+
+    estado = EstadoVital(pv_maximos=12, pv_atuais=12)
+    espacos = dict(ficha["recursos_iniciais"]["espacos_de_magia"]["espacos_restantes"])
+
+    def conjurar_curar_ferimentos(espacos_atuais):
+        return engine.evaluate({
+            "type": "class_feature",
+            "classe": "artifice",
+            "nivel": 1,
+            "recurso": "conjuracao",
+            "acao": "conjurar",
+            "magia": "Curar Ferimentos",
+            "inteligencia": 16,
+            "truques_conhecidos": ficha["conjuracao"]["truques_conhecidos"],
+            "magias_preparadas": ficha["conjuracao"]["magias_preparadas"],
+            "espacos_restantes": dict(espacos_atuais),
+            "componentes_disponiveis": ["V", "S"],
+        })
+
+    primeira = conjurar_curar_ferimentos(espacos)
+    assert primeira.status == "resolved"
+    assert "class.feature" in primeira.matched_rules
+    assert primeira.outcome["resultado"] == "conjurada"
+    assert primeira.outcome["slot_consumido"] == 1
+    assert primeira.outcome["delta_espacos"] == {"1": -1}
+    espacos = dict(primeira.outcome["espacos_restantes_depois"])
+    assert espacos == {"1": 1}
+
+    dano = engine.evaluate({
+        "type": "damage_application",
+        "estado": estado,
+        "damage": 5,
+        "source": "teste de integração",
+    })
+    assert dano.status == "resolved"
+    assert estado.pv_atuais == 7
+
+    descanso = engine.evaluate({
+        "type": "long_rest",
+        "estado": estado,
+        "duration_hours": 8,
+    })
+    assert descanso.status == "resolved"
+    assert estado.pv_atuais == 12
+
+    recuperacao = engine.evaluate({
+        "type": "class_feature",
+        "classe": "artifice",
+        "nivel": 1,
+        "recurso": "resource_recovery",
+        "tipo_descanso": "longo",
+        "inteligencia": 16,
+        "itens_tinkers_atuais": [],
+    })
+    assert recuperacao.status == "resolved"
+    assert "class.feature" in recuperacao.matched_rules
+    assert recuperacao.outcome["resultado"] == "recursos_recuperados"
+    assert set(recuperacao.outcome["recursos"]) == {"magia_de_artifice", "espacos_de_magia"}
+    # A recuperação produz um delta; a camada que mantém a ficha aplica-o ao estado.
+    espacos = dict(recuperacao.outcome["delta_conjuracao"]["espacos_restantes"])
+    assert espacos == {"1": 2}
+
+    dano_apos_descanso = engine.evaluate({
+        "type": "damage_application",
+        "estado": estado,
+        "damage": 5,
+    })
+    assert dano_apos_descanso.status == "resolved"
+    assert estado.pv_atuais == 7
+
+    segunda = conjurar_curar_ferimentos(espacos)
+    assert segunda.status == "resolved"
+    assert "class.feature" in segunda.matched_rules
+    assert segunda.outcome["resultado"] == "conjurada"
+    assert segunda.outcome["slot_consumido"] == 1
+    assert segunda.outcome["espacos_restantes_depois"] == {"1": 1}
+
