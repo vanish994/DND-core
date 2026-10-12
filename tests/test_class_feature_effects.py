@@ -283,7 +283,7 @@ class PaladinoGuardiaoFeatureTests(unittest.TestCase):
 
     def test_artifice_ajustador_item_magico_carrega_cargas(self):
         resultado = caracteristica("artifice", "Ajustador de Item Mágico", 6,
-                                   acao="carregar", nivel_espaco=2,
+                                   acao="carregar", nivel_espaco=2, item_replicado=True, distancia_m=1.0,
                                    cargas_atuais=1, cargas_maximas=5)
         self.assertEqual(resultado["cargas_restauradas"], 2)
         self.assertEqual(resultado["cargas_atuais"], 3)
@@ -297,14 +297,14 @@ class PaladinoGuardiaoFeatureTests(unittest.TestCase):
 
     def test_artifice_item_armazenador_ate_terceiro_circulo(self):
         resultado = caracteristica("artifice", "Item Armazenador de Magia", 11,
-                                   inteligencia=16, magia="Dissipar Magia", nivel_magia=3, tempo_conjuracao_acao=True)
+                                   inteligencia=16, magia="Dissipar Magia", nivel_magia=3, tempo_conjuracao_acao=True, objeto_adequado=True)
         self.assertEqual(resultado["resultado"], "armazenado")
         self.assertEqual(resultado["usos"], 6)
 
     def test_artifice_alma_artifice_recupera_20_pv_por_item(self):
         resultado = caracteristica("artifice", "Alma do Artífice", 20,
                                    acao="evitar_morte",
-                                   itens_destruidos=[{"raridade":"incomum"}, {"raridade":"raro"}])
+                                   itens_destruidos=[{"raridade":"incomum", "replicado":True}, {"raridade":"raro", "replicado":True}])
         self.assertEqual(resultado["resultado"], "sobreviveu")
         self.assertEqual(resultado["pv_atuais"], 40)
 
