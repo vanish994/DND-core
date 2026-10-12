@@ -285,6 +285,29 @@ class ArtificerProgressionTests(unittest.TestCase):
                 failures.append((gear_id, "metadados_ou_delta_incorretos", created))
         self.assertEqual(failures, [], f"Itens de Tinker's Magic sem criação funcional: {failures}")
 
+    def test_tinkers_magic_runs_through_registered_rule_engine_and_returns_world_delta(self):
+        from rule_engine.rules import build_default_engine
+
+        engine = build_default_engine()
+        result = engine.evaluate({
+            "type": "class_feature",
+            "classe": "artifice", "nivel": 1, "recurso": "tinkers_magic", "acao": "criar",
+            "inteligencia": 16, "usos_gastos": 0,
+            "ferramentas_de_funileiro_em_maos": True,
+            "distancia_m": 1.5, "espaco_desocupado": True,
+            "posicao_criacao": {"x": 2, "y": 4},
+            "item": "corda", "item_id": "pc-1:tinker:1",
+            "ids_objetos_existentes": ["pc-1", "npc-1"],
+        })
+        self.assertEqual(result.status, "resolved")
+        self.assertIn("class.feature", result.matched_rules)
+        outcome = result.outcome
+        self.assertEqual(outcome["resultado"], "criado")
+        self.assertEqual(outcome["delta_mundo"]["adicionar_objeto"]["id"], "pc-1:tinker:1")
+        self.assertEqual(outcome["delta_mundo"]["adicionar_objeto"]["posicao"], {"x": 2, "y": 4})
+        self.assertEqual(outcome["delta_usos"], -1)
+        self.assertTrue(outcome["requer_id_unico_ao_persistir"])
+
     def test_tinkers_magic_rejects_world_object_id_collision(self):
         from rule_engine.class_features import resolver_caracteristica
 
