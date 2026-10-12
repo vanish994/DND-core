@@ -110,6 +110,26 @@ class ArtificerProgressionTests(unittest.TestCase):
         self.assertEqual(sharpener["cargas_restantes"], 3)
         self.assertTrue(sharpener["salvaguarda_sucesso"])
 
+        helm = usar_item_magico({
+            "item": "item-helm", "metadados_item": {"plano": "helm_of_awareness", "nome": "Elmo da Consciência", "sintonizacao": False},
+        })
+        self.assertTrue(helm["vantagem_iniciativa"])
+        self.assertTrue(helm["nao_pode_ser_surpreendido_enquanto_consciente"])
+
+        repeating = usar_item_magico({
+            "item": "item-repeat", "metadados_item": {"plano": "repeating_shot", "nome": "Disparo Repetidor", "sintonizacao": True},
+            "sintonizados": ["item-repeat"],
+        })
+        self.assertEqual(repeating["bonus_ataque"], 1)
+        self.assertTrue(repeating["ignora_propriedade_recarga"])
+        self.assertTrue(repeating["cria_municao_magica_se_necessario"])
+
+        returning = usar_item_magico({
+            "item": "item-return", "metadados_item": {"plano": "returning_weapon", "nome": "Arma Retornante", "sintonizacao": False},
+        })
+        self.assertEqual(returning["bonus_dano"], 1)
+        self.assertTrue(returning["retorna_apos_ataque_a_distancia"])
+
         shield = usar_item_magico({
             "item": "item-5", "metadados_item": {"plano": "repulsion_shield", "nome": "Escudo de Repulsão", "sintonizacao": False},
             "acao": "repelir", "foi_atingido_por_ataque_corpo_a_corpo": True, "tamanho_atacante": "grande",
