@@ -403,6 +403,55 @@ class ArtificerProgressionTests(unittest.TestCase):
                 failures.append((spell, result.get("resultado"), result.get("motivo")))
         self.assertEqual(failures, [], f"Magias que falham na rota real do Artífice: {failures}")
 
+    def test_every_selectable_artificer_cantrip_runs_through_class_feature_resolver(self):
+        from rule_engine.class_features import resolver_caracteristica
+        from rule_engine.spellcasting import ARTIFICER_SPELL_LEVELS
+
+        failures = []
+        cantrips = [name for name, circle in ARTIFICER_SPELL_LEVELS.items() if circle == 0]
+        for spell in cantrips:
+            known = ["Luz", "Bolha Ácida"] if spell == "Luz" else [spell, "Luz"]
+            result = resolver_caracteristica({
+                "classe": "artifice", "nivel": 1, "recurso": "conjuracao", "acao": "conjurar",
+                "magia": spell, "inteligencia": 16,
+                "truques_conhecidos": known,
+                "magias_preparadas": ["Curar Ferimentos", "Detectar Magia"],
+                "ferramentas_de_funileiro_em_maos": True,
+                "foco_conjuracao_em_maos": True, "foco_conjuracao": "Ferramentas de Funileiro",
+                "componentes_disponiveis": ["V", "S", "M"],
+                "arma_em_maos": True, "proficiencia_com_arma": True, "valor_arma_pc": 1,
+            })
+            if result.get("resultado") != "conjurada" or not result.get("mecanica"):
+                failures.append((spell, result.get("resultado"), result.get("motivo")))
+        self.assertEqual(failures, [], f"Truques sem resolução pela característica de classe: {failures}")
+
+    def test_true_strike_requires_its_actual_weapon_component(self):
+        from rule_engine.class_features import resolver_caracteristica
+
+        base = {
+            "classe": "artifice", "nivel": 1, "recurso": "conjuracao", "acao": "conjurar",
+            "magia": "Golpe Certeiro", "inteligencia": 16,
+            "truques_conhecidos": ["Golpe Certeiro", "Luz"],
+            "magias_preparadas": ["Curar Ferimentos", "Detectar Magia"],
+            "foco_conjuracao_em_maos": True, "foco_conjuracao": "Ferramentas de Funileiro",
+        }
+        missing = resolver_caracteristica(base)
+        self.assertEqual(missing["resultado"], "requer_dados")
+        self.assertEqual(missing["motivo"], "arma_de_golpe_certeiro_em_maos_necessaria")
+
+        worthless = resolver_caracteristica({
+            **base, "arma_em_maos": True, "proficiencia_com_arma": True, "valor_arma_pc": 0,
+        })
+        self.assertEqual(worthless["resultado"], "bloqueado")
+        self.assertEqual(worthless["motivo"], "arma_de_golpe_certeiro_deve_valer_ao_menos_1_pc")
+
+        valid = resolver_caracteristica({
+            **base, "arma_em_maos": True, "proficiencia_com_arma": True, "valor_arma_pc": 1,
+        })
+        self.assertEqual(valid["resultado"], "conjurada")
+        self.assertEqual(valid["mecanica"]["tipo"], "ataque_com_arma")
+        self.assertEqual(valid["mecanica"]["atributo_ataque_e_dano"], "atributo_conjuracao")
+
     def test_tinkers_magic_granted_mending_cantrip_is_executable(self):
         from rule_engine.class_features import resolver_caracteristica
         from rule_engine.spells import resolver_magia
