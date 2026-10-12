@@ -219,6 +219,37 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
         if level >= 14:
             available.append({"id": "rare_wondrous_item:<item_id>", "nome": "Item Maravilhoso Raro à escolha",
                               "nivel_minimo": 14, "raridade": "raro", "sintonizacao": "varia", "repetivel": True})
+        if facts.get("acao") in {"definir_planos", "set_known_plans"}:
+            known = facts.get("planos_conhecidos", facts.get("planos", []))
+            if not isinstance(known, list) or any(not isinstance(plan, str) for plan in known):
+                return {**base, "resultado": "bloqueado", "motivo": "planos_conhecidos_devem_ser_lista_de_ids"}
+            if len(known) != plans_count:
+                return {**base, "resultado": "bloqueado", "motivo": "quantidade_de_planos_conhecidos_incorreta",
+                        "quantidade_esperada": plans_count}
+            if len(set(known)) != len(known):
+                return {**base, "resultado": "bloqueado", "motivo": "planos_conhecidos_duplicados"}
+            if any(_plan_metadata(plan, level) is None for plan in known):
+                return {**base, "resultado": "bloqueado", "motivo": "plano_conhecido_invalido_para_nivel"}
+            return {**base, "resultado": "planos_definidos", "planos_conhecidos": known,
+                    "quantidade_planos_conhecidos": plans_count}
+        if facts.get("acao") in {"aprender_plano", "learn_plan"}:
+            if facts.get("ao_subir_de_nivel") is not True or level not in {6, 10, 14, 18}:
+                return {**base, "resultado": "bloqueado", "motivo": "novo_plano_concedido_nos_niveis_6_10_14_18_ao_subir_de_nivel"}
+            known = facts.get("planos_conhecidos")
+            new_plan = facts.get("plano_novo")
+            if not isinstance(known, list) or any(not isinstance(plan, str) for plan in known):
+                return {**base, "resultado": "requer_dados", "motivo": "lista_de_planos_conhecidos_necessaria"}
+            if len(known) != plans_count - 1:
+                return {**base, "resultado": "bloqueado", "motivo": "quantidade_de_planos_antes_do_marco_incorreta",
+                        "quantidade_esperada": plans_count - 1}
+            if len(set(known)) != len(known) or any(_plan_metadata(plan, level) is None for plan in known):
+                return {**base, "resultado": "bloqueado", "motivo": "planos_conhecidos_invalidos"}
+            metadata = _plan_metadata(str(new_plan or ""), level)
+            if metadata is None or new_plan in known:
+                return {**base, "resultado": "bloqueado", "motivo": "plano_novo_invalido_ou_ja_conhecido"}
+            return {**base, "resultado": "plano_aprendido", "plano_novo": new_plan,
+                    "metadados": metadata, "planos_conhecidos": [*known, new_plan],
+                    "quantidade_planos_conhecidos": plans_count}
         if facts.get("acao") in {"criar", "create"}:
             if facts.get("ferramentas_artesao_em_maos") is not True:
                 return {**base, "resultado": "requer_dados", "motivo": "confirmar_ferramentas_de_artesao_em_maos",
