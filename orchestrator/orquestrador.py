@@ -153,6 +153,9 @@ class OrquestradorAcoes:
         """Executa a ação: pré-condições, motor, estado e rolagens."""
         if acao.ferramenta not in {"sugerir_monstros", "consultar_monstro", "resolver_regra"}:
             return ResultadoAcao.bloqueado("ferramenta_desconhecida")
+        erro_entrada = acao.parametros.get("_erro_entrada")
+        if erro_entrada:
+            return ResultadoAcao.bloqueado(str(erro_entrada))
 
         fatos = acao.para_fatos()
         preparo = _Preparo(fatos)
