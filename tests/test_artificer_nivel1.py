@@ -286,3 +286,80 @@ def test_artifice_nivel_1_orquestrador_casting_reparo_e_recupera_slots_no_descan
     assert segunda.dados["espacos_restantes"] == {"1": 1}
     assert ficha["conjuracao"]["espacos_restantes"] == {"1": 1}
 
+
+def test_artifice_nivel_1_orquestrador_persiste_usos_e_expira_itens_tinkers():
+    from orchestrator import OrquestradorAcoes
+    from rule_engine.rules import build_default_engine
+    from rule_engine.survival import EstadoVital
+
+    engine = build_default_engine()
+    criado = engine.evaluate({
+        "type": "character_creation",
+        "name": "Ada",
+        "species": "humano",
+        "class": "artifice",
+        "level": 1,
+        "ability_scores": {
+            "forca": 8,
+            "destreza": 14,
+            "constituicao": 12,
+            "inteligencia": 16,
+            "sabedoria": 10,
+            "carisma": 10,
+        },
+        "artificer_cantrips": ["Luz", "Mensagem"],
+        "artificer_prepared_spells": ["Curar Ferimentos", "Alarme"],
+    })
+    assert criado.status == "resolved"
+    ficha = criado.outcome["ficha"]
+    orquestrador = OrquestradorAcoes(engine)
+    personagens = [ficha]
+
+    def criar_item(item, item_id, position):
+        return orquestrador.executar_ferramenta(
+            "resolver_regra",
+            {"fatos": {
+                "type": "class_feature",
+                "character_id": ficha["id"],
+                "recurso": "tinkers_magic",
+                "acao": "criar",
+                "item": item,
+                "item_id": item_id,
+                "ids_objetos_existentes": [],
+                "ferramentas_tinkering_em_maos": True,
+                "distancia_m": 1.5,
+                "espaco_desocupado": True,
+                "posicao_criacao": position,
+            }},
+            personagens,
+        )
+
+    primeiro = criar_item("corda", "ada-tinker-1", {"x": 1, "y": 1})
+    assert primeiro.status == "resolved"
+    assert primeiro.dados["resultado"] == "criado"
+    assert primeiro.dados["delta_mundo"]["adicionar_objeto"]["id"] == "ada-tinker-1"
+    assert ficha["recursos_iniciais"]["magia_de_artifice"]["usos_gastos"] == 1
+    assert [item["id"] for item in ficha["itens_tinkers_criados"]] == ["ada-tinker-1"]
+
+    segundo = criar_item("estrepes", "ada-tinker-2", {"x": 2, "y": 2})
+    assert segundo.status == "resolved"
+    assert segundo.dados["resultado"] == "criado"
+    assert ficha["recursos_iniciais"]["magia_de_artifice"]["usos_gastos"] == 2
+    assert [item["id"] for item in ficha["itens_tinkers_criados"]] == ["ada-tinker-1", "ada-tinker-2"]
+
+    estado = EstadoVital(pv_maximos=12, pv_atuais=8)
+    descanso = orquestrador.executar_ferramenta(
+        "resolver_regra",
+        {"fatos": {
+            "type": "long_rest",
+            "character_id": ficha["id"],
+            "estado": estado,
+            "duration_hours": 8,
+        }},
+        personagens,
+    )
+    assert descanso.status == "resolved"
+    assert descanso.dados["delta_mundo"]["remover_ids"] == ["ada-tinker-1", "ada-tinker-2"]
+    assert ficha["itens_tinkers_criados"] == []
+    assert ficha["recursos_iniciais"]["magia_de_artifice"]["usos_gastos"] == 0
+
