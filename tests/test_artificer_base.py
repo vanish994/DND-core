@@ -62,6 +62,29 @@ class ArtificerProgressionTests(unittest.TestCase):
         self.assertEqual(result["usos_restantes"], 1)
         self.assertEqual(result["desaparece"], "proximo_descanso_longo")
 
+    def test_tinkers_magic_grants_repair_without_counting_it_as_a_selected_cantrip(self):
+        from rule_engine.spellcasting import validar_escolhas_artifice, ARTIFICER_SPELL_LEVELS
+        valid = validar_escolhas_artifice(
+            1, 16, ["Bolha Ácida", "Luz"],
+            ["Curar Ferimentos", "Detectar Magia"], {"1": 2},
+        )
+        self.assertEqual(valid["truques"], 2)
+        self.assertNotIn("Consertar", ARTIFICER_SPELL_LEVELS)
+        repair = resolver_caracteristica({
+            "classe": "artifice", "recurso": "Magia de Artífice", "nivel": 1,
+        })
+        self.assertEqual(repair["truque_conhecido"], "Reparar")
+
+    def test_spell_storing_rejects_non_action_spell_even_if_caller_claims_action(self):
+        result = resolver_caracteristica({
+            "classe": "artifice", "recurso": "Item Armazenador de Magia", "nivel": 11,
+            "magia": "Servo Homúnculo", "nivel_magia": 2, "objeto_adequado": True,
+            "descanso_longo_concluido": True, "distancia_m": 1,
+            "tempo_conjuracao_acao": True,
+        })
+        self.assertEqual(result["resultado"], "bloqueado")
+        self.assertEqual(result["motivo"], "tempo_de_conjuracao_nao_e_uma_acao")
+
     def test_replicate_catalog_is_tiered_and_returns_item_metadata(self):
         level_2 = resolve_artificer_feature("replicar_item_magico", 2, {})
         level_6 = resolve_artificer_feature("replicar_item_magico", 6, {})
