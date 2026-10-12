@@ -251,7 +251,8 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             if not nome_magia:
                 return {**base, "resultado": "requer_dados", "motivo": "nome_da_magia_necessario"}
             chave_magia = normalizar_nome_magia(nome_magia)
-            nivel_magia = 0 if chave_magia == normalizar_nome_magia("Reparar") else next(
+            reparo_gratuito = chave_magia in {normalizar_nome_magia("Reparar"), normalizar_nome_magia("Consertar")}
+            nivel_magia = 0 if reparo_gratuito else next(
                 (circulo for nome, circulo in ARTIFICER_SPELL_LEVELS.items()
                  if normalizar_nome_magia(nome) == chave_magia),
                 None,
@@ -260,26 +261,65 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 return {**base, "resultado": "bloqueado", "motivo": "magia_fora_da_lista_do_artifice", "magia": nome_magia}
             truques = facts.get("truques_conhecidos", facts.get("cantrips_known", []))
             preparadas = facts.get("magias_preparadas", facts.get("prepared_spells", []))
+            if not isinstance(truques, (list, tuple)) or not isinstance(preparadas, (list, tuple)):
+                return {**base, "resultado": "bloqueado", "motivo": "listas_de_magias_devem_ser_listas"}
             if nivel_magia == 0:
                 permitidos = {normalizar_nome_magia(str(m)) for m in truques}
-                permitidos.add(normalizar_nome_magia("Reparar"))
+                permitidos.update({normalizar_nome_magia("Reparar"), normalizar_nome_magia("Consertar")})
                 if chave_magia not in permitidos:
                     return {**base, "resultado": "bloqueado", "motivo": "truque_nao_conhecido", "magia": nome_magia}
             else:
                 permitidos = {normalizar_nome_magia(str(m)) for m in preparadas}
                 if chave_magia not in permitidos:
                     return {**base, "resultado": "bloqueado", "motivo": "magia_nao_preparada", "magia": nome_magia}
-                slots = facts.get("espacos_restantes", facts.get("slots_remaining", {"1": 2}))
-                if not isinstance(slots, dict) or int(slots.get("1", slots.get(1, 0))) < 1:
-                    return {**base, "resultado": "bloqueado", "motivo": "sem_espacos_de_magia", "magia": nome_magia}
-            dados_magia = {k: v for k, v in facts.items() if k not in {"classe", "nivel", "recurso", "feature", "acao"}}
+            slot_level = nivel_magia
+            slots: dict[str, int] = {}
+            if nivel_magia > 0:
+                slot_value = facts.get("espaco", facts.get("slot_level", nivel_magia))
+                try:
+                    slot_level = int(slot_value)
+                except (TypeError, ValueError):
+                    return {**base, "resultado": "bloqueado", "motivo": "circulo_de_espaco_invalido"}
+                state_slots = facts.get("espacos_restantes", facts.get("slots_remaining"))
+                if state_slots is None:
+                    return {**base, "resultado": "requer_dados", "motivo": "estado_de_espacos_restantes_necessario",
+                            "espacos_totais_sugeridos": {str(i + 1): n for i, n in enumerate(__import__("rule_engine.spellcasting", fromlist=["ARTIFICER_SLOTS"]).ARTIFICER_SLOTS[level])}}
+                if not isinstance(state_slots, dict):
+                    return {**base, "resultado": "bloqueado", "motivo": "espacos_restantes_devem_ser_um_mapa"}
+                try:
+                    for slot_key, remaining in state_slots.items():
+                        normalized_key = str(int(slot_key))
+                        if normalized_key not in {"1", "2", "3", "4", "5"} or isinstance(remaining, bool) or int(remaining) < 0:
+                            raise ValueError
+                        slots[normalized_key] = int(remaining)
+                except (TypeError, ValueError):
+                    return {**base, "resultado": "bloqueado", "motivo": "estado_de_espacos_restantes_invalido"}
+                if slot_level < nivel_magia or slot_level > 5:
+                    return {**base, "resultado": "bloqueado", "motivo": "circulo_de_espaco_invalido",
+                            "circulo_minimo": nivel_magia, "circulo_maximo": 5}
+                if slots.get(str(slot_level), 0) < 1:
+                    return {**base, "resultado": "bloqueado", "motivo": "sem_espacos_de_magia",
+                            "magia": nome_magia, "circulo_espaco": slot_level}
+            dados_magia = {
+                k: v for k, v in facts.items()
+                if k not in {"classe", "nivel", "recurso", "feature", "acao", "espacos_restantes", "slots_remaining"}
+            }
             dados_magia["magia"] = nome_magia
             if nivel_magia > 0:
-                dados_magia.setdefault("has_slot", True)
-                dados_magia.setdefault("espaco", nivel_magia)
+                dados_magia["has_slot"] = True
+                dados_magia["espaco"] = slot_level
+            else:
+                dados_magia["espaco"] = 0
             resolucao = resolver_magia(dados_magia)
-            return {**base, **resolucao, "caracteristica": key, "magia": nome_magia,
-                    "slot_consumido": nivel_magia if nivel_magia > 0 and resolucao.get("resultado") not in {"bloqueado", "nao_implementado"} else None}
+            saida = {**base, **resolucao, "caracteristica": key, "magia": nome_magia, "slot_consumido": None}
+            if nivel_magia > 0 and resolucao.get("resultado") == "conjurada":
+                slots[str(slot_level)] -= 1
+                saida.update({
+                    "slot_consumido": slot_level,
+                    "delta_espacos": {str(slot_level): -1},
+                    "espacos_restantes_depois": slots,
+                })
+            return saida
 
         from .spellcasting import ARTIFICER_SLOTS
         cantrips = 2 if level < 10 else 3 if level < 14 else 4
