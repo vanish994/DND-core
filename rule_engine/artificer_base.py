@@ -105,7 +105,6 @@ ARTIFICER_NON_ACTION_SPELLS = {
     "boca encantada": "1 minuto",
     "sopro de dragão": "ação bônus",
     "vigor arcano": "ação bônus",
-    "servo homunculo": "1 hora ou ritual",
     "glifo de protecao": "1 hora",
     "fabricar": "10 minutos",
     "santuario particular de mordenkainen": "10 minutos",
