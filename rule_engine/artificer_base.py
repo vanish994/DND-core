@@ -8,6 +8,11 @@ from __future__ import annotations
 import unicodedata
 from typing import Any
 
+
+def _modifier(score: int) -> int:
+    return (int(score) - 10) // 2
+
+
 # Progressão publicada da classe base, sem características de subclasse.
 ARTIFICER_PLANS_KNOWN = {2: 4, 6: 5, 10: 6, 14: 7, 18: 8}
 ARTIFICER_MAGIC_ITEMS = {2: 2, 6: 3, 10: 4, 14: 5, 18: 6}
