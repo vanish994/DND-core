@@ -402,14 +402,14 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 return {**base, "resultado": "bloqueado", "motivo": "espaco_de_magia_indisponivel"}
             current = int(facts.get("cargas_atuais", 0))
             maximum = int(facts.get("cargas_maximas", 0))
-            if slot < 1 or maximum < 1 or current < 0 or current > maximum:
+            if slot < 1 or slot > 5 or maximum < 1 or current < 0 or current > maximum:
                 return {**base, "resultado": "bloqueado", "motivo": "dados_de_carga_ou_espaco_invalidos"}
             restored = min(slot, maximum - current)
             if restored <= 0:
                 return {**base, "resultado": "bloqueado", "motivo": "item_ja_esta_com_cargas_maximas"}
-            return {**base, "resultado": "carregado", "cargas_restauradas": restored,
-                    "cargas_atuais": current + restored, "espaco_gasto": slot,
-                    "requer_item_replicado": True, "acao": "acao_bonus"}
+            return {**base, "resultado": "carregado", "item_id": facts["item_id"],
+                    "cargas_restauradas": restored, "cargas_atuais": current + restored,
+                    "espaco_gasto": slot, "requer_item_replicado": True, "acao": "acao_bonus"}
         if action in {"drenar", "drain"}:
             if facts.get("usado_no_descanso_longo") is None:
                 return {**base, "resultado": "requer_dados", "motivo": "estado_de_drenar_apos_descanso_longo_necessario"}
@@ -419,7 +419,7 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             if rarity not in {"comum", "incomum", "raro", "common", "uncommon", "rare"}:
                 return {**base, "resultado": "requer_dados", "motivo": "raridade_do_item_replicado_necessaria"}
             slot_level = 1 if rarity in {"comum", "common"} else 2
-            return {**base, "resultado": "drenado", "item_destruido": True,
+            return {**base, "resultado": "drenado", "item_id": facts["item_id"], "item_destruido": True,
                     "nivel_espaco_recuperado": slot_level, "limite": "uma_vez_por_descanso_longo",
                     "espaco_expira": "descanso_longo", "requer_item_replicado": True, "acao": "acao_bonus"}
         if action in {"transmutar", "transmute"}:
@@ -428,7 +428,9 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             if facts.get("usado_no_descanso_longo", False):
                 return {**base, "resultado": "bloqueado", "motivo": "transmutar_item_ja_usado_apos_descanso_longo"}
             origem, destino = facts.get("plano_origem"), facts.get("plano_destino")
-            conhecidos = facts.get("planos_conhecidos", [])
+            conhecidos = facts.get("planos_conhecidos")
+            if not isinstance(conhecidos, list) or any(not isinstance(plan, str) for plan in conhecidos):
+                return {**base, "resultado": "requer_dados", "motivo": "lista_de_planos_conhecidos_necessaria"}
             if not origem or not destino:
                 return {**base, "resultado": "escolha", "requer": ["plano_origem", "plano_destino"]}
             if origem == destino:
@@ -439,7 +441,8 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 return {**base, "resultado": "bloqueado", "motivo": "plano_destino_nao_conhecido"}
             destination_metadata = _plan_metadata(str(destino), level)
             return {**base, "resultado": "transmutado", "item_id": facts["item_id"],
-                    "substitui": origem, "por": destino, "metadados_destino": destination_metadata,
+                    "substitui": origem, "por": destino,
+                    "novo_item": {"plano": destino, **destination_metadata, "replicado": True},
                     "limite": "uma_vez_por_descanso_longo", "requer_item_replicado": True,
                     "acao": "acao_magica"}
         return {**base, "resultado": "escolha", "opcoes": ["carregar", "drenar", "transmutar"]}
