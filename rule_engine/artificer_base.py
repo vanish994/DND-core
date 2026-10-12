@@ -406,9 +406,10 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
     if key == "magic_item_tinker":
         action = str(facts.get("acao", "")).lower()
         if action in {"carregar", "charge", "drenar", "drain", "transmutar", "transmute"}:
+            item_metadata = facts.get("metadados_item") if isinstance(facts.get("metadados_item"), dict) else {}
             if not facts.get("item_id"):
                 return {**base, "resultado": "requer_dados", "motivo": "id_unico_do_item_necessario"}
-            if facts.get("item_replicado") is not True:
+            if facts.get("item_replicado", item_metadata.get("replicado")) is not True:
                 return {**base, "resultado": "requer_dados", "motivo": "confirmar_que_o_item_foi_criado_por_replicar_item_magico",
                         "requer": "item_replicado=True"}
             if facts.get("distancia_m") is None:
@@ -421,8 +422,12 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 return {**base, "resultado": "requer_dados", "motivo": "confirmar_disponibilidade_do_espaco"}
             if facts.get("espaco_disponivel") is not True:
                 return {**base, "resultado": "bloqueado", "motivo": "espaco_de_magia_indisponivel"}
-            current = int(facts.get("cargas_atuais", 0))
-            maximum = int(facts.get("cargas_maximas", 0))
+            current_value = facts.get("cargas_atuais")
+            maximum_value = facts.get("cargas_maximas", item_metadata.get("cargas"))
+            if current_value is None or maximum_value is None:
+                return {**base, "resultado": "requer_dados", "motivo": "cargas_maximas_e_atuais_necessarias"}
+            current = int(current_value)
+            maximum = int(maximum_value)
             if slot < 1 or slot > 5 or maximum < 1 or current < 0 or current > maximum:
                 return {**base, "resultado": "bloqueado", "motivo": "dados_de_carga_ou_espaco_invalidos"}
             restored = min(slot, maximum - current)
