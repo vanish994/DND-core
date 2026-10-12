@@ -297,6 +297,8 @@ class Personagem:
     ferramenta_antecedente: str | None = None
     equipamento_antecedente: str | None = None
     equipamento_classe: str | None = None
+    truques_artifice: list[str] = field(default_factory=list)
+    magias_preparadas_artifice: list[str] = field(default_factory=list)
 
     @property
     def bonus_proficiencia(self) -> int:
@@ -410,6 +412,30 @@ def criar_personagem(fatos: Mapping[str, Any]) -> Personagem:
         if escolha_origem.startswith("iniciado_em_magia:")
         else {}
     )
+
+    cantrip_keys = ("artificer_cantrips", "truques_artifice")
+    prepared_keys = ("artificer_prepared_spells", "magias_preparadas_artifice")
+    cantrips_supplied = any(key in fatos for key in cantrip_keys)
+    prepared_supplied = any(key in fatos for key in prepared_keys)
+    if classe != "artifice" and (cantrips_supplied or prepared_supplied):
+        raise ValueError("Escolhas de magia de Artífice só podem ser informadas para essa classe")
+    truques_artifice: list[str] = []
+    magias_preparadas_artifice: list[str] = []
+    if classe == "artifice" and (cantrips_supplied or prepared_supplied):
+        if not (cantrips_supplied and prepared_supplied):
+            raise ValueError("Informe juntos os truques e as magias preparadas do Artífice")
+        truques_artifice = list(fatos.get("artificer_cantrips", fatos.get("truques_artifice")) or [])
+        magias_preparadas_artifice = list(
+            fatos.get("artificer_prepared_spells", fatos.get("magias_preparadas_artifice")) or []
+        )
+        from .spellcasting import progresso_artifice, validar_escolhas_artifice
+
+        progress = progresso_artifice(nivel, atributos["inteligencia"])
+        validar_escolhas_artifice(
+            nivel, atributos["inteligencia"], truques_artifice,
+            magias_preparadas_artifice, progress["espacos_totais"], subclasse,
+        )
+
     return Personagem(
         nome=str(fatos["name"]).strip(),
         especie=especie,
@@ -426,6 +452,8 @@ def criar_personagem(fatos: Mapping[str, Any]) -> Personagem:
         ferramenta_antecedente=ferramenta_antecedente,
         equipamento_antecedente=equipamento_antecedente,
         equipamento_classe=equipamento_classe,
+        truques_artifice=truques_artifice,
+        magias_preparadas_artifice=magias_preparadas_artifice,
     )
 
 
@@ -488,6 +516,36 @@ def ficha_personagem(personagem: Personagem) -> dict[str, Any]:
     equipamento_classe_pendente = personagem.classe == "artifice" and not personagem.equipamento_classe
     if equipamento_classe_pendente:
         escolhas_pendentes.append("Equipamento inicial de Artífice (A ou B)")
+
+    conjuracao_artifice = None
+    if personagem.classe == "artifice":
+        from .spellcasting import progresso_artifice
+
+        progresso_magico = progresso_artifice(personagem.nivel, personagem.atributos["inteligencia"])
+        truques_corretos = len(personagem.truques_artifice) == progresso_magico["truques"]
+        preparadas_corretas = len(personagem.magias_preparadas_artifice) == progresso_magico["magias_preparadas"]
+        if not truques_corretos:
+            escolhas_pendentes.append("Truques de Artífice")
+        if not preparadas_corretas:
+            escolhas_pendentes.append("Magias preparadas de Artífice")
+        modificador_int = modificador(personagem.atributos["inteligencia"])
+        conjuracao_artifice = {
+            **progresso_magico,
+            "atributo_conjuracao": "inteligencia",
+            "cd_magia": 8 + personagem.bonus_proficiencia + modificador_int,
+            "ataque_magia": personagem.bonus_proficiencia + modificador_int,
+            "truques_conhecidos": list(personagem.truques_artifice),
+            "magias_preparadas": list(personagem.magias_preparadas_artifice),
+            "truque_concedido": "Reparar",
+            "caracteristica_de_classe": "Magia de Artífice",
+            "escolhas_completas": truques_corretos and preparadas_corretas,
+            "foco_magico": [
+                "Ferramentas de Ladrão", "Ferramentas de Funileiro",
+                "Ferramentas de Artesão com proficiência",
+            ],
+            "espacos_totais": dict(progresso_magico["espacos_totais"]),
+        }
+
     return {
         "nome": personagem.nome,
         "especie": personagem.especie,
@@ -558,7 +616,9 @@ def ficha_personagem(personagem: Personagem) -> dict[str, Any]:
             else None
         ),
         "equipamento_classe_pendente": equipamento_classe_pendente,
-        "escolhas_pendentes": escolhas_pendentes,
+        "caracteristicas_classe": caracteristicas_no_nivel(personagem.classe, personagem.nivel),
+        "conjuracao": conjuracao_artifice,
+        "escolhas_pendentes": list(dict.fromkeys(escolhas_pendentes)),
     }
 
 
