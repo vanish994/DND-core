@@ -436,7 +436,7 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 return {**base, "resultado": "requer_dados", "motivo": "estado_de_drenar_apos_descanso_longo_necessario"}
             if facts.get("usado_no_descanso_longo", False):
                 return {**base, "resultado": "bloqueado", "motivo": "drenar_item_ja_usado_apos_descanso_longo"}
-            rarity = str(facts.get("raridade", "")).lower()
+            rarity = str(facts.get("raridade", item_metadata.get("raridade", ""))).lower()
             if rarity not in {"comum", "incomum", "raro", "common", "uncommon", "rare"}:
                 return {**base, "resultado": "requer_dados", "motivo": "raridade_do_item_replicado_necessaria"}
             slot_level = 1 if rarity in {"comum", "common"} else 2
@@ -448,7 +448,7 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 return {**base, "resultado": "requer_dados", "motivo": "estado_de_transmutar_apos_descanso_longo_necessario"}
             if facts.get("usado_no_descanso_longo", False):
                 return {**base, "resultado": "bloqueado", "motivo": "transmutar_item_ja_usado_apos_descanso_longo"}
-            origem, destino = facts.get("plano_origem"), facts.get("plano_destino")
+            origem, destino = facts.get("plano_origem", item_metadata.get("plano")), facts.get("plano_destino")
             conhecidos = facts.get("planos_conhecidos")
             if not isinstance(conhecidos, list) or any(not isinstance(plan, str) for plan in conhecidos):
                 return {**base, "resultado": "requer_dados", "motivo": "lista_de_planos_conhecidos_necessaria"}
