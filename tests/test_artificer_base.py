@@ -77,6 +77,55 @@ class ArtificerProgressionTests(unittest.TestCase):
         self.assertIn("Dádiva Épica", caracteristicas_no_nivel("artifice", 19))
         self.assertIn("Alma do Artífice", caracteristicas_no_nivel("artifice", 20))
 
+    def test_new_eberron_magic_items_have_deterministic_actions(self):
+        from rule_engine.economy import usar_item_magico
+
+        manifold = usar_item_magico({
+            "item": "item-1", "metadados_item": {"plano": "manifold_tool", "nome": "Ferramenta Multiforme", "sintonizacao": True},
+            "sintonizados": ["item-1"], "acao": "transformar", "ferramenta_artesao": "ferramentas_de_carpinteiro",
+        })
+        self.assertEqual(manifold["resultado"], "transformado")
+        self.assertTrue(manifold["proficiencia_concedida_ao_usar"])
+
+        dazzling = usar_item_magico({
+            "item": "item-2", "metadados_item": {"plano": "dazzling_weapon", "nome": "Arma Deslumbrante", "sintonizacao": True},
+            "sintonizados": ["item-2"], "acao": "cegar_atacante", "foi_atingido_por_ataque": True,
+            "reacao_disponivel": True, "cargas": 4, "salvaguarda_constituicao_total": 12,
+        })
+        self.assertEqual(dazzling["cargas_restantes"], 3)
+        self.assertEqual(dazzling["condicao_aplicada"], "cego")
+
+        boots = usar_item_magico({
+            "item": "item-3", "metadados_item": {"plano": "boots_of_the_winding_path", "nome": "Botas do Caminho Sinuoso", "sintonizacao": True},
+            "sintonizados": ["item-3"], "acao": "teleportar", "distancia_m": 4,
+            "espaco_visto": True, "espaco_desocupado": True, "ocupou_este_turno": True,
+        })
+        self.assertEqual(boots["resultado"], "teletransportado")
+
+        sharpener = usar_item_magico({
+            "item": "item-4", "metadados_item": {"plano": "mind_sharpener", "nome": "Aguçador Mental", "sintonizacao": True},
+            "sintonizados": ["item-4"], "acao": "manter_concentracao", "salvaguarda_constituicao_falhou": True,
+            "reacao_disponivel": True, "cargas": 4,
+        })
+        self.assertEqual(sharpener["cargas_restantes"], 3)
+        self.assertTrue(sharpener["salvaguarda_sucesso"])
+
+        shield = usar_item_magico({
+            "item": "item-5", "metadados_item": {"plano": "repulsion_shield", "nome": "Escudo de Repulsão", "sintonizacao": False},
+            "acao": "repelir", "foi_atingido_por_ataque_corpo_a_corpo": True, "tamanho_atacante": "grande",
+            "distancia_m": 1, "reacao_disponivel": True, "cargas": 4,
+        })
+        self.assertEqual(shield["deslocamento_empurrado_m"], 4.5)
+
+        ring = usar_item_magico({
+            "item": "item-6", "metadados_item": {"plano": "spell_refueling_ring", "nome": "Anel de Reabastecimento de Magia",
+            "sintonizacao": True, "sintonizacao_requer_classe": "conjurador"},
+            "sintonizados": ["item-6"], "conjurador": True, "acao": "recuperar_espaco",
+            "usado_hoje": False, "espaco_gasto": True, "nivel_espaco": 2,
+        })
+        self.assertEqual(ring["resultado"], "espaco_recuperado")
+        self.assertTrue(ring["usado_hoje"])
+
     def test_tinkers_magic_uses_exact_26_item_list(self):
         self.assertEqual(len(ARTIFICER_GEAR), 26)
         self.assertIn("esferas_de_rolamento", ARTIFICER_GEAR)
