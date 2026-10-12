@@ -42,6 +42,7 @@ from .combat_special import (
     resolver_escape_agarramento,
 )
 from .conditions import resolver_efeitos_condicao, resolver_estado_condicao
+from .damage import aplicar_defesas_monstro
 from .dice import (
     rolar_ataque_auditavel,
     rolar_d20_auditavel,
@@ -57,6 +58,7 @@ from .economy import (
     usar_item_magico,
     vender_item,
 )
+from .encounters import resolver_encontro
 from .engine import Rule, RuleEngine
 from .exploration_actions import (
     resolver_acao_ajudar,
@@ -90,6 +92,8 @@ from .martial import (
     resolver_recuperar_folego,
 )
 from .martial_subclasses import resolver_subclasse_marcial
+from .species import resolver_tracos_especie
+from .spell_lists import listar_magias_da_classe
 from .spellcasters import (
     resolver_canalizar_divindade,
     resolver_forma_selvagem,
@@ -192,6 +196,23 @@ def build_default_engine() -> RuleEngine:
     )
     engine.register(
         Rule(
+            rule_id="ability-check.awaiting-dc",
+            description="O d20 já foi rolado, mas a CD ainda não foi definida pelo MJ.",
+            priority=30,
+            when=lambda f: f["type"] == "ability_check" and "roll" in f and f.get("dc") is None,
+            resolve=lambda f: {
+                "type": f["type"],
+                "result": "requires_dc",
+                "reason": "cd_do_mj_ausente",
+                "roll": int(f["roll"]),
+                "modifier": int(f.get("modifier", 0)),
+                "total": int(f["roll"]) + int(f.get("modifier", 0)),
+            },
+            source="D&D 2024 — testes de d20; a CD pertence ao MJ",
+        )
+    )
+    engine.register(
+        Rule(
             rule_id="attack.engine-roll",
             description="O motor gera um d20 auditável e resolve acerto, erro e crítico.",
             priority=110,
@@ -274,6 +295,23 @@ def build_default_engine() -> RuleEngine:
                 "target_ac": int(f["target_ac"]),
             },
             source="D&D 2024 — jogadas de ataque",
+        )
+    )
+    engine.register(
+        Rule(
+            rule_id="attack.awaiting-ac",
+            description="O d20 do ataque já foi rolado, mas a CA do alvo ainda não foi informada.",
+            priority=30,
+            when=lambda f: f["type"] == "attack" and "roll" in f and f.get("target_ac") is None,
+            resolve=lambda f: {
+                "type": f["type"],
+                "result": "blocked",
+                "reason": "target_ac_ausente",
+                "roll": int(f["roll"]),
+                "modifier": int(f.get("modifier", 0)),
+                "total": int(f["roll"]) + int(f.get("modifier", 0)),
+            },
+            source="D&D 2024 — jogadas de ataque; a CA pertence ao alvo",
         )
     )
     engine.register(
@@ -395,6 +433,23 @@ def build_default_engine() -> RuleEngine:
                 "dc": int(f["dc"]),
             },
             source="D&D 2024 — salvaguardas",
+        )
+    )
+    engine.register(
+        Rule(
+            rule_id="saving-throw.awaiting-dc",
+            description="O d20 da salvaguarda já foi rolado, mas a CD ainda não foi definida pelo MJ.",
+            priority=30,
+            when=lambda f: f["type"] == "saving_throw" and "roll" in f and f.get("dc") is None,
+            resolve=lambda f: {
+                "type": f["type"],
+                "result": "requires_dc",
+                "reason": "cd_do_mj_ausente",
+                "roll": int(f["roll"]),
+                "modifier": int(f.get("modifier", 0)),
+                "total": int(f["roll"]) + int(f.get("modifier", 0)),
+            },
+            source="D&D 2024 — salvaguardas; a CD pertence ao MJ",
         )
     )
     engine.register(
@@ -591,61 +646,6 @@ def build_default_engine() -> RuleEngine:
     )
     engine.register(
         Rule(
-            rule_id="condition.attack.cancelled",
-            description="Vantagem e desvantagem na mesma jogada se cancelam.",
-            priority=100,
-            when=lambda f: (
-                f["type"] == "condition_effect"
-                and f.get("action") == "attack"
-                and bool(set(f.get("attacker_conditions", [])) & {"blinded", "poisoned", "restrained"})
-                and bool(set(f.get("target_conditions", [])) & {"blinded", "restrained"})
-            ),
-            resolve=lambda f: {
-                "type": f["type"],
-                "result": "normal",
-                "reason": "advantage_disadvantage_cancel",
-            },
-            source="D&D 2024 — condições",
-        )
-    )
-    engine.register(
-        Rule(
-            rule_id="condition.attack.advantage",
-            description="Atacar uma criatura cega ou impedida concede vantagem.",
-            priority=60,
-            when=lambda f: (
-                f["type"] == "condition_effect"
-                and f.get("action") == "attack"
-                and bool(set(f.get("target_conditions", [])) & {"blinded", "restrained"})
-            ),
-            resolve=lambda f: {
-                "type": f["type"],
-                "result": "advantage",
-                "reason": "target_condition",
-            },
-            source="D&D 2024 — condições",
-        )
-    )
-    engine.register(
-        Rule(
-            rule_id="condition.attack.disadvantage",
-            description="Atacar enquanto cego, envenenado ou impedido impõe desvantagem.",
-            priority=50,
-            when=lambda f: (
-                f["type"] == "condition_effect"
-                and f.get("action") == "attack"
-                and bool(set(f.get("attacker_conditions", [])) & {"blinded", "poisoned", "restrained"})
-            ),
-            resolve=lambda f: {
-                "type": f["type"],
-                "result": "disadvantage",
-                "reason": "attacker_condition",
-            },
-            source="D&D 2024 — condições",
-        )
-    )
-    engine.register(
-        Rule(
             rule_id="attack.opportunity",
             description="Uma criatura que sai do alcance pode provocar um ataque de oportunidade.",
             priority=50,
@@ -702,6 +702,20 @@ def build_default_engine() -> RuleEngine:
                 imunidades=f.get("immunities", ()),
             ),
             source="D&D 2024 — Pontos de Vida",
+        )
+    )
+    engine.register(
+        Rule(
+            rule_id="damage.defenses",
+            description="Aplica Imunidade, Resistência e Vulnerabilidade na ordem do glossário 2024.",
+            priority=50,
+            when=lambda f: f["type"] == "damage_defenses",
+            resolve=lambda f: aplicar_defesas_monstro(
+                int(f["damage"]),
+                str(f.get("damage_type", f.get("tipo_dano", ""))),
+                f.get("defesas", f),
+            ),
+            source="D&D 2024 — Resistência e Vulnerabilidade",
         )
     )
     engine.register(
@@ -1267,6 +1281,21 @@ def build_default_engine() -> RuleEngine:
     )
     engine.register(
         Rule(
+            rule_id="spell.list-by-class",
+            description="Lista as magias da lista de classe do PHB 2024, opcionalmente por círculo.",
+            priority=70,
+            when=lambda f: f["type"] == "spell_catalog" and f.get("operation") == "by_class",
+            resolve=lambda f: {
+                "resultado": "listado",
+                "classe": f.get("classe"),
+                "circulo": f.get("circulo"),
+                "magias": listar_magias_da_classe(f.get("classe"), f.get("circulo")),
+            },
+            source="D&D 2024 — Listas de magias por classe (cap. 3)",
+        )
+    )
+    engine.register(
+        Rule(
             rule_id="spell.lookup",
             description="Consulta escola, círculo, componentes e duração de uma magia.",
             priority=70,
@@ -1371,6 +1400,32 @@ def build_default_engine() -> RuleEngine:
             when=lambda f: f["type"] == "bestiary",
             resolve=resolver_bestiario,
             source="SRD 5.2.1 — bestiário",
+        )
+    )
+    engine.register(
+        Rule(
+            rule_id="species.traits",
+            description=(
+                "Resolve os traços completos das dez espécies do PHB 2024: visão no escuro, "
+                "resistências, vantagens de salvaguarda, magias de linhagem/legado e recursos."
+            ),
+            priority=80,
+            when=lambda f: f["type"] == "species_traits",
+            resolve=resolver_tracos_especie,
+            source="D&D 2024 — Origens dos Personagens: espécies",
+        )
+    )
+    engine.register(
+        Rule(
+            rule_id="encounter.building",
+            description=(
+                "Constrói e avalia encontros com o orçamento de XP por personagem do DMG 2024, "
+                "incluindo dificuldade, atitude inicial e tabelas de personalidade e relação."
+            ),
+            priority=80,
+            when=lambda f: f["type"] == "encounter",
+            resolve=resolver_encontro,
+            source="Dungeon Master's Guide 2024 — Combat Encounters",
         )
     )
     engine.register(

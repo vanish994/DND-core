@@ -6,6 +6,10 @@ venv/
 .env
 .env.*
 !.env.example
+.coverage
+
+# Fontes de referência baixadas localmente (livros protegidos; não versionar)
+biblioteca/fontes/
 
 # Banco SQLite local de desenvolvimento
 data/

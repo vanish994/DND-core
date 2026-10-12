@@ -67,15 +67,23 @@ def aplicar_dano(
     vulnerabilidades: Iterable[str] = (),
     imunidades: Iterable[str] = (),
 ) -> dict[str, Any]:
-    """Aplica dano, absorvendo PV temporários e tratando 0 PV."""
+    """Aplica dano, absorvendo PV temporários e tratando 0 PV.
+
+    Resistência e Vulnerabilidade seguem a ordem do Livro do Jogador 2024:
+    Resistência (metade, para baixo) e depois Vulnerabilidade (dobro). Os nomes
+    de tipo são normalizados (``fogo``/``fire``/``Ígneo`` casam entre si) com a
+    mesma tabela de ``rule_engine.damage``.
+    """
+    from .damage import possui_defesa
+
     if dano_ajustado:
         dano = max(0, int(dano))
     else:
         dano = ajustar_dano(
             dano,
-            resistente=tipo_dano in set(resistencias),
-            vulneravel=tipo_dano in set(vulnerabilidades),
-            imune=tipo_dano in set(imunidades),
+            resistente=bool(tipo_dano) and possui_defesa(resistencias, tipo_dano),
+            vulneravel=bool(tipo_dano) and possui_defesa(vulnerabilidades, tipo_dano),
+            imune=bool(tipo_dano) and possui_defesa(imunidades, tipo_dano),
         )
     antes_pv = estado.pv_atuais
     absorvido = min(estado.pv_temporarios, dano)
@@ -94,7 +102,12 @@ def aplicar_dano(
         resultado["origem"] = origem
     if estado.pv_atuais > 0:
         return resultado
-    if antes_pv > 0 and restante >= estado.pv_maximos:
+    # Dano Maciço (PHB 2024): se o dano reduz a 0 PV e o excedente for igual
+    # ou superior aos PV máximos, a criatura morre. Ex.: 12 máximos, 6 atuais,
+    # 18 de dano → 12 de excedente ≥ 12 → morte.
+    excedente = max(0, restante - antes_pv)
+    resultado["dano_excedente"] = excedente
+    if antes_pv > 0 and excedente >= estado.pv_maximos:
         estado.morto = True
         resultado["estado"] = "morto"
         return resultado

@@ -693,6 +693,27 @@ for _nome_d, _circ_d in _CIRCULOS_PHB2024.items():
         if _m["nome"] == _nome_d and _m.get("circulo") is None:
             _m["circulo"] = int(_circ_d)
 
+# Completa círculo e adiciona magias ausentes a partir das listas de classe do
+# PHB 2024 (rule_engine/spell_lists.py). Os marcadores C/R/M vêm das listas;
+# duração não consta das listas e fica com o padrão do catálogo extraído.
+from .spell_lists import META_POR_NOME as _META_LISTAS
+
+for _chave_l, _meta_l in _META_LISTAS.items():
+    _existente_l = next((m for m in MAGIAS.values() if _normalizar_nome_magia(m["nome"]) == _chave_l), None)
+    if _existente_l is not None:
+        if _existente_l.get("circulo") is None:
+            _existente_l["circulo"] = _meta_l["circulo"]
+    else:
+        MAGIAS[_chave_l] = {
+            "nome": _meta_l["nome"],
+            "circulo": _meta_l["circulo"],
+            "escola": _meta_l["escola"],
+            "componentes": "V, S" + (", M" if _meta_l["material"] else ""),
+            "concentracao": bool(_meta_l["concentracao"]),
+            "ritual": bool(_meta_l["ritual"]),
+            "duracao": "concentração" if _meta_l["concentracao"] else "instantânea",
+        }
+
 for _antigo, _novo in _ALIAS_PARA_2024:
     _entrada = MAGIAS.get(_antigo.lower())
     if _entrada is not None:
@@ -1430,11 +1451,29 @@ def resolver_magia(fatos: dict) -> dict[str, Any]:
         and fatos.get("alvo_veste_armadura") is True
     ):
         return {"resultado": "bloqueado", "motivo": "alvo_ja_veste_armadura"}
+    # Espaço de magia é pré-condição da conjuração: sem espaço disponível a
+    # magia é bloqueada, mesmo quando o chamador envia o nome ("magia").
+    if "has_slot" in fatos and not bool(fatos.get("has_slot")):
+        return {
+            "resultado": "bloqueado",
+            "motivo": "no_slot",
+            "reason": "no_slot",
+            "magia": magia["nome"],
+            "circulo": magia["circulo"],
+        }
     try:
-        usado = int(fatos.get("espaco", fatos.get("spell_level", magia["circulo"])))
+        if "espaco" in fatos and fatos.get("espaco") is not None:
+            usado = int(fatos["espaco"])
+        elif "slot_level" in fatos and fatos.get("slot_level") is not None:
+            usado = int(fatos["slot_level"])
+        elif "spell_level" in fatos and fatos.get("spell_level") is not None:
+            usado = int(fatos["spell_level"])
+        else:
+            usado = int(magia["circulo"])
         aumento = _circulo_efetivo(magia["circulo"], usado)
     except (TypeError, ValueError) as erro:
-        return {"resultado": "bloqueado", "motivo": "circulo_invalido", "detalhe": str(erro)}
+        motivo = "slot_level_too_low" if "inferior ao círculo" in str(erro) else "circulo_invalido"
+        return {"resultado": "bloqueado", "motivo": motivo, "reason": motivo, "detalhe": str(erro)}
     componentes = set(magia["componentes"].replace("(", ",").replace(")", ",").split(","))
     requeridos = {c.strip() for c in componentes if c.strip() in {"V", "S", "M"}}
     disponiveis = set(fatos.get("componentes_disponiveis", ["V", "S", "M"]))

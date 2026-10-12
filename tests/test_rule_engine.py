@@ -526,6 +526,66 @@ class RuleEngineTests(unittest.TestCase):
         self.assertEqual(ajustar_dano(25, resistente=True), 12)
         self.assertEqual(ajustar_dano(25, vulneravel=True), 50)
         self.assertEqual(ajustar_dano(25, imune=True), 0)
+        # PHB 2024: Resistência e Vulnerabilidade não se cancelam; aplicam-se
+        # em sequência (metade para baixo e depois o dobro). Exemplo do livro:
+        # 23 de dano Ígneo com ambas → 11 → 22.
+        self.assertEqual(ajustar_dano(23, resistente=True, vulneravel=True), 22)
+
+    def test_damage_defenses_follow_2024_order_of_application(self):
+        from rule_engine.damage import aplicar_defesas_monstro
+
+        resultado = aplicar_defesas_monstro(
+            23,
+            "ígneo",
+            {
+                "resistencias_dano": ["todos"],
+                "vulnerabilidades_dano": ["fire"],
+                "imunidades_dano": [],
+            },
+        )
+        self.assertEqual(resultado["dano"], 22)
+        self.assertEqual(resultado["aplicacao"], "resistencia_e_vulnerabilidade")
+        resistencia = aplicar_defesas_monstro(23, "fire", {"resistencias_dano": ["ígneo"]})
+        self.assertEqual(resistencia["dano"], 11)
+        self.assertEqual(resistencia["aplicacao"], "resistencia")
+        # A mesma regra está registrada no motor.
+        via_engine = self.engine.evaluate(
+            {
+                "type": "damage_defenses",
+                "damage": 23,
+                "damage_type": "ígneo",
+                "defesas": {"resistencias_dano": ["todos"], "vulnerabilidades_dano": ["fire"]},
+            }
+        )
+        self.assertEqual(via_engine.matched_rules, ["damage.defenses"])
+        self.assertEqual(via_engine.outcome["dano"], 22)
+        self.assertEqual(via_engine.outcome["rule_source"], "D&D 2024 — Resistência e Vulnerabilidade")
+
+    def test_damage_application_normalizes_damage_type_aliases(self):
+        estado = EstadoVital(20, 20)
+        result = self.engine.evaluate(
+            {
+                "type": "damage_application",
+                "estado": estado,
+                "damage": 20,
+                "damage_type": "fire",
+                "resistances": ["ígneo"],
+            }
+        )
+        self.assertEqual(result.outcome["dano_total"], 10)
+
+    def test_massive_damage_uses_excess_over_current_hit_points(self):
+        # PHB 2024: 12 máximos, 6 atuais, 18 de dano → 12 de excedente ≥ 12 → morte.
+        fatal = EstadoVital(12, 6)
+        result = self.engine.evaluate({"type": "damage_application", "estado": fatal, "damage": 18})
+        self.assertEqual(result.outcome["dano_excedente"], 12)
+        self.assertTrue(fatal.morto)
+        # Excedente 9 < 12 → Inconsciente, sem morte instantânea.
+        sobrevive = EstadoVital(12, 6)
+        result = self.engine.evaluate({"type": "damage_application", "estado": sobrevive, "damage": 15})
+        self.assertEqual(result.outcome["dano_excedente"], 9)
+        self.assertFalse(sobrevive.morto)
+        self.assertTrue(sobrevive.inconsciente)
 
     def test_damage_application_uses_damage_type_and_origin(self):
         estado = EstadoVital(20, 20)
@@ -1542,15 +1602,16 @@ class RuleEngineTests(unittest.TestCase):
         self.assertIn("dadiva_do_destino", EPIC_FEATS)
         self.assertEqual(FEATS["alerta"]["categoria"], "origem")
 
-    def test_origin_talents_distinguish_catalog_from_implemented_effects(self):
+    def test_origin_talents_resolve_deterministic_benefits(self):
         result = self.engine.evaluate({"type": "feat", "talento": "alerta", "nivel": 1})
         self.assertIn("proficiência_iniciativa", result.outcome["efeitos"])
-        self.assertEqual(result.outcome["resultado"], "nao_implementado")
+        self.assertEqual(result.outcome["resultado"], "resolvido")
+        self.assertEqual(result.outcome["bonus_iniciativa"], "bonus_proficiencia")
         result = self.engine.evaluate({"type": "feat", "talento": "vigoroso", "nivel": 5})
         self.assertEqual(result.outcome["pv_adicionais"], 10)
         result = self.engine.evaluate({"type": "feat", "talento": "sortudo", "nivel": 1, "bonus_proficiencia": 2})
-        self.assertEqual(result.outcome["resultado"], "nao_implementado")
-        self.assertNotIn("pontos_de_sorte", result.outcome)
+        self.assertEqual(result.outcome["resultado"], "resolvido")
+        self.assertEqual(result.outcome["pontos_de_sorte"], 2)
 
     def test_general_talent_prerequisites_and_effects(self):
         blocked = self.engine.evaluate(
@@ -1564,15 +1625,15 @@ class RuleEngineTests(unittest.TestCase):
         result = self.engine.evaluate({"type": "feat", "talento": "sentinela", "nivel": 4, "forca": 13})
         self.assertIn("zera_deslocamento", result.outcome["efeitos"])
 
-    def test_epic_talents_require_level_19_and_mark_partial_effects_unimplemented(self):
+    def test_epic_talents_require_level_19_and_resolve_benefits(self):
         blocked = self.engine.evaluate({"type": "feat", "talento": "dadiva_da_velocidade", "nivel": 18})
         self.assertEqual(blocked.outcome["motivo"], "nivel_insuficiente")
-        partial = self.engine.evaluate({"type": "feat", "talento": "dadiva_da_velocidade", "nivel": 19})
-        self.assertEqual(partial.outcome["resultado"], "nao_implementado")
-        self.assertNotIn("deslocamento_adicional_m", partial.outcome)
+        velocidade = self.engine.evaluate({"type": "feat", "talento": "dadiva_da_velocidade", "nivel": 19})
+        self.assertEqual(velocidade.outcome["resultado"], "resolvido")
+        self.assertEqual(velocidade.outcome["deslocamento_adicional_m"], 9)
         true_sight = self.engine.evaluate({"type": "feat", "talento": "dadiva_da_visao_verdadeira", "nivel": 19})
-        self.assertEqual(true_sight.outcome["resultado"], "nao_implementado")
-        self.assertNotIn("visao_verdadeira_m", true_sight.outcome)
+        self.assertEqual(true_sight.outcome["resultado"], "resolvido")
+        self.assertEqual(true_sight.outcome["visao_verdadeira_m"], 18)
 
     def test_spell_catalog_is_queryable_by_school_and_circle(self):
         from rule_engine import ESCOLAS, listar_magias, obter_magia
@@ -1597,7 +1658,40 @@ class RuleEngineTests(unittest.TestCase):
         )
         self.assertEqual(result.outcome["motivo"], "componentes_ausentes")
         result = self.engine.evaluate({"type": "spell_cast", "magia": "bola de fogo", "espaco": 2})
-        self.assertEqual(result.outcome["motivo"], "circulo_invalido")
+        self.assertEqual(result.outcome["resultado"], "bloqueado")
+        self.assertEqual(result.outcome["motivo"], "slot_level_too_low")
+
+    def test_spell_cast_with_name_is_blocked_without_slot(self):
+        # O caminho com "magia" não pode contornar a validação de espaço.
+        result = self.engine.evaluate(
+            {"type": "spell_cast", "magia": "bola de fogo", "has_slot": False, "slot_level": 3, "spell_level": 3}
+        )
+        self.assertEqual(result.matched_rules, ["spell.cast-complete"])
+        self.assertEqual(result.outcome["resultado"], "bloqueado")
+        self.assertEqual(result.outcome["motivo"], "no_slot")
+
+    def test_spell_cast_with_name_honors_slot_level(self):
+        result = self.engine.evaluate(
+            {"type": "spell_cast", "magia": "bola de fogo", "has_slot": True, "slot_level": 1, "spell_level": 3}
+        )
+        self.assertEqual(result.outcome["resultado"], "bloqueado")
+        self.assertEqual(result.outcome["motivo"], "slot_level_too_low")
+        ok = self.engine.evaluate(
+            {"type": "spell_cast", "magia": "bola de fogo", "has_slot": True, "slot_level": 3, "spell_level": 3}
+        )
+        self.assertEqual(ok.outcome["resultado"], "conjurada")
+
+    def test_external_roll_without_dc_returns_pending_instead_of_undetermined(self):
+        result = self.engine.evaluate({"type": "ability_check", "roll": 12, "modifier": 3})
+        self.assertEqual(result.status, "resolved")
+        self.assertEqual(result.outcome["result"], "requires_dc")
+        self.assertEqual(result.outcome["reason"], "cd_do_mj_ausente")
+        self.assertEqual(result.outcome["total"], 15)
+        save = self.engine.evaluate({"type": "saving_throw", "roll": 9, "modifier": 1})
+        self.assertEqual(save.outcome["result"], "requires_dc")
+        attack = self.engine.evaluate({"type": "attack", "roll": 12, "modifier": 3})
+        self.assertEqual(attack.outcome["result"], "blocked")
+        self.assertEqual(attack.outcome["reason"], "target_ac_ausente")
 
     def test_spell_lookup_rule_exposes_components(self):
         result = self.engine.evaluate({"type": "spell_catalog", "operation": "lookup", "magia": "armadura de agathys"})
