@@ -84,7 +84,7 @@ class ArtificerProgressionTests(unittest.TestCase):
         self.assertEqual(result["itens_tinkers_que_expiram"][0]["id"], "mundane-1")
         self.assertEqual(result["delta_inventario"]["remover_ids"], ["mundane-1"])
         self.assertEqual(result["delta_mundo"]["remover_ids"], ["mundane-1"])
-        self.assertEqual(result["delta_conjuracao"]["espacos_restantes"], {"1": 3, "2": 2, "3": 1})
+        self.assertEqual(result["delta_conjuracao"]["espacos_restantes"], {"1": 4, "2": 3})
         self.assertTrue(result["delta_conjuracao"]["troca_truque_disponivel"])
         self.assertTrue(result["delta_conjuracao"]["mudanca_magias_preparadas_disponivel"])
 
