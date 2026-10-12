@@ -18,10 +18,10 @@ ARTIFICER_PREPARED_SPELLS = {
 ARTIFICER_ATTUNEMENT_LIMIT = {1: 3, 10: 4, 14: 5, 18: 6}
 ARTIFICER_GEAR = {
     "esferas_de_rolamento", "cesta", "saco_de_dormir", "sino", "cobertor",
-    "talha_e_polias", "balde", "estrepes", "vela", "pe_de_cabra",
-    "frasco", "jarro", "lampada", "rede", "oleo", "papel", "pergaminho",
-    "vara", "bolsa", "corda", "saco", "pa", "barbante", "caixa_de_isca",
-    "tocha", "frasco_de_vidro", "gancho_de_escala",
+    "talha_e_polias", "balde", "estrepes", "vela", "corrente", "gancho_de_escalada",
+    "pe_de_cabra", "frasco", "gancho_de_escala", "jarro", "lampada", "algemas",
+    "rede", "oleo", "papel", "pergaminho", "vara", "bolsa", "corda", "saco",
+    "pa", "barbante", "caixa_de_isca", "tocha", "frasco_de_vidro",
 }
 ARTIFICER_FEATURE_ALIASES = {
     "conjuracao": "conjuracao",
@@ -30,6 +30,7 @@ ARTIFICER_FEATURE_ALIASES = {
     "replicar_item_magico": "replicate_magic_item",
     "replicate_magic_item": "replicate_magic_item",
     "artesao_de_item_magico": "magic_item_tinker",
+    "ajustador_de_item_magico": "magic_item_tinker",
     "magic_item_tinker": "magic_item_tinker",
     "adepto_de_item_magico": "magic_item_adept",
     "magic_item_adept": "magic_item_adept",
@@ -105,7 +106,7 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                     "usos_restantes": uses - gastos - 1, "desaparece": "proximo_descanso_longo"}
         return {**base, "resultado": "resolvido", "truque_conhecido": "consertar",
                 "usos_por_descanso_longo": uses, "acao": "acao_magica",
-                "requer_ferramentas": "ferramentas_de_tinkering",
+                "requer_ferramentas": "ferramentas_de_tinkering", "foco": "ferramentas_de_artifice",
                 "duracao_itens_criados": "ate_concluir_descanso_longo"}
 
     if key == "replicate_magic_item":
@@ -141,14 +142,15 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             restored = min(slot, maximum - current)
             return {**base, "resultado": "carregado", "cargas_restauradas": restored,
                     "cargas_atuais": current + restored, "espaco_gasto": slot,
-                    "requer_item_replicado": True, "acao": "acao_magica"}
+                    "requer_item_replicado": True, "acao": "acao_bonus"}
         if action in {"drenar", "drain"}:
-            if not facts.get("nivel_espaco_recuperado"):
-                return {**base, "resultado": "requer_dados", "motivo": "raridade_do_item_deve_mapear_para_nivel_de_espaco",
-                        "requer": ["item_replicado", "nivel_espaco_recuperado"]}
+            rarity = str(facts.get("raridade", "")).lower()
+            if rarity not in {"comum", "incomum", "raro", "common", "uncommon", "rare"}:
+                return {**base, "resultado": "requer_dados", "motivo": "raridade_do_item_replicado_necessaria"}
+            slot_level = 1 if rarity in {"comum", "common"} else 2
             return {**base, "resultado": "drenado", "item_destruido": True,
-                    "nivel_espaco_recuperado": int(facts["nivel_espaco_recuperado"]),
-                    "limite": "uma_vez_por_descanso_longo", "acao": "acao_magica"}
+                    "nivel_espaco_recuperado": slot_level, "limite": "uma_vez_por_descanso_longo",
+                    "espaco_expira": "descanso_longo", "requer_item_replicado": True, "acao": "acao_bonus"}
         if action in {"transmutar", "transmute"}:
             origem, destino = facts.get("plano_origem"), facts.get("plano_destino")
             conhecidos = facts.get("planos_conhecidos", [])
@@ -170,8 +172,8 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
         maximum = max(1, int_mod)
         if spent >= maximum:
             return {**base, "resultado": "bloqueado", "motivo": "usos_esgotados", "usos_maximos": maximum}
-        return {**base, "resultado": "aplicado", "bonus": int_mod,
-                "novo_total": int(facts.get("total", 0)) + int_mod,
+        return {**base, "resultado": "aplicado", "bonus": max(1, int_mod),
+                "novo_total": int(facts.get("total", 0)) + max(1, int_mod),
                 "reacao": True, "usos_maximos": maximum, "usos_restantes": maximum - spent - 1,
                 "alvo": "criatura_que_voce_ve_a_9m_ou_menos"}
 
@@ -191,7 +193,7 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                         "sem_componente_material_consumido"]}
         uses = max(1, 2 * int_mod)
         return {**base, "resultado": "armazenado", "magia": spell, "nivel_magia": spell_level,
-                "usos": uses, "acao_para_lancar": "acao_magica", "habilidade_conjuracao": "inteligencia",
+                "usos": max(2, 2 * int_mod), "acao_para_lancar": "acao_magica", "habilidade_conjuracao": "inteligencia",
                 "objeto": facts.get("objeto"), "requer_objeto_adequado": True}
 
     if key == "advanced_artifice":
@@ -210,8 +212,8 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             items = facts.get("itens_destruidos", [])
             if not isinstance(items, list) or not items:
                 return {**base, "resultado": "escolha", "requer": "itens_replicados_incomuns_ou_raros"}
-            if any(str(item.get("raridade", "")).lower() not in {"incomum", "raro", "uncommon", "rare"}
-                   for item in items if isinstance(item, dict)):
+            if any(not isinstance(item, dict) or str(item.get("raridade", "")).lower() not in {"incomum", "raro", "uncommon", "rare"}
+                   for item in items):
                 return {**base, "resultado": "bloqueado", "motivo": "raridade_nao_elegivel"}
             return {**base, "resultado": "sobreviveu", "pv_atuais": 20 * len(items),
                     "itens_destruidos": len(items), "gatilho": "cair_a_0_pv",
