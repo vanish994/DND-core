@@ -24,6 +24,25 @@ class ArtificerProgressionTests(unittest.TestCase):
             "1": 4, "2": 3, "3": 3, "4": 3, "5": 2
         })
 
+    def test_english_feature_aliases_obey_level_gates(self):
+        early_tinker = resolver_caracteristica({
+            "classe": "artifice", "recurso": "Magic Item Tinker", "nivel": 1,
+        })
+        self.assertEqual(early_tinker["resultado"], "bloqueado")
+        self.assertEqual(early_tinker["nivel_minimo"], 6)
+        early_adept = resolver_caracteristica({
+            "classe": "artifice", "recurso": "Magic Item Adept", "nivel": 1,
+        })
+        self.assertEqual(early_adept["nivel_minimo"], 10)
+        early_master = resolver_caracteristica({
+            "classe": "artifice", "recurso": "Magic Item Master", "nivel": 1,
+        })
+        self.assertEqual(early_master["nivel_minimo"], 18)
+        early_boon = resolver_caracteristica({
+            "classe": "artifice", "recurso": "Epic Boon", "nivel": 18,
+        })
+        self.assertEqual(early_boon["nivel_minimo"], 19)
+
     def test_level_6_10_14_18_and_epic_boon_are_in_progression(self):
         self.assertIn("Ajustador de Item Mágico", caracteristicas_no_nivel("artifice", 6))
         self.assertIn("Adepto de Item Mágico", caracteristicas_no_nivel("artifice", 10))
