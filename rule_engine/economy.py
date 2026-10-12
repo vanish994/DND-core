@@ -220,14 +220,122 @@ def usar_item_magico(fatos: dict) -> dict[str, Any]:
         if fatos.get("sintonizacao_requerida") is None:
             return {"resultado": "requer_dados", "motivo": "sintonizacao_depende_do_item_escolhido"}
         requires_attunement = bool(fatos["sintonizacao_requerida"])
-    if requires_attunement and str(fatos["item"]).lower() not in {
-        str(x).lower() for x in fatos.get("sintonizados", [])
-    }:
+    item_id = str(fatos["item"]).lower()
+    if requires_attunement and item_id not in {str(x).lower() for x in fatos.get("sintonizados", [])}:
         return {"resultado": "bloqueado", "motivo": "requer_sintonizacao"}
-    cargas = fatos.get("cargas")
-    if cargas is not None and int(cargas) <= 0:
+    plan = str(item.get("plano", fatos.get("plano", ""))).lower()
+    action = str(fatos.get("acao", "passivo")).lower()
+    charges = fatos.get("cargas")
+
+    if plan == "manifold_tool":
+        if action not in {"transformar", "transform", "usar"}:
+            return {"resultado": "escolha", "item": item["nome"], "opcoes": ["transformar"],
+                    "acao": "acao_magica"}
+        tool = fatos.get("ferramenta_artesao")
+        if not tool:
+            return {"resultado": "escolha", "motivo": "escolha_tipo_de_ferramenta_de_artesao"}
+        return {"resultado": "transformado", "item": item["nome"], "ferramenta": tool,
+                "proficiencia_concedida_ao_usar": True, "acao": "acao_magica"}
+    if plan == "boots_of_the_winding_path":
+        if action not in {"teleportar", "teleport", "usar"}:
+            return {"resultado": "escolha", "item": item["nome"], "opcoes": ["teleportar"],
+                    "acao": "acao_bonus", "distancia_maxima_m": 4.5}
+        if fatos.get("distancia_m") is None or fatos.get("espaco_visto") is None or fatos.get("espaco_desocupado") is None or fatos.get("ocupou_este_turno") is None:
+            return {"resultado": "requer_dados", "motivo": "distancia_visibilidade_espaco_e_posicao_anterior_necessarios"}
+        if float(fatos["distancia_m"]) > 4.5:
+            return {"resultado": "bloqueado", "motivo": "destino_fora_de_4_5_metros"}
+        if fatos.get("espaco_visto") is not True or fatos.get("espaco_desocupado") is not True or fatos.get("ocupou_este_turno") is not True:
+            return {"resultado": "bloqueado", "motivo": "destino_deve_ser_visto_livre_e_ocupado_este_turno"}
+        return {"resultado": "teletransportado", "item": item["nome"], "distancia_m": float(fatos["distancia_m"]),
+                "acao": "acao_bonus"}
+    if plan == "dazzling_weapon":
+        if action in {"iluminar", "light"}:
+            return {"resultado": "usado", "item": item["nome"], "acao": "acao_bonus",
+                    "luz_brilhante_raio_m": 9, "luz_fraca_raio_adicional_m": 9,
+                    "efeito": item.get("efeito")}
+        if action in {"cegar_atacante", "blind_attacker"}:
+            if fatos.get("foi_atingido_por_ataque") is not True:
+                return {"resultado": "bloqueado", "motivo": "gatilho_requer_ser_atingido_por_ataque"}
+            if fatos.get("reacao_disponivel") is not True:
+                return {"resultado": "bloqueado", "motivo": "reacao_indisponivel"}
+            if charges is None:
+                return {"resultado": "requer_dados", "motivo": "cargas_atuais_necessarias"}
+            if int(charges) <= 0:
+                return {"resultado": "bloqueado", "motivo": "sem_cargas"}
+            save_total = fatos.get("salvaguarda_constituicao_total")
+            if save_total is None:
+                return {"resultado": "requer_dados", "motivo": "resultado_da_salvaguarda_de_constituicao_necessario",
+                        "cd": 15}
+            return {"resultado": "usado", "item": item["nome"], "cargas_restantes": int(charges) - 1,
+                    "cd": 15, "salvaguarda_sucesso": int(save_total) >= 15,
+                    "condicao_aplicada": None if int(save_total) >= 15 else "cego",
+                    "duracao_condicao": "ate_o_fim_do_proximo_turno_do_atacante", "reacao": True}
+        return {"resultado": "passivo", "item": item["nome"], "bonus_ataque": 1, "bonus_dano": 1}
+    if plan == "helm_of_awareness":
+        return {"resultado": "passivo", "item": item["nome"], "vantagem_iniciativa": True}
+    if plan == "mind_sharpener":
+        if action not in {"manter_concentracao", "maintain_concentration"}:
+            return {"resultado": "escolha", "item": item["nome"], "opcoes": ["manter_concentracao"]}
+        if fatos.get("salvaguarda_constituicao_falhou") is not True:
+            return {"resultado": "bloqueado", "motivo": "gatilho_requer_falha_em_salvaguarda_de_constituicao"}
+        if fatos.get("reacao_disponivel") is not True:
+            return {"resultado": "bloqueado", "motivo": "reacao_indisponivel"}
+        if charges is None:
+            return {"resultado": "requer_dados", "motivo": "cargas_atuais_necessarias"}
+        if int(charges) <= 0:
+            return {"resultado": "bloqueado", "motivo": "sem_cargas"}
+        return {"resultado": "concentracao_mantida", "item": item["nome"],
+                "salvaguarda_sucesso": True, "cargas_restantes": int(charges) - 1, "reacao": True}
+    if plan == "repeating_shot":
+        return {"resultado": "passivo", "item": item["nome"], "bonus_ataque": 1, "bonus_dano": 1,
+                "somente_ataques_a_distancia": True, "ignora_propriedade_recarga": True,
+                "cria_municao_magica_se_necessario": True}
+    if plan == "repulsion_shield":
+        if action in {"repelir", "repel"}:
+            if fatos.get("foi_atingido_por_ataque_corpo_a_corpo") is not True:
+                return {"resultado": "bloqueado", "motivo": "gatilho_requer_ataque_corpo_a_corpo"}
+            if fatos.get("tamanho_atacante") not in {"miudo", "pequeno", "medio", "grande", "tiny", "small", "medium", "large"}:
+                return {"resultado": "bloqueado", "motivo": "atacante_deve_ser_grande_ou_menor"}
+            if fatos.get("distancia_m") is None:
+                return {"resultado": "requer_dados", "motivo": "distancia_do_atacante_necessaria"}
+            if float(fatos["distancia_m"]) > 1.5:
+                return {"resultado": "bloqueado", "motivo": "atacante_fora_de_1_5_metro"}
+            if fatos.get("reacao_disponivel") is not True:
+                return {"resultado": "bloqueado", "motivo": "reacao_indisponivel"}
+            if charges is None:
+                return {"resultado": "requer_dados", "motivo": "cargas_atuais_necessarias"}
+            if int(charges) <= 0:
+                return {"resultado": "bloqueado", "motivo": "sem_cargas"}
+            return {"resultado": "repelido", "item": item["nome"], "cargas_restantes": int(charges) - 1,
+                    "deslocamento_empurrado_m": 4.5, "direcao": "linha_reta_para_longe_de_voce", "reacao": True}
+        return {"resultado": "passivo", "item": item["nome"], "bonus_ca": 1}
+    if plan == "returning_weapon":
+        return {"resultado": "passivo", "item": item["nome"], "bonus_ataque": 1, "bonus_dano": 1,
+                "retorna_apos_ataque_a_distancia": True, "requer_propriedade_arremesso": True}
+    if plan == "spell_refueling_ring":
+        if action not in {"recuperar_espaco", "recover_slot"}:
+            return {"resultado": "escolha", "item": item["nome"], "opcoes": ["recuperar_espaco"],
+                    "acao": "acao_bonus", "nivel_maximo_espaco": 3, "limite": "uma_vez_ate_o_proximo_amanhecer"}
+        if fatos.get("conjurador") is not True:
+            return {"resultado": "bloqueado", "motivo": "anel_requer_usuario_conjurador"}
+        if fatos.get("usado_hoje") is None:
+            return {"resultado": "requer_dados", "motivo": "estado_diario_do_anel_necessario"}
+        if fatos.get("usado_hoje") is True:
+            return {"resultado": "bloqueado", "motivo": "anel_ja_usado_antes_do_proximo_amanhecer"}
+        if fatos.get("espaco_gasto") is not True:
+            return {"resultado": "bloqueado", "motivo": "deve_haver_espaco_de_magia_gasto"}
+        slot_level = int(fatos.get("nivel_espaco", 0))
+        if slot_level < 1 or slot_level > 3:
+            return {"resultado": "bloqueado", "motivo": "anel_recupera_apenas_espaco_de_nivel_1_a_3"}
+        return {"resultado": "espaco_recuperado", "item": item["nome"], "nivel_espaco": slot_level,
+                "usado_hoje": True, "acao": "acao_bonus"}
+
+    if requires_attunement and item.get("sintonizacao_requer_classe") == "conjurador" and fatos.get("conjurador") is not True:
+        return {"resultado": "bloqueado", "motivo": "item_requer_sintonizacao_por_conjurador"}
+    charges = fatos.get("cargas")
+    if charges is not None and int(charges) <= 0:
         return {"resultado": "bloqueado", "motivo": "sem_cargas"}
     retorno = {"resultado": "usado", "item": item["nome"], "efeito": item.get("efeito")}
-    if cargas is not None:
-        retorno["cargas_restantes"] = int(cargas) - 1
+    if charges is not None:
+        retorno["cargas_restantes"] = int(charges) - 1
     return retorno
