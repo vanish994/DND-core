@@ -193,16 +193,12 @@ class ArtificerProgressionTests(unittest.TestCase):
         self.assertEqual(ring["resultado"], "espaco_recuperado")
         self.assertTrue(ring["usado_hoje"])
 
-    def test_tinkers_magic_uses_exact_26_item_list(self):
-        self.assertEqual(len(ARTIFICER_GEAR), 31)
+    def test_tinkers_magic_uses_exact_published_26_item_list(self):
+        self.assertEqual(len(ARTIFICER_GEAR), 26)
         self.assertIn("esferas_de_rolamento", ARTIFICER_GEAR)
         self.assertIn("caixa_de_isca", ARTIFICER_GEAR)
-        self.assertIn("garrafa_de_vidro", ARTIFICER_GEAR)
-        self.assertIn("arpeu", ARTIFICER_GEAR)
-        self.assertIn("armadilha_de_caca", ARTIFICER_GEAR)
-        self.assertIn("algemas", ARTIFICER_GEAR)
-        self.assertIn("estacas_de_ferro", ARTIFICER_GEAR)
-        self.assertNotIn("corrente", ARTIFICER_GEAR)
+        for disallowed in ("garrafa_de_vidro", "arpeu", "armadilha_de_caca", "algemas", "estacas_de_ferro", "corrente"):
+            self.assertNotIn(disallowed, ARTIFICER_GEAR)
 
         from rule_engine.artificer_base import ARTIFICER_GEAR_CATALOG_NAMES
         from rule_engine.catalog import CATALOGO_EQUIPAMENTOS
