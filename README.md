@@ -53,7 +53,7 @@ python -m pip install -r requirements-dev.txt
 python -m pytest
 ```
 
-Os testes copiados do projeto de origem ainda precisam ser executados neste repositório para confirmar a portabilidade. Não considere esta cópia validada até a suíte passar no ambiente de execução.
+**Validação inicial:** GitHub Actions executou a suíte deste repositório em Python 3.11: `216 passed, 5 subtests passed`. A suíte contém os testes selecionados do núcleo, não todos os testes do projeto original. A validação cobre importação sem backend/integrações e os testes mecânicos incluídos; novas mudanças devem manter o CI verde.
 
 ## Origem
 
