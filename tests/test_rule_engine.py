@@ -2206,6 +2206,7 @@ class RuleEngineTests(unittest.TestCase):
                 "inteligencia": 18,
                 "criatura_falhou": True,
                 "tipo_teste": "salvaguarda",
+                "usos_gastos": 0,
                 "distancia_m": 5,
                 "alvo_visivel": True,
                 "total": 10,
