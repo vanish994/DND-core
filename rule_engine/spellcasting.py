@@ -1,4 +1,4 @@
-"""Validação de conjuração do Artífice (lista de Tasha's usada pelo projeto).
+"""Validação de conjuração do Artífice 5.5e (Eberron: Forge of the Artificer).
 
 A progressão de espaços segue o Artífice de meio conjurador com progressão
 arredondada para cima, incluindo dois espaços de 1º círculo no nível 1.
@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import unicodedata
 from typing import Any
+
+from .artificer_base import ARTIFICER_PREPARED_SPELLS
 
 # Subconjunto explícito de magias do Artífice disponível no catálogo executável.
 # Os nomes são os localizados em português usados pela interface.
@@ -142,8 +144,8 @@ def progresso_artifice(nivel: int, inteligencia: int) -> dict[str, Any]:
     modificador = (int(inteligencia) - 10) // 2
     slots = {str(i + 1): quantidade for i, quantidade in enumerate(ARTIFICER_SLOTS[int(nivel)])}
     circulo_maximo = max(int(circulo) for circulo in slots)
-    truques = 2 if nivel < 10 else 3 if nivel < 18 else 4
-    preparadas = max(1, modificador + int(nivel) // 2)
+    truques = 2 if nivel < 10 else 3 if nivel < 14 else 4
+    preparadas = ARTIFICER_PREPARED_SPELLS[int(nivel)]
     return {
         "resultado": "resolvido",
         "classe": "artifice",
