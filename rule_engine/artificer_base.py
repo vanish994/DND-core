@@ -332,7 +332,9 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 return {**base, "resultado": "bloqueado", "motivo": "plano_conhecido_invalido_para_nivel"}
             if any(plan not in known for plan in chosen):
                 return {**base, "resultado": "bloqueado", "motivo": "plano_nao_conhecido"}
-            created = [{"plano": plan, **_plan_metadata(str(plan), level), "replicado": True} for plan in chosen]
+            created = [{"plano": plan, **_plan_metadata(str(plan), level), "replicado": True,
+                        "desaparece_apos_morte_em_dias": "1d4",
+                        "plano_substituido_remove_imediatamente": True} for plan in chosen]
             current_items = facts.get("itens_atuais")
             if not isinstance(current_items, list):
                 return {**base, "resultado": "requer_dados", "motivo": "inventario_atual_de_itens_replicados_necessario"}
@@ -372,6 +374,7 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             updated_known = [new_plan if plan == old_plan else plan for plan in known]
             return {**base, "resultado": "plano_substituido", "planos_conhecidos_antes": known,
                     "planos_conhecidos_depois": updated_known, "remove": old_plan, "adiciona": new_plan,
+                    "itens_a_remover": [{"plano": old_plan, "remover_todos": True}],
                     "itens_criados_com_plano_antigo": "desaparecem_imediatamente"}
         known = facts.get("planos_conhecidos")
         return {**base, "resultado": "resolvido", "planos_conhecidos": plans_count,
@@ -447,7 +450,9 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 return {**base, "resultado": "bloqueado", "motivo": "plano_destino_invalido_para_nivel"}
             return {**base, "resultado": "transmutado", "item_id": facts["item_id"],
                     "substitui": origem, "por": destino,
-                    "novo_item": {"plano": destino, **destination_metadata, "replicado": True},
+                    "novo_item": {"plano": destino, **destination_metadata, "replicado": True,
+                                  "desaparece_apos_morte_em_dias": "1d4",
+                                  "plano_substituido_remove_imediatamente": True},
                     "limite": "uma_vez_por_descanso_longo", "requer_item_replicado": True,
                     "acao": "acao_magica"}
         return {**base, "resultado": "escolha", "opcoes": ["carregar", "drenar", "transmutar"]}
