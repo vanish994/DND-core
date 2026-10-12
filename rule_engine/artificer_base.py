@@ -116,6 +116,16 @@ ARTIFICER_NON_ACTION_SPELLS = {
     "criacao": "1 minuto",
 }
 
+ARTIFICER_CONCENTRATION_SPELLS = {
+    "fogo das fadas", "detectar magia", "retirada acelerada",
+    "alterar se", "desfoque", "sopro de dragao", "aprimorar atributo",
+    "aumentar/reduzir", "esquentar metal", "invisibilidade", "levitacao",
+    "escalada de aranha", "teia", "arma elemental", "voar", "celeridade",
+    "protecao contra energia", "esfera resiliente de otiluke", "pele de pedra",
+    "invocar constructo", "animar objetos", "mao de bigby", "circulo de poder",
+    "muralha de pedra",
+}
+
 ARTIFICER_PREPARED_SPELLS = {
     1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 6, 7: 7, 8: 7, 9: 9, 10: 9,
     11: 10, 12: 10, 13: 11, 14: 11, 15: 12, 16: 12, 17: 14, 18: 14,
@@ -531,12 +541,10 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                     "requer": "tempo_conjuracao_acao=True"}
         if facts.get("criatura_ja_usou_neste_turno", False):
             return {**base, "resultado": "bloqueado", "motivo": "criatura_deve_aguardar_inicio_do_proximo_turno"}
-        from .spells import obter_magia
-        spell_metadata = obter_magia(str(spell)) or {}
         return {**base, "resultado": "armazenado", "magia": spell, "nivel_magia": spell_level,
                 "usos": max(2, 2 * int_mod), "acao_para_lancar": "acao_magica", "habilidade_conjuracao": "inteligencia",
                 "objeto": facts.get("objeto"), "requer_objeto_adequado": True,
-                "concentracao_requerida": bool(spell_metadata.get("concentracao", False)),
+                "concentracao_requerida": normalized_spell in ARTIFICER_CONCENTRATION_SPELLS,
                 "bloqueio_por_criatura_ate": "inicio_do_proximo_turno_daquela_criatura",
                 "componentes_materiais_consumidos": False, "substitui_armazenamento_anterior": True}
 
