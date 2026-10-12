@@ -133,7 +133,7 @@ class ArtificerProgressionTests(unittest.TestCase):
             "acao": "criar", "ferramentas_artesao_em_maos": True, "descanso_longo_concluido": True,
             "planos_conhecidos": ["alchemy_jug", "bag_of_holding", "cap_of_water_breathing", "wand_of_secrets"],
             "planos": ["alchemy_jug", "bag_of_holding"],
-            "itens_atuais": [{"plano": "cap_of_water_breathing", "nome": "Bolsa antiga"}],
+            "itens_atuais": [{"id": "old-item-1", "plano": "cap_of_water_breathing", "nome": "Bolsa antiga"}],
         })
         self.assertEqual(result["resultado"], "criado")
         self.assertEqual(result["itens_que_desaparecem"][0]["plano"], "cap_of_water_breathing")
@@ -188,7 +188,7 @@ class ArtificerProgressionTests(unittest.TestCase):
     def test_drain_item_uses_rarity_and_is_bonus_action(self):
         result = resolver_caracteristica({
             "classe": "artifice", "recurso": "Ajustador de Item Mágico", "nivel": 6,
-            "acao": "drenar", "item_replicado": True, "distancia_m": 1,
+            "acao": "drenar", "item_replicado": True, "item_id": "replica-1", "distancia_m": 1, "usado_no_descanso_longo": False,
             "raridade": "raro",
         })
         self.assertEqual(result["resultado"], "drenado")
