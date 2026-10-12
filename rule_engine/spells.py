@@ -715,6 +715,16 @@ for _chave_l, _meta_l in _META_LISTAS.items():
             "duracao": "concentração" if _meta_l["concentracao"] else "instantânea",
         }
 
+# Passos Longos é uma magia de 1º círculo da lista de Artífice; o efeito é um bônus de deslocamento sem concentração.
+_DETALHADAS["passos longos"] = (
+    1,
+    "transmutação",
+    "V, S, M (uma pitada de terra)",
+    False,
+    "Toque uma criatura; seu deslocamento aumenta em 3 m por 1 hora; não requer concentração",
+    {"bonus_deslocamento_m": 3, "duracao": "1 hora"},
+)
+
 for _antigo, _novo in _ALIAS_PARA_2024:
     _entrada = MAGIAS.get(_antigo.lower())
     if _entrada is not None:
@@ -725,6 +735,14 @@ for _antigo, _novo in _ALIAS_PARA_2024:
 # Fórmulas são devolvidas como dados; o motor de combate continua responsável
 # por rolagens, salvaguardas, aplicação de dano e atualização de estado.
 MECANICAS_MAGIA: dict[str, dict[str, Any]] = {
+    "passos longos": {
+        "tipo": "buff_deslocamento",
+        "bonus_deslocamento_m": 3,
+        "duracao": "1 hora",
+        "concentracao": False,
+        "alvo": "uma criatura tocada",
+        "acao": "acao",
+    },
     "bolha ácida": {
         "tipo": "dano_multialvo",
         "dados_dano_base": "1d6",
