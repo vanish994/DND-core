@@ -207,9 +207,9 @@ class ArtificerProgressionTests(unittest.TestCase):
     def test_artificer_attunement_limit_accepts_replicated_item_metadata(self):
         from rule_engine.economy import resolver_sintonizacao
         known = ["item_a", "item_b", "item_c"]
-        metadata = {"nome": "Ferramenta Multifuncional +1", "raridade": "incomum", "sintonizacao": True}
+        metadata = {"nome": "Ferramenta Multiforme", "raridade": "incomum", "sintonizacao": True}
         result = resolver_sintonizacao({
-            "item": "all_purpose_tool_plus_1", "metadados_item": metadata,
+            "item": "manifold_tool", "metadados_item": metadata,
             "sintonizados": known, "classe": "artifice", "nivel": 10,
         })
         self.assertEqual(result["resultado"], "sintonizado")
