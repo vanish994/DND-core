@@ -332,7 +332,7 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 return {**base, "resultado": "bloqueado", "motivo": "plano_conhecido_invalido_para_nivel"}
             if any(plan not in known for plan in chosen):
                 return {**base, "resultado": "bloqueado", "motivo": "plano_nao_conhecido"}
-            created = [{"plano": plan, **_plan_metadata(str(plan), level)} for plan in chosen]
+            created = [{"plano": plan, **_plan_metadata(str(plan), level), "replicado": True} for plan in chosen]
             current_items = facts.get("itens_atuais")
             if not isinstance(current_items, list):
                 return {**base, "resultado": "requer_dados", "motivo": "inventario_atual_de_itens_replicados_necessario"}
@@ -344,6 +344,7 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             return {**base, "resultado": "criado", "planos": chosen, "itens_criados": created,
                     "itens_que_desaparecem": removed, "itens_atuais_apos_criacao": retained,
                     "quantidade": len(created), "limite_itens_criados": capacity,
+                    "requer_id_unico_ao_adicionar_inventario": True,
                     "requer": "descanso_longo_concluido_e_ferramentas_de_artesao_em_maos",
                     "sintonizacao_imediata_se_necessaria": True,
                     "varinha_ou_arma_replicada_pode_ser_foco_de_conjuracao": True,
@@ -435,11 +436,15 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                 return {**base, "resultado": "escolha", "requer": ["plano_origem", "plano_destino"]}
             if origem == destino:
                 return {**base, "resultado": "bloqueado", "motivo": "plano_destino_deve_ser_diferente"}
+            if any(_plan_metadata(plan, level) is None for plan in conhecidos):
+                return {**base, "resultado": "bloqueado", "motivo": "plano_conhecido_invalido_para_nivel"}
             if origem not in conhecidos:
                 return {**base, "resultado": "bloqueado", "motivo": "plano_origem_nao_conhecido"}
             if destino not in conhecidos:
                 return {**base, "resultado": "bloqueado", "motivo": "plano_destino_nao_conhecido"}
             destination_metadata = _plan_metadata(str(destino), level)
+            if destination_metadata is None:
+                return {**base, "resultado": "bloqueado", "motivo": "plano_destino_invalido_para_nivel"}
             return {**base, "resultado": "transmutado", "item_id": facts["item_id"],
                     "substitui": origem, "por": destino,
                     "novo_item": {"plano": destino, **destination_metadata, "replicado": True},
