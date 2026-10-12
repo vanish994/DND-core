@@ -192,7 +192,7 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             "circulo_maximo": max(range(1, len(ARTIFICER_SLOTS[level]) + 1)),
             "cd_magia": 8 + prof + int_mod, "ataque_magia": prof + int_mod,
             "focos_validos": ["ferramentas_de_ladrao", "ferramentas_de_artifice",
-                              "outras_ferramentas_de_artesao_com_proficiencia"],
+                              "outras_ferramentas_de_artesao_com_proficiencia", "varinhas_ou_armas_replicadas"],
             "troca_truque_apos_descanso_longo": True,
             "recupera_espacos": "descanso_longo",
         }
@@ -340,8 +340,12 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             new_metadata = _plan_metadata(str(new_plan or ""), level)
             if new_metadata is None:
                 return {**base, "resultado": "bloqueado", "motivo": "plano_novo_invalido_para_nivel"}
-            if new_plan in known and new_plan != old_plan:
+            if new_plan == old_plan:
+                return {**base, "resultado": "bloqueado", "motivo": "plano_novo_deve_ser_diferente"}
+            if new_plan in known:
                 return {**base, "resultado": "bloqueado", "motivo": "plano_novo_ja_conhecido"}
+            if any(not isinstance(plan, str) or _plan_metadata(plan, level) is None for plan in known):
+                return {**base, "resultado": "bloqueado", "motivo": "planos_conhecidos_invalidos"}
             updated_known = [new_plan if plan == old_plan else plan for plan in known]
             return {**base, "resultado": "plano_substituido", "planos_conhecidos_antes": known,
                     "planos_conhecidos_depois": updated_known, "remove": old_plan, "adiciona": new_plan,
@@ -397,6 +401,10 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             conhecidos = facts.get("planos_conhecidos", [])
             if not origem or not destino:
                 return {**base, "resultado": "escolha", "requer": ["plano_origem", "plano_destino"]}
+            if origem == destino:
+                return {**base, "resultado": "bloqueado", "motivo": "plano_destino_deve_ser_diferente"}
+            if origem not in conhecidos:
+                return {**base, "resultado": "bloqueado", "motivo": "plano_origem_nao_conhecido"}
             if destino not in conhecidos:
                 return {**base, "resultado": "bloqueado", "motivo": "plano_destino_nao_conhecido"}
             return {**base, "resultado": "transmutado", "substitui": origem,
@@ -407,6 +415,9 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
     if key == "flash_of_genius":
         if not facts.get("criatura_falhou", facts.get("creature_failed", False)):
             return {**base, "resultado": "bloqueado", "motivo": "so_apos_falha_em_teste_ou_salvaguarda"}
+        test_type = str(facts.get("tipo_teste", "")).lower()
+        if test_type not in {"teste_de_habilidade", "salvaguarda", "ability_check", "saving_throw"}:
+            return {**base, "resultado": "bloqueado", "motivo": "lampejo_so_afeta_teste_de_habilidade_ou_salvaguarda"}
         if facts.get("distancia_m") is None:
             return {**base, "resultado": "requer_dados", "motivo": "distancia_ate_a_criatura_necessaria"}
         if float(facts["distancia_m"]) > 9:
