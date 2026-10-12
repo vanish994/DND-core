@@ -133,12 +133,12 @@ Continuam **abertos** (cada item exige regra + teste próprios):
   (`MECANICAS_MAGIA` cobre ~60; o restante tem só o catálogo);
 - durações detalhadas das magias adicionadas via listas (as listas trazem
   círculo/escola/marcadores, não duração);
-- subclasses e integração persistente do Artífice 5.5e: a progressão 1–20,
-  conjuração, equipamento inicial, resolução das características da classe e
-  catálogo de planos de Replicar Item Mágico estão implementados no módulo
-  `artificer_base.py`; ainda falta ligar os resultados ao estado persistente
-  de inventário, sintonização, cargas, usos e descansos, além da auditoria final
-  de cada plano contra a fonte e da implementação das subclasses;
+- subclasses e integração final do Artífice 5.5e: a progressão 1–20,
+  conjuração, equipamento inicial, características da classe, catálogo de
+  planos de Replicar Item Mágico, limites de sintonização e deltas determinísticos
+  de criação/carga/descanso estão implementados; ainda falta persistir esses
+  deltas no estado do aplicativo, completar os efeitos individuais dos itens
+  mágicos replicáveis no catálogo geral e implementar as subclasses;
 - dois talentos de Dádiva Sombria (`anatomia_aberrante`, `toque_da_morte`) —
   efeitos não catalogados nas fontes locais;
 - equipamento inicial por classe/origem (PHB caps. 2 e 5);
@@ -151,6 +151,6 @@ A conclusão de uma regra exige: implementação no módulo correto, registro em
 
 - efeitos mecânicos das magias restantes (maior lacuna);
 - equipamento inicial por classe/origem;
-- integração persistente de recursos de classe com descansos, inventário e sintonização;
+- persistência no aplicativo dos deltas de recursos, inventário, cargas e descansos;
 - separação por edição (`2024`) e configuração da mesa;
 - carregamento de regras em JSON/YAML com versionamento e fonte.
