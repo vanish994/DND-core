@@ -98,7 +98,6 @@ ARTIFICER_SPELL_LEVELS: dict[str, int] = {
     "Golpe Certeiro": 0,
     "Elementalismo": 0,
     "Sopro de Dragão": 2,
-    "Servo Homúnculo": 2,
     "Vigor Arcano": 2,
     "Círculo de Poder": 5,
 }
