@@ -235,13 +235,18 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
         if facts.get("acao") in {"criar", "create"}:
             if facts.get("usos_gastos") is None:
                 return {**base, "resultado": "requer_dados", "motivo": "estado_de_usos_de_magia_de_artifice_necessario"}
-            if facts.get("ferramentas_tinkering_em_maos") is None:
-                return {**base, "resultado": "requer_dados", "motivo": "confirmar_ferramentas_de_tinkering_em_maos"}
-            if facts.get("ferramentas_tinkering_em_maos") is not True:
+            tools_in_hand = facts.get(
+                "ferramentas_tinkering_em_maos",
+                facts.get("ferramentas_de_funileiro_em_maos", facts.get("tinker_tools_in_hand")),
+            )
+            if tools_in_hand is None:
+                return {**base, "resultado": "requer_dados", "motivo": "confirmar_ferramentas_de_funileiro_em_maos"}
+            if tools_in_hand is not True:
                 return {**base, "resultado": "bloqueado", "motivo": "ferramentas_de_funileiro_nao_estao_em_maos"}
             if facts.get("distancia_m") is None:
                 return {**base, "resultado": "requer_dados", "motivo": "distancia_ate_o_espaco_de_criacao_necessaria"}
-            if float(facts["distancia_m"]) > 1.5:
+            distance = float(facts["distancia_m"])
+            if distance < 0 or distance > 1.5:
                 return {**base, "resultado": "bloqueado", "motivo": "espaco_de_criacao_fora_de_1_5_metro"}
             if facts.get("espaco_desocupado") is None:
                 return {**base, "resultado": "requer_dados", "motivo": "confirmar_espaco_desocupado"}
@@ -253,13 +258,28 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             if item not in ARTIFICER_GEAR:
                 return {**base, "resultado": "bloqueado", "motivo": "item_nao_permitido",
                         "opcoes": [{"id": gear, "nome": ARTIFICER_GEAR_LABELS[gear]} for gear in sorted(ARTIFICER_GEAR)]}
-            gastos = int(facts.get("usos_gastos", 0))
+            try:
+                gastos = int(facts.get("usos_gastos", 0))
+            except (TypeError, ValueError):
+                return {**base, "resultado": "bloqueado", "motivo": "usos_gastos_invalidos"}
             if gastos < 0 or gastos >= uses:
                 return {**base, "resultado": "bloqueado", "motivo": "usos_esgotados",
                         "usos_maximos": uses, "usos_gastos": gastos}
+            item_id = facts.get("item_id")
+            item_criado = {
+                "id": str(item_id) if item_id else None,
+                "nome": ARTIFICER_GEAR_LABELS[item],
+                "item": item,
+                "quantidade": 1,
+                "categoria": "equipamento_mundano",
+                "criado_por": "tinkers_magic",
+                "expira": "proximo_descanso_longo",
+            }
             return {**base, "resultado": "criado", "item": item, "nome_item": ARTIFICER_GEAR_LABELS[item], "quantidade": 1,
+                    "item_criado": item_criado, "requer_id_unico_ao_persistir": not bool(item_id),
                     "alcance_m": 1.5, "requer_espaco_desocupado": True,
                     "acao": "acao_magica", "usos_maximos": uses,
+                    "usos_gastos_depois": gastos + 1, "delta_usos": -1,
                     "usos_restantes": uses - gastos - 1, "desaparece": "proximo_descanso_longo"}
         return {**base, "resultado": "resolvido", "truque_conhecido": "Reparar",
                 "usos_por_descanso_longo": uses, "acao": "acao_magica",
