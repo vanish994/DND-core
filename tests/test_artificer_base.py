@@ -37,6 +37,24 @@ class ArtificerProgressionTests(unittest.TestCase):
         self.assertEqual(result["delta_espacos"], {"1": -1})
         self.assertEqual(result["espacos_restantes_depois"], {"1": 1})
 
+    def test_artificer_cantrip_and_first_level_spell_lists_match_2024_class_list(self):
+        from rule_engine.spellcasting import ARTIFICER_SPELL_LEVELS
+
+        cantrips = {name for name, level in ARTIFICER_SPELL_LEVELS.items() if level == 0}
+        first_level = {name for name, level in ARTIFICER_SPELL_LEVELS.items() if level == 1}
+        self.assertEqual(cantrips, {
+            "Acudir os Moribundos", "Bolha Ácida", "Chicote de Espinhos", "Luz",
+            "Luzes Dançantes", "Mensagem", "Orientação", "Prestidigitação Arcana",
+            "Raio de Fogo", "Raio de Gelo", "Rajada de Veneno", "Resistência",
+            "Toque Chocante", "Trovão", "Mãos Mágicas", "Golpe Certeiro", "Elementalismo",
+        })
+        self.assertEqual(first_level, {
+            "Alarme", "Passos Longos", "Curar Ferimentos", "Detectar Magia",
+            "Disfarçar-se", "Fogo das Fadas", "Graxa", "Identificar",
+            "Purificar Alimentos e Bebidas", "Queda Suave", "Retirada Acelerada",
+            "Salto", "Santuário", "Vitalidade Vazia",
+        })
+
     def test_fixed_prepared_spell_table_for_all_levels(self):
         self.assertEqual(
             [progresso_artifice(level, 16)["magias_preparadas"] for level in range(1, 21)],
