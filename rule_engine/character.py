@@ -27,7 +27,7 @@ EQUIPAMENTO_INICIAL_ARTIFICE = {
     "A": {
         "itens": ["Armadura de Couro Batido", "Adaga", "Ferramentas de Ladrão",
                   "Ferramentas de Artesão (mesmas escolhidas na proficiência)",
-                  "Mochila de Explorador de Masmorras"],
+                  "Mochila de Aventureiro"],
         "ouro": 16,
     },
     "B": {"itens": [], "ouro": 150},
@@ -227,7 +227,7 @@ PROFICIENCIAS_CLASSE = {
     "artifice": {
         "armaduras": ["leves", "medias", "escudos"],
         "armas": ["simples"],
-        "ferramentas": ["Ferramentas de Ladrão", "Ferramentas de Funileiro", "um tipo de Ferramentas de Artesão"],
+        "ferramentas": ["Ferramentas de Ladrão", "Ferramentas de Remendador", "um tipo de Ferramentas de Artesão"],
     },
     "barbaro": {"armaduras": ["leves", "medias", "escudos"], "armas": ["simples", "marciais"], "ferramentas": []},
     "bardo": {
