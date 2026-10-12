@@ -29,6 +29,8 @@ CATALOGO_ARMAS = {
     "Cajado": {"dano": "1d6", "tipo": "contundente", "alcance": 0, "peso": 2, "propriedades": ["versatil"]},
     "Funda": {"dano": "1d4", "tipo": "contundente", "alcance": 9, "peso": 0.1, "propriedades": ["municao"]},
     "Azagaia": {"dano": "1d6", "tipo": "perfurante", "alcance": 9, "peso": 1, "propriedades": ["arremesso"]},
+    "Foice": {"dano": "1d4", "tipo": "cortante", "alcance": 0, "peso": 1, "propriedades": ["leve"], "custo_po": 1},
+    "Lança": {"dano": "1d6", "tipo": "perfurante", "alcance": 6, "peso": 1.5, "propriedades": ["arremesso", "versátil"], "custo_po": 1},
     "Arco Curto": {
         "dano": "1d6",
         "tipo": "perfurante",
