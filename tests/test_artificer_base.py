@@ -253,8 +253,8 @@ class ArtificerProgressionTests(unittest.TestCase):
                 continue
             result = resolver_magia({
                 "magia": name,
-                "has_slot": circle == 0 or True,
-                "espaco": max(1, circle),
+                "has_slot": True,
+                "espaco": circle,
                 "nivel_personagem": 1,
             })
             if result.get("resultado") != "conjurada":
