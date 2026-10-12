@@ -1,4 +1,4 @@
-"""Criação e progressão de personagens do Livro do Jogador 2024."""
+"""Criação e progressão de personagens do PHB 2024 e do Artífice 5.5e."""
 
 from __future__ import annotations
 
@@ -68,8 +68,7 @@ SUBCLASSES_RAVENLOFT = {
 TALENTOS = set(FEATS)
 ATRIBUTOS = {"forca", "destreza", "constituicao", "inteligencia", "sabedoria", "carisma"}
 
-# Opções de perícias de classe do PHB 2024. Artífice segue a lista publicada
-# em Tasha's Cauldron of Everything, usada pelo projeto.
+# Opções de perícias de classe: PHB 2024; Artífice conforme Eberron: Forge of the Artificer (2025).
 PERICIAS_CLASSE_OPCOES = {
     "barbaro": {"adestrar_animais", "atletismo", "intimidacao", "natureza", "percepcao", "sobrevivencia"},
     "bardo": set(
