@@ -120,8 +120,7 @@ ARTIFICER_PREPARED_SPELLS = {
 ARTIFICER_ATTUNEMENT_LIMIT = {1: 3, 10: 4, 14: 5, 18: 6}
 ARTIFICER_GEAR = {
     "esferas_de_rolamento", "cesta", "saco_de_dormir", "sino", "cobertor",
-    "talha_e_polias", "balde", "estrepes", "vela", "corrente", "gancho_de_escalada",
-    "pe_de_cabra", "frasco", "gancho_de_escala", "jarro", "lampada", "algemas",
+    "talha_e_polias", "balde", "estrepes", "vela", "pe_de_cabra", "frasco", "jarro", "lampada",
     "rede", "oleo", "papel", "pergaminho", "vara", "bolsa", "corda", "saco",
     "pa", "barbante", "caixa_de_isca", "tocha", "frasco_de_vidro",
 }
@@ -129,22 +128,20 @@ ARTIFICER_GEAR_LABELS = {
     "esferas_de_rolamento": "Esferas de rolamento", "cesta": "Cesta",
     "saco_de_dormir": "Saco de dormir", "sino": "Sino", "cobertor": "Cobertor",
     "talha_e_polias": "Talha e polias", "balde": "Balde", "estrepes": "Estrepes",
-    "vela": "Vela", "corrente": "Corrente", "gancho_de_escalada": "Gancho de escalada",
-    "pe_de_cabra": "Pé de cabra", "frasco": "Frasco", "gancho_de_escala": "Gancho de agarrar",
-    "jarro": "Jarro", "lampada": "Lâmpada", "algemas": "Algemas", "rede": "Rede",
+    "vela": "Vela", "pe_de_cabra": "Pé de cabra", "frasco": "Frasco",
+    "jarro": "Jarro", "lampada": "Lâmpada", "rede": "Rede",
     "oleo": "Óleo", "papel": "Papel", "pergaminho": "Pergaminho", "vara": "Vara",
     "bolsa": "Bolsa", "corda": "Corda", "saco": "Saco", "pa": "Pá",
     "barbante": "Barbante", "caixa_de_isca": "Caixa de isqueiro", "tocha": "Tocha",
     "frasco_de_vidro": "Frasco de vidro",
 }
 ARTIFICER_GEAR_ALIASES = {
-    "bag": "bolsa", "basket": "cesta", "bell": "sino", "blanket": "cobertor",
+    "basket": "cesta", "bell": "sino", "blanket": "cobertor",
     "bucket": "balde", "candle": "vela", "ball_bearings": "esferas_de_rolamento",
     "bedroll": "saco_de_dormir",
-    "block_and_tackle": "talha_e_polias", "caltrops": "estrepes", "chain": "corrente",
-    "climbing_hook": "gancho_de_escalada", "crowbar": "pe_de_cabra",
-    "flask": "frasco", "grappling_hook": "gancho_de_escala", "jug": "jarro",
-    "lamp": "lampada", "manacles": "algemas", "net": "rede", "oil": "oleo",
+    "block_and_tackle": "talha_e_polias", "caltrops": "estrepes", "crowbar": "pe_de_cabra",
+    "flask": "frasco", "jug": "jarro",
+    "lamp": "lampada", "net": "rede", "oil": "oleo",
     "paper": "papel", "parchment": "pergaminho", "pole": "vara", "pouch": "bolsa",
     "rope": "corda", "sack": "saco", "shovel": "pa", "string": "barbante",
     "tinderbox": "caixa_de_isca", "caixa_de_isqueiro": "caixa_de_isca",
@@ -208,7 +205,7 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
             "espacos": {str(i + 1): count for i, count in enumerate(ARTIFICER_SLOTS[level])},
             "circulo_maximo": max(range(1, len(ARTIFICER_SLOTS[level]) + 1)),
             "cd_magia": 8 + prof + int_mod, "ataque_magia": prof + int_mod,
-            "focos_validos": ["ferramentas_de_ladrao", "ferramentas_de_remendador",
+            "focos_validos": ["ferramentas_de_ladrao", "ferramentas_de_funileiro",
                               "outras_ferramentas_de_artesao_com_proficiencia", "varinhas_ou_armas_replicadas"],
             "troca_truque_apos_descanso_longo": True,
             "recupera_espacos": "descanso_longo",
@@ -246,7 +243,7 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                     "usos_restantes": uses - gastos - 1, "desaparece": "proximo_descanso_longo"}
         return {**base, "resultado": "resolvido", "truque_conhecido": "Reparar",
                 "usos_por_descanso_longo": uses, "acao": "acao_magica",
-                "requer_ferramentas": "ferramentas_de_remendador", "foco": "ferramentas_de_remendador",
+                "requer_ferramentas": "ferramentas_de_funileiro", "foco": "ferramentas_de_remendador",
                 "duracao_itens_criados": "ate_concluir_descanso_longo"}
 
     if key == "replicate_magic_item":
