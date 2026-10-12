@@ -55,7 +55,7 @@ class ArtificerProgressionTests(unittest.TestCase):
         result = resolver_caracteristica({
             "classe": "artifice", "recurso": "Magia de Artífice", "nivel": 1,
             "inteligencia": 16, "acao": "criar", "item": "Estrepes",
-            "ferramentas_tinkering_em_maos": True, "usos_gastos": 1,
+            "ferramentas_tinkering_em_maos": True, "distancia_m": 1, "espaco_desocupado": True, "usos_gastos": 1,
         })
         self.assertEqual(result["resultado"], "criado")
         self.assertEqual(result["usos_maximos"], 3)
@@ -96,7 +96,7 @@ class ArtificerProgressionTests(unittest.TestCase):
     def test_replicate_creation_replaces_oldest_when_at_capacity(self):
         result = resolver_caracteristica({
             "classe": "artifice", "recurso": "Replicar Item Mágico", "nivel": 2,
-            "acao": "criar", "ferramentas_artesao_em_maos": True,
+            "acao": "criar", "ferramentas_artesao_em_maos": True, "descanso_longo_concluido": True,
             "planos_conhecidos": ["alchemy_jug", "bag_of_holding", "cap_of_water_breathing", "wand_of_secrets"],
             "planos": ["alchemy_jug", "bag_of_holding"],
             "itens_atuais": [{"plano": "cap_of_water_breathing", "nome": "Bolsa antiga"}],
