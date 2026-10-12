@@ -243,7 +243,7 @@ def resolve_artificer_feature(feature: str, level: int, facts: dict[str, Any]) -
                     "usos_restantes": uses - gastos - 1, "desaparece": "proximo_descanso_longo"}
         return {**base, "resultado": "resolvido", "truque_conhecido": "Reparar",
                 "usos_por_descanso_longo": uses, "acao": "acao_magica",
-                "requer_ferramentas": "ferramentas_de_funileiro", "foco": "ferramentas_de_remendador",
+                "requer_ferramentas": "ferramentas_de_funileiro", "foco": "ferramentas_de_funileiro",
                 "duracao_itens_criados": "ate_concluir_descanso_longo"}
 
     if key == "replicate_magic_item":
