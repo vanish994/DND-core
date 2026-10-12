@@ -315,9 +315,14 @@ def validar_escolhas_artifice(
             f"Com INT {inteligencia}, este Artífice deve registrar exatamente {progresso['magias_preparadas']} magias preparadas"
         )
     for nome in truques:
-        circulo = permitidas.get(normalizar_nome_magia(nome))
-        if circulo != 0 or not obter_magia(nome):
+        chave = normalizar_nome_magia(nome)
+        circulo = permitidas.get(chave)
+        if circulo is None:
             raise ValueError(f"Truque não disponível para Artífice: {nome}")
+        if circulo != 0:
+            raise ValueError(f"Magia de círculo {circulo} não é um truque: {nome}")
+        if not obter_magia(nome):
+            raise ValueError(f"Truque ausente do catálogo: {nome}")
     for nome in magias_preparadas:
         circulo = permitidas.get(normalizar_nome_magia(nome))
         if circulo is None or circulo == 0:
