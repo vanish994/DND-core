@@ -9,6 +9,7 @@ from __future__ import annotations
 import unicodedata
 
 from .class_progression import FEATURES_BY_CLASS
+from .artificer_base import resolve_artificer_feature
 
 
 def _normalizar(valor: object) -> str:
@@ -620,41 +621,9 @@ def resolver_caracteristica(f: dict) -> dict:
             return {"resultado": "resolvido", "invocacao_adicional": True, "recupera_espaco_pacto": True}
 
     if classe == "artifice":
-        if recurso in {"conjuracao", "tinkers_magic", "magia_de_artifice"}:
-            return {"resultado": "resolvido", "atributo_conjuracao": "inteligencia", "foco": "ferramentas_de_artifice"}
-        if recurso in {"artesao_de_item_magico", "adepto_de_item_magico", "mestre_de_item_magico"}:
-            return {
-                "resultado": "nao_implementado",
-                "motivo": "sem_fonte_de_regra_no_repositorio",
-                "caracteristica": recurso,
-                "classe": "artifice",
-                "nivel": nivel,
-                "observacao": "o PHB 2024 nao traz o Artifice; aguarda fonte do projeto",
-            }
-        if recurso in {"replicar_item_magico", "replicate_magic_item"}:
-            return {
-                "resultado": "infundido",
-                "infusoes": 2 if nivel < 6 else 3 if nivel < 10 else 4,
-                "itens": int(f.get("quantidade", 1)),
-            }
-        if recurso in {"flash_of_genius", "lampejo_de_genio"}:
-            return {
-                "resultado": "resolvido",
-                "bonus": _mod(f.get("inteligencia", 10)),
-                "usos": max(1, _mod(f.get("inteligencia", 10))),
-                "reacao": True,
-            }
-        if recurso in {"spell_storing_item", "item_armazenador_de_magia"}:
-            return {"resultado": "armazenado", "conjuracoes": 2 * _mod(f.get("inteligencia", 10)), "circulo_maximo": 2}
-        if recurso in {"advanced_artifice", "artifice_avancado"}:
-            return {"resultado": "resolvido", "itens_sintonizados_extra": 2, "bonus_todos_itens": 1}
-        if recurso in {"soul_of_artifice", "alma_do_artifice"}:
-            return {
-                "resultado": "resolvido",
-                "itens_sintonizados": 6,
-                "bonus_salvaguardas_por_item": 1,
-                "reacao_evitar_morte": True,
-            }
+        resolucao_artifice = resolve_artificer_feature(recurso, nivel, f)
+        if resolucao_artifice is not None:
+            return resolucao_artifice
 
     if classe == "paladino":
         if recurso == "maos_consagradas":
