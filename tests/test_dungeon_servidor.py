@@ -137,6 +137,10 @@ class EstaticosTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertIn(b"Ordem de Iniciativa", corpo)
         self.assertIn(b"Encerrar Turno", corpo)
+        self.assertIn(b'id="painel-toggle"', corpo)
+        self.assertIn(b'id="tela-cheia"', corpo)
+        self.assertIn(b'id="painel"', corpo)
+        self.assertIn(b'data-acao="magias"', corpo)
 
     def test_sprite_sheet_do_bardo_e_servida_com_tipo_e_dimensoes_corretos(self):
         status, corpo, tipo = servidor.despachar("GET", "/static/assets/bardo.png", {})

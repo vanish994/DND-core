@@ -44,6 +44,25 @@ const estado = {
   magia: null, // { nome, comando } enquanto se escolhe o alvo ou o comando
 };
 
+const painelCombate = document.getElementById("painel");
+const botaoPainel = document.getElementById("painel-toggle");
+const botaoTelaCheia = document.getElementById("tela-cheia");
+
+function definirPainelAberto(aberto) {
+  painelCombate.hidden = !aberto;
+  botaoPainel.setAttribute("aria-expanded", String(aberto));
+  botaoPainel.title = aberto ? "Fechar registro e opções" : "Abrir registro e opções";
+}
+
+function atualizarControleTelaCheia() {
+  const ativo = Boolean(document.fullscreenElement);
+  const rotulo = ativo ? "Sair da tela cheia" : "Ativar tela cheia";
+  botaoTelaCheia.setAttribute("aria-pressed", String(ativo));
+  botaoTelaCheia.setAttribute("aria-label", rotulo);
+  botaoTelaCheia.title = rotulo;
+  botaoTelaCheia.querySelector(".rotulo").textContent = ativo ? "Sair da tela cheia" : "Tela cheia";
+}
+
 const canvas = document.getElementById("mapa");
 const ctx = canvas.getContext("2d");
 ctx.imageSmoothingEnabled = false;
@@ -333,6 +352,7 @@ function renderizarOpcoes() {
       lista.append(opcao(rotulo, "escolher", true, () => {
         estado.magia = { nome: "Comando", comando: valor };
         estado.modo = "alvo_magia";
+        definirPainelAberto(false);
         renderizarTudo();
       }));
     });
@@ -350,6 +370,7 @@ function renderizarOpcoes() {
           estado.erro = null;
           estado.magia = m.nome === "Comando" ? { nome: "Comando" } : { nome: m.nome };
           if (m.nome !== "Comando") estado.modo = "alvo_magia";
+          definirPainelAberto(false);
           renderizarTudo();
         }
       };
@@ -381,6 +402,7 @@ async function conjurar(magia, alvo, comando) {
       const unidade = estado.dados.unidades.find((u) => u.id === alvo);
       if (unidade) orientarBardo(estado.dados.personagem.posicao, unidade.posicao);
     }
+    definirPainelAberto(false);
     estado.modo = "mover";
     estado.magia = null;
     aplicarEstado(resposta);
@@ -514,6 +536,7 @@ document.querySelectorAll(".botao-acao").forEach((botao) => {
     const acao = botao.dataset.acao;
     if (acao === "itens") return;
     if (acao === "encerrar") {
+      definirPainelAberto(false);
       estado.erro = null;
       executar("encerrar", {});
       return;
@@ -521,9 +544,34 @@ document.querySelectorAll(".botao-acao").forEach((botao) => {
     estado.modo = acao;
     estado.erro = null;
     estado.magia = null;
+    if (acao === "magias" || acao === "truques") definirPainelAberto(true);
+    else definirPainelAberto(false);
     renderizarTudo();
   });
 });
+
+botaoPainel.addEventListener("click", () => definirPainelAberto(painelCombate.hidden));
+document.getElementById("painel-fechar").addEventListener("click", () => definirPainelAberto(false));
+document.addEventListener("keydown", (evento) => {
+  if (evento.key === "Escape" && !painelCombate.hidden) definirPainelAberto(false);
+});
+
+botaoTelaCheia.addEventListener("click", async () => {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen();
+    else if (document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen();
+    else throw new Error("não suportado");
+  } catch {
+    estado.erro = "Não foi possível ativar tela cheia neste navegador.";
+    if (estado.dados) renderizarTudo();
+  }
+});
+document.addEventListener("fullscreenchange", () => {
+  atualizarControleTelaCheia();
+  requestAnimationFrame(ajustarMapa);
+});
+if (!document.documentElement.requestFullscreen) botaoTelaCheia.disabled = true;
+atualizarControleTelaCheia();
 
 document.getElementById("novo").addEventListener("click", async () => {
   history.replaceState(null, "", "/encontro");

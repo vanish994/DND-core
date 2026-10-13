@@ -8,6 +8,7 @@
 </head>
 <body>
   <div class="girar" role="alert">Gire o celular para a horizontal para jogar.</div>
+
   <header class="topo">
     <section class="ficha" id="ficha" aria-label="Ficha do personagem"></section>
     <div class="andar" id="andar">Carregando…</div>
@@ -15,19 +16,32 @@
       <h2>Ordem de Iniciativa</h2>
       <ol id="iniciativa"></ol>
     </section>
+    <div class="controles-vista" aria-label="Controles de visualização">
+      <button id="painel-toggle" class="controle-vista" type="button" aria-controls="painel" aria-expanded="false" title="Abrir registro e opções">
+        <span class="icone-vista" aria-hidden="true">☷</span><span class="rotulo">Registro</span>
+      </button>
+      <button id="tela-cheia" class="controle-vista" type="button" aria-label="Ativar tela cheia" aria-pressed="false" title="Ativar tela cheia">
+        <span class="icone-vista" aria-hidden="true">⛶</span><span class="rotulo">Tela cheia</span>
+      </button>
+    </div>
   </header>
 
   <main class="area-mapa">
     <div class="mapa-wrap">
       <canvas id="mapa" aria-label="Mapa de batalha"></canvas>
+      <p class="dica" id="dica" role="status">Carregando encontro…</p>
       <div class="fim" id="fim" hidden>
         <p id="fim-texto"></p>
         <button id="novo" type="button">Novo encontro</button>
       </div>
     </div>
-    <aside class="painel">
-      <p class="dica" id="dica" role="status">Carregando encontro…</p>
+    <aside class="painel" id="painel" aria-label="Painel do combate" hidden>
+      <div class="painel-cabecalho">
+        <h2>Painel do combate</h2>
+        <button id="painel-fechar" class="fechar-painel" type="button" aria-label="Fechar painel">×</button>
+      </div>
       <ul class="opcoes" id="opcoes" aria-label="Magias e truques"></ul>
+      <h3 class="registro-titulo">Registro recente</h3>
       <ul class="registro" id="registro" aria-label="Registro do combate"></ul>
     </aside>
   </main>
