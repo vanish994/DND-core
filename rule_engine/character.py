@@ -311,10 +311,21 @@ def gerar_atributos_matriz_padrao() -> dict[str, int]:
     return {"forca": 15, "destreza": 14, "constituicao": 13, "inteligencia": 12, "sabedoria": 10, "carisma": 8}
 
 
+CUSTO_COMPRA_PONTOS = {8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9}
+
+
+def custo_compra_pontos(pontos: Mapping[str, int]) -> int:
+    """Devolve o custo da distribuição usando a tabela oficial do motor."""
+    valores = validar_atributos(pontos)
+    if any(valor not in CUSTO_COMPRA_PONTOS for valor in valores.values()):
+        raise ValueError("Compra por pontos inválida: valores devem estar entre 8 e 15")
+    return sum(CUSTO_COMPRA_PONTOS[valor] for valor in valores.values())
+
+
 def gerar_atributos_compra_pontos(pontos: Mapping[str, int]) -> dict[str, int]:
     valores = validar_atributos(pontos)
-    custo = {8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9}
-    if any(valor not in custo for valor in valores.values()) or sum(custo[valor] for valor in valores.values()) > 27:
+    custo = custo_compra_pontos(valores)
+    if custo > 27:
         raise ValueError("Compra por pontos inválida: máximo de 27 pontos e valores de 8 a 15")
     return valores
 
