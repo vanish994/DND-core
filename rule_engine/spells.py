@@ -174,7 +174,14 @@ _DETALHADAS = {
         {"dano": "escala nos níveis 5, 11 e 17"},
     ),
     "escudo": (1, "abjuração", "V, S", False, "+5 CA até o início do próximo turno", {}),
-    "curar ferimentos": (1, "necromancia", "V, S", False, "cura 2d8", {"cura": "+2d8 por círculo"}),
+    "curar ferimentos": (
+        1,
+        "necromancia",
+        "V, S",
+        False,
+        "cura 2d8 + modificador de conjuração",
+        {"cura": "+2d8 por círculo"},
+    ),
     "palavra curativa": (
         1,
         "abjuração",

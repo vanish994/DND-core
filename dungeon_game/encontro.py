@@ -35,9 +35,8 @@ SIMBOLOS_BLOQUEADOS = {"#", "+", "o"}
 CASA_PES = 5
 ATRIBUTO_CONJURACAO = "carisma"
 
-# Magias com efeito resolvido no encontro. Curar Ferimentos: o motor confirma a
-# conjuração e a rolagem vem da regra; o catálogo ainda grava o efeito só como
-# "cura 2d8", sem o modificador, que aqui é aplicado pela fórmula do PHB 2024.
+# Magias com efeito resolvido no encontro. Curar Ferimentos: 2d8 + modificador de
+# conjuração (PHB 2024; a mecânica do motor também marca soma_modificador_conjuracao).
 EFEITOS_EM_COMBATE = {"Curar Ferimentos", "Zombaria Perversa", "Comando"}
 
 # Alvo de cada magia: si mesmo (toque) ou inimigo ao alcance.
@@ -328,7 +327,7 @@ class Encontro:
         return self._comando(alvo_id, comando, cd)
 
     def _curar(self, ator: str) -> dict[str, Any]:
-        # 2d8 + modificador de Carisma (PHB 2024). O catálogo do motor registra só "cura 2d8".
+        # 2d8 + modificador de Carisma (PHB 2024).
         modificador = int(self.ficha["modificadores"][ATRIBUTO_CONJURACAO])
         rolagem = self._executar(
             {
