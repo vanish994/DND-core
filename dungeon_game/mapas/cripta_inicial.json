@@ -1,0 +1,32 @@
+{
+  "id": "cripta-inicial",
+  "nome": "Cripta Inicial",
+  "ambiente": "cripta",
+  "casa_pes": 5,
+  "legenda": {
+    ".": {"tipo": "chao", "nome": "Chão de pedra"},
+    "#": {"tipo": "parede", "nome": "Parede", "bloqueia_movimento": true, "bloqueia_visao": true},
+    "+": {"tipo": "porta", "nome": "Porta", "bloqueia_movimento": true, "bloqueia_visao": true},
+    "~": {"tipo": "agua", "nome": "Água", "custo_movimento": 2},
+    "o": {"tipo": "pilar", "nome": "Pilar", "bloqueia_movimento": true, "bloqueia_visao": false},
+    "t": {"tipo": "tocha", "nome": "Tocha", "bloqueia_movimento": true, "bloqueia_visao": false}
+  },
+  "entradas": {"jogador": [{"x": 2, "y": 7}], "inimigos": [{"x": 13, "y": 3}, {"x": 13, "y": 10}]},
+  "grade": [
+    "########################",
+    "#......................#",
+    "#......................#",
+    "#...o...........o......#",
+    "#......................#",
+    "#......~~~~............#",
+    "#......~~~~............#",
+    "+......................#",
+    "#......................#",
+    "#...o.............o....#",
+    "#......................#",
+    "#......................#",
+    "#......................#",
+    "########################"
+  ],
+  "fonte": "Mapa original do DND-core; não derivado de outras obras."
+}
