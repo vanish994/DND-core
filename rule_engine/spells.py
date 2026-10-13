@@ -1270,6 +1270,22 @@ MECANICAS_MAGIA: dict[str, dict[str, Any]] = {
         "nao_protege_contra": ["area"],
         "encerra_se": ["ataque", "magia", "dano", "conjurar_magia"],
     },
+    # Livro do Jogador 2024, p. 310 — Reviver os Mortos.
+    "reviver os mortos": {
+        "tipo": "ressurreicao",
+        "alcance": "toque",
+        "acao": "1_hora",
+        "duracao": "instantanea",
+        "custo_material_po": 500,
+        "consome_componente_material": True,
+        "limite_dias_morto": 10,
+        "pv_ao_reviver": 1,
+        "neutraliza_venenos": True,
+        "revive_morto_vivo": False,
+        "requer_partes_do_corpo_integras": True,
+        "penalidade_testes_d20_inicial": -4,
+        "reducao_penalidade_por_descanso_longo": 1,
+    },
 }
 
 
