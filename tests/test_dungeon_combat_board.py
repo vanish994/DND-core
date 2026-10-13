@@ -1,12 +1,13 @@
-"""Testes do tabuleiro tático discreto."""
+"""Testes unitários do tabuleiro tático, sem depender de regras de D&D."""
 import unittest
 
 from dungeon_game.combat_board import BoardPosition, CombatBoard
+from dungeon_game.rule_adapter import DungeonRuleAdapter
 
 
 class CombatBoardTests(unittest.TestCase):
-    def test_distance_uses_existing_rule_engine_grid_convention(self):
-        board = CombatBoard(8, 8)
+    def test_distance_uses_explicit_rule_adapter(self):
+        board = DungeonRuleAdapter.create_combat_board(8, 8)
         self.assertEqual(board.distance_feet(BoardPosition(1, 1), BoardPosition(4, 3)), 15)
 
     def test_movement_respects_budget_walls_and_occupied_tiles(self):
@@ -26,6 +27,21 @@ class CombatBoardTests(unittest.TestCase):
         self.assertEqual(path[0], BoardPosition(1, 2))
         self.assertEqual(path[-1], BoardPosition(3, 2))
         self.assertNotIn(BoardPosition(2, 2), path)
+
+    def test_diagonal_cannot_cut_between_two_blocked_cells(self):
+        board = CombatBoard(3, 3, blocked=frozenset({BoardPosition(1, 0), BoardPosition(0, 1)}))
+        self.assertNotIn(BoardPosition(1, 1), board.reachable_positions(BoardPosition(0, 0), 5))
+        self.assertIsNone(board.shortest_path(BoardPosition(0, 0), BoardPosition(1, 1)))
+
+    def test_occupied_target_is_not_a_valid_path_destination(self):
+        board = CombatBoard(4, 4)
+        self.assertIsNone(
+            board.shortest_path(
+                BoardPosition(0, 0),
+                BoardPosition(2, 2),
+                occupied={BoardPosition(2, 2)},
+            )
+        )
 
     def test_invalid_start_and_out_of_bounds_obstacles_are_rejected(self):
         with self.assertRaises(ValueError):
