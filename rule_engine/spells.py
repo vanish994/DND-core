@@ -1276,7 +1276,7 @@ MECANICAS_MAGIA: dict[str, dict[str, Any]] = {
         "alcance": "toque",
         "acao": "1_hora",
         "duracao": "instantanea",
-        "custo_material_po": 500,
+        "custo_material_minimo_po": 500,
         "consome_componente_material": True,
         "limite_dias_morto": 10,
         "pv_ao_reviver": 1,
