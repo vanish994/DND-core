@@ -89,11 +89,13 @@ class CharacterCreatorApplication:
 
     def _dispatch(self, method: str, path: str, environ: dict[str, Any]) -> tuple[int, Any, str, str]:
         json_type = "application/json; charset=utf-8"
+        if path == "/combat-preview" and method in {"GET", "HEAD"}:
+            return self._static("combat.html", "text/html; charset=utf-8")
         if path == "/" and method in {"GET", "HEAD"}:
             return self._static("index.html", "text/html; charset=utf-8")
         if path.startswith("/static/") and method in {"GET", "HEAD"}:
             name = path.removeprefix("/static/")
-            if "/" in name or "\\" in name or name in {"", ".", ".."}:
+            if "/" in name or "\\\\" in name or name in {"", ".", ".."}:
                 return self._json_error(404, "Arquivo não encontrado.")
             return self._static(name)
 
@@ -115,7 +117,7 @@ class CharacterCreatorApplication:
             if self.service.store is None:
                 raise PersistenceError("O serviço de persistência não está configurado.")
             character_id = path.removeprefix("/api/characters/")
-            if not character_id or "/" in character_id or "\\" in character_id:
+            if not character_id or "/" in character_id or "\\\\" in character_id:
                 return self._json_error(404, "Ficha não encontrada.")
             record = self.service.store.get(character_id)
             if record is None:

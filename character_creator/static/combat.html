@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#151a19">
+  <title>Combate — DND-core</title>
+  <link rel="stylesheet" href="/static/combat.css">
+  <script src="/static/combat.js" defer></script>
+</head>
+<body class="combat-page">
+  <main class="combat-shell">
+    <header class="combat-topbar">
+      <a class="back-link" href="/" aria-label="Voltar ao criador">‹</a>
+      <div class="encounter-title"><span class="eyebrow">EXPEDIÇÃO · ANDAR 01</span><strong>Salão esquecido</strong></div>
+      <div class="turn-pill"><span class="turn-dot"></span> Prévia da interface</div>
+    </header>
+    <section class="battlefield" aria-label="Área do mapa de combate">
+      <div class="map-caption"><span>MAPA DE EXEMPLO</span><span>Grade tática sob demanda</span></div>
+      <div class="map-scene" id="map-scene">
+        <div class="stone-ring"></div><div class="stone-pillar pillar-a"></div><div class="stone-pillar pillar-b"></div>
+        <div class="stone-pillar pillar-c"></div><div class="stone-pillar pillar-d"></div>
+        <button class="unit hero-unit" data-unit="hero" aria-label="Selecionar aventureiro"><span>✦</span><small>Você</small></button>
+        <button class="unit enemy-unit" data-unit="enemy" aria-label="Selecionar goblin"><span>♟</span><small>Goblin</small></button>
+        <div class="map-hint" id="map-hint">Escolha uma ação na barra inferior</div>
+      </div>
+      <div class="combatant-strip">
+        <div class="combatant-card"><div class="portrait hero-portrait">✦</div><div class="combatant-info"><strong>Aventureiro</strong><span>PV <b>24 / 30</b></span><div class="hp-track"><i style="width:80%"></i></div></div><span class="ac-label">CA 16</span></div>
+        <div class="combatant-card enemy-card"><div class="portrait enemy-portrait">♟</div><div class="combatant-info"><strong>Goblin</strong><span>Inimigo de exemplo</span><div class="hp-track enemy-hp"><i style="width:60%"></i></div></div><span class="distance-label">12 m*</span></div>
+      </div>
+    </section>
+    <aside class="preview-note">Demonstração visual com dados ilustrativos. As ações ainda não executam combate real.</aside>
+    <nav class="action-dock" aria-label="Ações de combate">
+      <div class="action-options" id="action-options" aria-live="polite">
+        <span class="options-label">AÇÕES</span><span class="options-placeholder">Selecione uma opção abaixo</span>
+      </div>
+      <div class="action-buttons">
+        <button class="action-button" data-action="move"><span class="action-icon">⌁</span><span>Mover</span></button>
+        <button class="action-button" data-action="attack"><span class="action-icon">⚔</span><span>Atacar</span></button>
+        <button class="action-button" data-action="spells"><span class="action-icon">✧</span><span>Magias</span></button>
+        <button class="action-button" data-action="cantrips"><span class="action-icon">✦</span><span>Truques</span></button>
+        <button class="action-button" data-action="items"><span class="action-icon">◇</span><span>Itens</span></button>
+        <button class="action-button end-turn" data-action="end"><span class="action-icon">◷</span><span>Encerrar</span></button>
+      </div>
+    </nav>
+  </main>
+</body>
+</html>
