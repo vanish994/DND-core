@@ -247,10 +247,10 @@ function mensagemDica() {
       : { texto: `Nenhum inimigo ao alcance de ${nome} (18 m).`, erro: false };
   }
   if (estado.modo === "magias") {
-    return { texto: "Escolha uma magia disponível. Magias sem efeito no combate ficam bloqueadas.", erro: false };
+    return { texto: "Escolha uma magia.", erro: false };
   }
   if (estado.modo === "truques") {
-    return { texto: "Truques ainda não têm efeito no combate.", erro: false };
+    return { texto: "Escolha um truque.", erro: false };
   }
   if (estado.modo === "atacar") {
     return d.alvos.length
