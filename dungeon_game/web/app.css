@@ -1,4 +1,4 @@
-/* HUD tático escuro: grade intacta, conteúdo entre o topo e as ações. */
+/* HUD tático sobreposto: a arena permanece em tela cheia atrás dos controles. */
 :root {
   --fundo: #0b0b12;
   --painel: #14141f;
@@ -14,7 +14,7 @@
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; }
+html, body { margin: 0; width: 100%; height: 100%; height: 100dvh; overflow: hidden; overscroll-behavior: none; }
 body {
   position: fixed;
   inset: 0;
@@ -152,10 +152,10 @@ button:focus-visible { outline: 2px solid #91b7ff; outline-offset: 2px; }
 
 .area-mapa {
   position: absolute;
-  inset: var(--altura-topo) 0 var(--altura-barra);
+  inset: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  padding: 6px;
+  padding: 0;
   overflow: hidden;
   background-color: #1a1a24;
   background-image:
@@ -183,7 +183,7 @@ button:focus-visible { outline: 2px solid #91b7ff; outline-offset: 2px; }
   position: absolute;
   z-index: 2;
   left: 10px;
-  bottom: 10px;
+  bottom: calc(var(--altura-barra) + 10px);
   max-width: min(62%, 560px);
   margin: 0;
   padding: 8px 12px;
@@ -375,7 +375,7 @@ button:focus-visible { outline: 2px solid #91b7ff; outline-offset: 2px; }
   .controles-vista { gap: 3px; }
   .controle-vista { width: 38px; min-width: 38px; padding: 0; }
   .controle-vista .rotulo { display: none; }
-  .area-mapa { padding: 4px; }
+  .area-mapa { padding: 0; }
   .painel { width: min(320px, 56vw); padding: 9px; }
   .barra { gap: 4px; padding: 5px 4px; }
   .botao-acao { min-height: 38px; padding: 0 3px; gap: 4px; font-size: clamp(10px, 2.4vh, 13px); }
@@ -389,7 +389,7 @@ button:focus-visible { outline: 2px solid #91b7ff; outline-offset: 2px; }
   .ficha .linha { font-size: .8em; }
   .painel { top: 5px; bottom: 5px; }
   .painel .registro, .registro-titulo { display: none; }
-  .dica { left: 5px; bottom: 5px; padding: 5px 8px; font-size: .8em; }
+  .dica { left: 5px; bottom: calc(var(--altura-barra) + 5px); padding: 5px 8px; font-size: .8em; }
   .barra { padding: 4px; gap: 4px; }
   .botao-acao { min-height: 38px; }
 }

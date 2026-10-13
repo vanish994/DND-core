@@ -142,6 +142,12 @@ class EstaticosTests(unittest.TestCase):
         self.assertIn(b'id="painel"', corpo)
         self.assertIn(b'data-acao="magias"', corpo)
 
+    def test_area_de_combate_ocupa_a_viewport_inteira(self):
+        status, css = chamar("GET", "/static/app.css")
+        self.assertEqual(status, 200)
+        regra_mapa = css.split(b".area-mapa {", 1)[1].split(b"}", 1)[0]
+        self.assertIn(b"inset: 0;", regra_mapa)
+
     def test_sprite_sheet_do_bardo_e_servida_com_tipo_e_dimensoes_corretos(self):
         status, corpo, tipo = servidor.despachar("GET", "/static/assets/bardo.png", {})
         self.assertEqual(status, 200)
