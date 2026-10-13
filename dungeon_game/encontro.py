@@ -45,7 +45,7 @@ SALVAGUARDA_EM_COMBATE = {"Zombaria Perversa", "Comando"}  # usam CD de magia (s
 ALCANCE_MAGIA_PES = 60  # 18 m, alcance de Zombaria Perversa e Comando
 
 # Comandos de Comando (PHB 2024). Cada um vale só para o próximo turno do alvo.
-COMANDOS = ("aproximar", "largar", "fugir", "prostrar", "parar")
+COMANDOS = ("aproximar", "largar", "fugir", "abaixar", "parar")
 
 MOTIVOS_SEM_EFEITO = {
     "Golpe Certeiro": "magia sem resolução específica no motor",
@@ -549,9 +549,9 @@ class Encontro:
 
         if comando in {"largar", "parar"}:
             resultado = {"status": "resolvido", "acao": f"comando_{comando}"}
-        elif comando == "prostrar":
+        elif comando == "abaixar":
             inimigo["caido"] = True
-            resultado = {"status": "resolvido", "acao": "comando_prostrar"}
+            resultado = {"status": "resolvido", "acao": "comando_abaixar"}
         elif comando == "fugir":
             self._fugir(cid, passos)
             resultado = {"status": "resolvido", "acao": "comando_fugir"}

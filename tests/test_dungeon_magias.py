@@ -205,8 +205,8 @@ class TestComando(unittest.TestCase):
                 self.assertEqual((encontro.posicoes["goblin-1"].x, encontro.posicoes["goblin-1"].y), posicao)
                 self.assertFalse(any(e.get("evento") == "ataque_inimigo" for e in encontro.log))
 
-    def test_prostrar_deixa_inimigo_caido_e_encerra_turno(self):
-        encontro = self._com_comando_falhado("prostrar")
+    def test_abaixar_deixa_inimigo_caido_e_encerra_turno(self):
+        encontro = self._com_comando_falhado("abaixar")
         posicao = (encontro.posicoes["goblin-1"].x, encontro.posicoes["goblin-1"].y)
         turno_do_goblin(encontro)
         self.assertTrue(encontro.inimigos["goblin-1"].get("caido"))

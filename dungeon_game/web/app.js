@@ -32,7 +32,7 @@ const COMANDOS = [
   ["aproximar", "Aproximar"],
   ["largar", "Largar"],
   ["fugir", "Fugir"],
-  ["prostrar", "Prostrar (Caído)"],
+  ["abaixar", "Abaixar (Caído)"],
   ["parar", "Parar"],
 ];
 
