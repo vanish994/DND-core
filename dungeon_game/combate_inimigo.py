@@ -30,6 +30,7 @@ def atacar(
     alvo: Mapping[str, Any],
     *,
     seed: int | None = None,
+    desvantagem: bool = False,
 ) -> dict[str, Any]:
     """Resolve um ataque do inimigo contra ``alvo`` (ficha com ``id``, ``ca``, ``pv_maximo``).
 
@@ -46,6 +47,9 @@ def atacar(
     }
     if seed is not None:
         fatos["seed"] = seed
+    if desvantagem:
+        # O motor de ataque lê "disadvantage"; outras chaves são ignoradas.
+        fatos["disadvantage"] = True
     ataque = _executar(orquestrador, fatos, [dict(alvo)])
     if ataque.status == "bloqueado":
         return {"status": ataque.status, "motivo": ataque.motivo, "perfil": perfil_id}

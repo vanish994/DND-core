@@ -28,11 +28,20 @@ const ESTILO_TERRENO = {
   tocha: { base: "#3a3a46", sombra: "#33333f", vinho: "#2e2e39" },
 };
 
+const COMANDOS = [
+  ["aproximar", "Aproximar"],
+  ["largar", "Largar"],
+  ["fugir", "Fugir"],
+  ["prostrar", "Prostrar (Caído)"],
+  ["parar", "Parar"],
+];
+
 const estado = {
   id: null,
   dados: null,
   modo: "mover",
   erro: null,
+  magia: null, // { nome, comando } enquanto se escolhe o alvo ou o comando
 };
 
 const canvas = document.getElementById("mapa");
@@ -118,6 +127,15 @@ function desenhar() {
     ctx.fillStyle = "rgba(79, 140, 255, 0.35)";
     d.alcancaveis.forEach(([x, y]) => ctx.fillRect(x * TAMANHO, y * TAMANHO, TAMANHO, TAMANHO));
   }
+  if (d.de_jogador && estado.modo === "alvo_magia") {
+    d.alvos_magia.forEach((id) => {
+      const u = d.unidades.find((item) => item.id === id);
+      if (!u) return;
+      ctx.strokeStyle = "#b07cff";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(u.posicao[0] * TAMANHO + 2, u.posicao[1] * TAMANHO + 2, TAMANHO - 4, TAMANHO - 4);
+    });
+  }
   if (d.de_jogador && estado.modo === "atacar") {
     d.alvos.forEach((id) => {
       const u = d.unidades.find((item) => item.id === id);
@@ -129,7 +147,7 @@ function desenhar() {
   }
 
   // Grade discreta; mais visível em movimento e ataque.
-  const forte = d.de_jogador && (estado.modo === "mover" || estado.modo === "atacar");
+  const forte = d.de_jogador && (estado.modo === "mover" || estado.modo === "atacar" || estado.modo === "alvo_magia");
   ctx.strokeStyle = forte ? "rgba(255,255,255,0.22)" : "rgba(255,255,255,0.08)";
   ctx.lineWidth = 1;
   for (let x = 0; x <= largura; x++) {
@@ -219,6 +237,15 @@ function mensagemDica() {
   }
   if (!d.de_jogador) return { texto: "Aguardando inimigos…", erro: false };
   if (estado.modo === "mover") return { texto: "Toque em uma casa destacada para se mover.", erro: false };
+  if (estado.magia && estado.magia.nome === "Comando" && estado.magia.comando === undefined) {
+    return { texto: "Escolha o comando que o inimigo deve cumprir.", erro: false };
+  }
+  if (estado.modo === "alvo_magia" && estado.magia) {
+    const nome = estado.magia.nome;
+    return d.alvos_magia.length
+      ? { texto: `Toque em um inimigo destacado para usar ${nome}.`, erro: false }
+      : { texto: `Nenhum inimigo ao alcance de ${nome} (18 m).`, erro: false };
+  }
   if (estado.modo === "magias") {
     return { texto: "Escolha uma magia disponível. Magias sem efeito no combate ficam bloqueadas.", erro: false };
   }
@@ -235,33 +262,62 @@ function mensagemDica() {
 
 function renderizarOpcoes() {
   // Lista de magias ou truques do modo atual; cada item traz o motivo quando indisponível.
+  // Quando a magia é Comando, a lista mostra os comandos antes do alvo.
   const lista = document.getElementById("opcoes");
   lista.replaceChildren();
   const d = estado.dados;
   if (!d.de_jogador || d.status !== "active") return;
+  if (estado.magia && estado.magia.nome === "Comando" && estado.magia.comando === undefined) {
+    COMANDOS.forEach(([valor, rotulo]) => {
+      lista.append(opcao(rotulo, "escolher", true, () => {
+        estado.magia = { nome: "Comando", comando: valor };
+        estado.modo = "alvo_magia";
+        renderizarTudo();
+      }));
+    });
+    return;
+  }
   if (estado.modo !== "magias" && estado.modo !== "truques") return;
   const circulo = estado.modo === "magias" ? 1 : 0;
   d.magias
     .filter((m) => m.circulo === circulo)
     .forEach((m) => {
-      const li = document.createElement("li");
-      const botao = document.createElement("button");
-      botao.type = "button";
-      botao.disabled = !m.disponivel;
-      botao.innerHTML = `<span></span><small></small>`;
-      botao.querySelector("span").textContent = m.nome;
-      botao.querySelector("small").textContent = m.disponivel ? "usar" : m.motivo;
-      botao.addEventListener("click", () => conjurar(m.nome));
-      li.append(botao);
-      lista.append(li);
+      const aoClicar = () => {
+        if (m.alvo === "si_mesmo") {
+          conjurar(m.nome);
+        } else if (m.alvo === "inimigo") {
+          estado.erro = null;
+          estado.magia = m.nome === "Comando" ? { nome: "Comando" } : { nome: m.nome };
+          if (m.nome !== "Comando") estado.modo = "alvo_magia";
+          renderizarTudo();
+        }
+      };
+      lista.append(opcao(m.nome, m.disponivel ? "usar" : m.motivo, m.disponivel, aoClicar));
     });
 }
 
-async function conjurar(magia) {
+function opcao(titulo, detalhe, habilitado, aoClicar) {
+  const li = document.createElement("li");
+  const botao = document.createElement("button");
+  botao.type = "button";
+  botao.disabled = !habilitado;
+  botao.innerHTML = `<span></span><small></small>`;
+  botao.querySelector("span").textContent = titulo;
+  botao.querySelector("small").textContent = detalhe;
+  botao.addEventListener("click", aoClicar);
+  li.append(botao);
+  return li;
+}
+
+async function conjurar(magia, alvo, comando) {
   estado.erro = null;
+  const corpo = { magia };
+  if (alvo !== undefined) corpo.alvo = alvo;
+  if (comando !== undefined) corpo.comando = comando;
   try {
-    const resposta = await chamar(`/api/encontros/${estado.id}/conjurar`, { magia });
+    const resposta = await chamar(`/api/encontros/${estado.id}/conjurar`, corpo);
     estado.modo = "mover";
+    estado.magia = null;
     aplicarEstado(resposta);
   } catch (erro) {
     estado.erro = erro.message;
@@ -360,6 +416,14 @@ canvas.addEventListener("click", (evento) => {
       estado.erro = "Essa casa não está ao alcance do movimento.";
       renderizarTudo();
     }
+  } else if (estado.modo === "alvo_magia" && estado.magia) {
+    const alvo = estado.dados.unidades.find((u) => !u.derrotado && u.posicao[0] === x && u.posicao[1] === y);
+    if (alvo && estado.dados.alvos_magia.includes(alvo.id)) {
+      conjurar(estado.magia.nome, alvo.id, estado.magia.comando);
+    } else {
+      estado.erro = "Escolha um inimigo destacado.";
+      renderizarTudo();
+    }
   } else if (estado.modo === "atacar") {
     const alvo = estado.dados.unidades.find((u) => !u.derrotado && u.posicao[0] === x && u.posicao[1] === y);
     if (alvo && estado.dados.alvos.includes(alvo.id)) {
@@ -382,6 +446,7 @@ document.querySelectorAll(".botao-acao").forEach((botao) => {
     }
     estado.modo = acao;
     estado.erro = null;
+    estado.magia = null;
     renderizarTudo();
   });
 });

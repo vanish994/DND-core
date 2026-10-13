@@ -282,6 +282,14 @@ _DETALHADAS = {
         "Toque; Constituição evita 2d10 necrótico, metade em sucesso",
         {"dano": "+1d10 por círculo"},
     ),
+    "zombaria perversa": (
+        0,
+        "encantamento",
+        "V",
+        False,
+        "Sabedoria evita; 1d6 de dano psíquico e desvantagem no próximo ataque do alvo antes do fim do próximo turno dele",
+        {"dano": "escala nos níveis 5, 11 e 17"},
+    ),
     "comando": (
         1,
         "encantamento",
@@ -911,6 +919,16 @@ MECANICAS_MAGIA: dict[str, dict[str, Any]] = {
         "sucesso_metade": True,
         "alcance": "toque",
         "acao": "acao",
+    },
+    "zombaria perversa": {
+        "tipo": "dano_salvaguarda",
+        "dados_dano_base": "1d6",
+        "tipo_dano": "psiquico",
+        "salvaguarda": "sabedoria",
+        "sucesso_metade": False,
+        "alcance_m": 18,
+        "acao": "acao",
+        "efeito_adicional": "desvantagem_no_proximo_ataque_do_alvo",
     },
     "comando": {
         "tipo": "controle_comando",

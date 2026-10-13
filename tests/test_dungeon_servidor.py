@@ -134,13 +134,22 @@ class ApiMagiaTests(unittest.TestCase):
         _, estado = self.abrir_turno_do_bardo()
         nomes = {m["nome"]: m for m in estado["magias"]}
         self.assertTrue(nomes["Curar Ferimentos"]["disponivel"])
-        self.assertIsNotNone(nomes["Comando"]["motivo"])
+        self.assertTrue(nomes["Comando"]["disponivel"])
+        self.assertIsNotNone(nomes["Enfeitiçar Pessoa"]["motivo"])
 
     def test_conjurar_magia_sem_efeito_retorna_409_com_motivo(self):
         encontro_id, _ = self.abrir_turno_do_bardo()
-        status, corpo = chamar("POST", f"/api/encontros/{encontro_id}/conjurar", {"magia": "Comando"})
+        status, corpo = chamar("POST", f"/api/encontros/{encontro_id}/conjurar", {"magia": "Luz"})
         self.assertEqual(status, 409)
-        self.assertIn("efeito ainda não resolvido", corpo["erro"])
+        self.assertEqual(corpo["erro"], "sem efeito em combate")
+
+    def test_comando_sem_comando_escolhido_retorna_409(self):
+        encontro_id, _ = self.abrir_turno_do_bardo()
+        status, corpo = chamar(
+            "POST", f"/api/encontros/{encontro_id}/conjurar", {"magia": "Comando", "alvo": "goblin-1"}
+        )
+        self.assertEqual(status, 409)
+        self.assertEqual(corpo["erro"], "comando_invalido")
 
     def test_conjurar_curar_ferimentos_no_turno_do_bardo(self):
         encontro_id, _ = self.abrir_turno_do_bardo()

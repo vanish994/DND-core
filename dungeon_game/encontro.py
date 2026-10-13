@@ -18,7 +18,10 @@ from typing import Any
 
 from character_creator.service import CharacterCreatorService
 from orchestrator import Acao, OrquestradorAcoes
+from orchestrator.preparo import cd_de_magia
+from rule_engine.bestiary import consultar_monstro
 from rule_engine.catalog import CATALOGO_ARMADURAS
+from rule_engine.spells import mecanica_de_magia
 from rule_engine.survival import EstadoVital
 
 from .combat_board import BoardPosition, CombatBoard
@@ -35,10 +38,17 @@ ATRIBUTO_CONJURACAO = "carisma"
 # Magias com efeito resolvido no encontro. Curar Ferimentos: o motor confirma a
 # conjuração e a rolagem vem da regra; o catálogo ainda grava o efeito só como
 # "cura 2d8", sem o modificador, que aqui é aplicado pela fórmula do PHB 2024.
-EFEITOS_EM_COMBATE = {"Curar Ferimentos"}
+EFEITOS_EM_COMBATE = {"Curar Ferimentos", "Zombaria Perversa", "Comando"}
+
+# Alvo de cada magia: si mesmo (toque) ou inimigo ao alcance.
+ALVO_MAGIA = {"Curar Ferimentos": "si_mesmo", "Zombaria Perversa": "inimigo", "Comando": "inimigo"}
+SALVAGUARDA_EM_COMBATE = {"Zombaria Perversa", "Comando"}  # usam CD de magia (salvaguarda do alvo)
+ALCANCE_MAGIA_PES = 60  # 18 m, alcance de Zombaria Perversa e Comando
+
+# Comandos de Comando (PHB 2024). Cada um vale só para o próximo turno do alvo.
+COMANDOS = ("aproximar", "largar", "fugir", "prostrar", "parar")
 
 MOTIVOS_SEM_EFEITO = {
-    "Comando": "efeito ainda não resolvido pelo motor (salvaguarda e comando)",
     "Golpe Certeiro": "magia sem resolução específica no motor",
     "Luz": "sem efeito em combate",
     "Ilusão Menor": "sem efeito em combate",
@@ -253,31 +263,54 @@ class Encontro:
         """Magias e truques da ficha, cada um com a razão de estar ou não disponível."""
         conjuracao = self.ficha.get("conjuracao") or {}
         espacos = (conjuracao.get("espacos_restantes") or {}).get("1", 0)
-        itens = []
-        for nome in conjuracao.get("truques", []):
-            motivo = MOTIVOS_SEM_EFEITO.get(nome, "sem efeito em combate")
-            itens.append({"nome": nome, "circulo": 0, "disponivel": False, "motivo": motivo})
-        for nome in conjuracao.get("magias_preparadas", []):
-            if nome in EFEITOS_EM_COMBATE:
-                motivo = None if espacos > 0 else "sem espaço de 1º círculo"
-                itens.append({"nome": nome, "circulo": 1, "disponivel": motivo is None, "motivo": motivo})
-            else:
-                motivo = MOTIVOS_SEM_EFEITO.get(nome, "sem efeito em combate")
-                itens.append({"nome": nome, "circulo": 1, "disponivel": False, "motivo": motivo})
+        itens = [self._item_magia(nome, 0, espacos) for nome in conjuracao.get("truques", [])]
+        itens += [self._item_magia(nome, 1, espacos) for nome in conjuracao.get("magias_preparadas", [])]
         return itens
 
-    def conjurar(self, magia: str, alvo_id: str | None = None) -> dict[str, Any]:
+    def _item_magia(self, nome: str, circulo: int, espacos: int) -> dict[str, Any]:
+        if nome not in EFEITOS_EM_COMBATE:
+            motivo = MOTIVOS_SEM_EFEITO.get(nome, "sem efeito em combate")
+            return {"nome": nome, "circulo": circulo, "disponivel": False, "motivo": motivo, "alvo": None}
+        motivo = "sem espaço de 1º círculo" if circulo > 0 and espacos <= 0 else None
+        return {
+            "nome": nome,
+            "circulo": circulo,
+            "disponivel": motivo is None,
+            "motivo": motivo,
+            "alvo": ALVO_MAGIA[nome],
+        }
+
+    def alvos_magia(self) -> list[str]:
+        """Inimigos vivos ao alcance de magia (18 m)."""
+        return self.alvos_ao_alcance(self.ficha["id"], ALCANCE_MAGIA_PES)
+
+    def conjurar(self, magia: str, alvo_id: str | None = None, comando: str | None = None) -> dict[str, Any]:
         """Conjura uma magia do personagem. Só as de efeito resolvido pelo motor são aceitas."""
         ator = self._exigir_turno_do_jogador()
         if magia not in EFEITOS_EM_COMBATE:
             motivo = MOTIVOS_SEM_EFEITO.get(magia, "magia_nao_disponivel_no_combate")
             return {"status": "bloqueado", "motivo": motivo}
-        if magia not in (self.ficha.get("conjuracao") or {}).get("magias_preparadas", []):
+        conjuracao_ficha = self.ficha.get("conjuracao") or {}
+        escolhidas = list(conjuracao_ficha.get("truques", [])) + list(conjuracao_ficha.get("magias_preparadas", []))
+        if magia not in escolhidas:
             return {"status": "bloqueado", "motivo": "magia_nao_escolhida_na_ficha"}
-        if alvo_id not in (None, ator):
-            return {"status": "bloqueado", "motivo": "alvo_invalido_toque_em_si_mesmo"}
         if self.ficha["pv_atuais"] <= 0:
             return {"status": "bloqueado", "motivo": "personagem_inconsciente"}
+        if ALVO_MAGIA[magia] == "si_mesmo":
+            if alvo_id not in (None, ator):
+                return {"status": "bloqueado", "motivo": "alvo_invalido_toque_em_si_mesmo"}
+        else:
+            if alvo_id not in self.inimigos or alvo_id in self.inimigos_derrotados:
+                return {"status": "bloqueado", "motivo": "alvo_invalido"}
+            if self.distancia_pes(ator, alvo_id) > ALCANCE_MAGIA_PES:
+                return {"status": "bloqueado", "motivo": "alvo_fora_do_alcance"}
+        if magia == "Comando" and comando not in COMANDOS:
+            return {"status": "bloqueado", "motivo": "comando_invalido"}
+
+        # CD antes de gastar espaço: sem CD o efeito não pode ser resolvido.
+        cd = cd_de_magia(self.orquestrador.engine, self.ficha) if magia in SALVAGUARDA_EM_COMBATE else None
+        if magia in SALVAGUARDA_EM_COMBATE and cd is None:
+            return {"status": "bloqueado", "motivo": "cd_magia_ausente"}
 
         # 1) Conjuração: preparo, espaço e círculo são conferidos e o espaço é gasto no orquestrador.
         conjuracao = self._executar(
@@ -287,8 +320,15 @@ class Encontro:
         if conjuracao.dados.get("resultado") != "conjurada":
             return {"status": "bloqueado", "motivo": conjuracao.motivo or conjuracao.dados.get("motivo")}
 
-        # 2) Efeito: 2d8 + modificador de Carisma (2024). A fórmula completa vem da regra;
-        #    o catálogo do motor ainda registra só "cura 2d8" (ver EFEITOS_EM_COMBATE).
+        # 2) Efeito, sempre pelo motor.
+        if magia == "Curar Ferimentos":
+            return self._curar(ator)
+        if magia == "Zombaria Perversa":
+            return self._zombaria_perversa(alvo_id, cd)
+        return self._comando(alvo_id, comando, cd)
+
+    def _curar(self, ator: str) -> dict[str, Any]:
+        # 2d8 + modificador de Carisma (PHB 2024). O catálogo do motor registra só "cura 2d8".
         modificador = int(self.ficha["modificadores"][ATRIBUTO_CONJURACAO])
         rolagem = self._executar(
             {
@@ -309,15 +349,97 @@ class Encontro:
         self._executar({"type": "healing", "estado": estado, "amount": int(rolagem)}, [])
         self.ficha["pv_atuais"] = estado.pv_atuais
         curado = estado.pv_atuais - pv_antes
-        self.log.append({"evento": "magia", "ator": ator, "magia": magia, "curado": curado})
+        self.log.append({"evento": "magia", "ator": ator, "magia": "Curar Ferimentos", "curado": curado})
         return {
             "status": "resolvido",
-            "magia": magia,
+            "magia": "Curar Ferimentos",
             "rolagem": int(rolagem),
             "curado": curado,
             "pv_atuais": estado.pv_atuais,
-            "espacos_restantes": conjuracao.dados.get("espacos_restantes"),
+            "espacos_restantes": self.ficha["conjuracao"]["espacos_restantes"],
         }
+
+    def _salvaguarda_sabedoria(self, cid: str, cd: int) -> dict[str, Any]:
+        """Salvaguarda de Sabedoria do inimigo, resolvida pelo motor com o bloco do bestiário."""
+        bloco = consultar_monstro(self.inimigos[cid]["monstro"])
+        registro = {
+            "id": cid,
+            "modificadores": dict(bloco["modificadores"]),
+            "bonus_proficiencia": bloco["bonus_proficiencia"],
+            "proficiencias_salvaguarda": list(bloco["salvaguardas"].keys()),
+        }
+        return self._executar(
+            {
+                "type": "saving_throw",
+                "atributo": "sabedoria",
+                "character_id": cid,
+                "dc": cd,
+                "seed": self._proxima_semente(),
+            },
+            [registro],
+        ).dados
+
+    def _zombaria_perversa(self, cid: str, cd: int) -> dict[str, Any]:
+        salvaguarda = self._salvaguarda_sabedoria(cid, cd)
+        if salvaguarda.get("result") != "failure":
+            self.log.append(
+                {"evento": "magia", "ator": self.ficha["id"], "magia": "Zombaria Perversa", "alvo": cid, "dano": 0}
+            )
+            return {
+                "status": "resolvido",
+                "magia": "Zombaria Perversa",
+                "alvo": cid,
+                "resultado": "resistiu",
+                "dano": 0,
+            }
+        expressao = mecanica_de_magia("Zombaria Perversa", nivel_personagem=int(self.ficha["nivel"]))["dados_dano"]
+        dano = self._executar(
+            {
+                "type": "damage",
+                "damage_expression": expressao,
+                "damage_type": "psychic",
+                "critical": False,
+                "seed": self._proxima_semente(),
+            },
+            [self.ficha],
+        ).dados["total"]
+        inimigo = self.inimigos[cid]
+        estado = EstadoVital(
+            pv_maximos=inimigo["pv_maximo"], pv_atuais=inimigo["pv_atuais"], pv_temporarios=inimigo["pv_temporarios"]
+        )
+        self._executar(
+            {"type": "damage_application", "estado": estado, "damage": int(dano), "damage_type": "psychic"}, []
+        )
+        inimigo["pv_atuais"] = estado.pv_atuais
+        inimigo["pv_temporarios"] = estado.pv_temporarios
+        derrubado = estado.pv_atuais == 0
+        if derrubado:
+            self._marcar_derrotado(cid)
+        # Desvantagem no próximo ataque do alvo, até o fim do próximo turno dele.
+        inimigo["desvantagem_proximo_ataque"] = True
+        self.log.append(
+            {"evento": "magia", "ator": self.ficha["id"], "magia": "Zombaria Perversa", "alvo": cid, "dano": int(dano)}
+        )
+        return {
+            "status": "resolvido",
+            "magia": "Zombaria Perversa",
+            "alvo": cid,
+            "resultado": "falhou",
+            "dano": int(dano),
+            "alvo_pv": estado.pv_atuais,
+            "derrubado": derrubado,
+        }
+
+    def _comando(self, cid: str, comando: str, cd: int) -> dict[str, Any]:
+        salvaguarda = self._salvaguarda_sabedoria(cid, cd)
+        if salvaguarda.get("result") != "failure":
+            self.log.append({"evento": "magia", "ator": self.ficha["id"], "magia": "Comando", "alvo": cid})
+            return {"status": "resolvido", "magia": "Comando", "alvo": cid, "resultado": "resistiu"}
+        self.inimigos[cid]["comando_pendente"] = comando
+        self.log.append(
+            {"evento": "magia", "ator": self.ficha["id"], "magia": "Comando", "alvo": cid, "comando": comando}
+        )
+        return {"status": "resolvido", "magia": "Comando", "alvo": cid, "resultado": "falhou", "comando": comando}
 
     def mover(self, destino: tuple[int, int]) -> dict[str, Any]:
         ator = self._exigir_turno_do_jogador()
@@ -411,28 +533,72 @@ class Encontro:
         self.session.mark_defeated(cid)
 
     def _turno_inimigo(self, cid: str) -> dict[str, Any]:
-        """IA simples: ataca se estiver no alcance; senão, aproxima-se e tenta atacar."""
+        """IA simples: ataca se estiver no alcance; senão, aproxima-se e tenta atacar.
+
+        Comando pendente e condição Caído alteram o turno (ver ``COMANDOS``).
+        """
         jogador = self.ficha["id"]
         if self.ficha["pv_atuais"] <= 0:
             return {"status": "bloqueado", "motivo": "jogador_derrotado"}
+        inimigo = self.inimigos[cid]
+        comando = inimigo.pop("comando_pendente", None)
+        caido = inimigo.pop("caido", False)
         resultado: dict[str, Any] = {"status": "resolvido", "acao": "nenhuma"}
-        if not self._pode_atacar(cid):
-            passos = self.inimigos[cid]["deslocamento_pes"] // CASA_PES
-            caminho = self.board.shortest_path(self.posicoes[cid], self.posicoes[jogador], occupied=self._ocupadas(cid))
-            if caminho:
-                for pos in caminho[1:-1][:passos]:
-                    self.posicoes[cid] = pos
-                    if self._pode_atacar(cid):
-                        break
-            self.log.append(
-                {"evento": "movimento_inimigo", "ator": cid, "para": (self.posicoes[cid].x, self.posicoes[cid].y)}
-            )
-            resultado = {"status": "resolvido", "acao": "moveu"}
-        if self._pode_atacar(cid) and self.ficha["pv_atuais"] > 0:
-            resultado = self._atacar_com_inimigo(cid)
+        passos = inimigo["deslocamento_pes"] // CASA_PES
+        if caido:
+            passos //= 2  # levantar-se gasta metade do deslocamento
+
+        if comando in {"largar", "parar"}:
+            resultado = {"status": "resolvido", "acao": f"comando_{comando}"}
+        elif comando == "prostrar":
+            inimigo["caido"] = True
+            resultado = {"status": "resolvido", "acao": "comando_prostrar"}
+        elif comando == "fugir":
+            self._fugir(cid, passos)
+            resultado = {"status": "resolvido", "acao": "comando_fugir"}
+        else:
+            if not self._pode_atacar(cid):
+                # A casa do próprio alvo não bloqueia a rota: o caminho termina nela.
+                ocupadas = self._ocupadas(cid) - {self.posicoes[jogador]}
+                caminho = self.board.shortest_path(self.posicoes[cid], self.posicoes[jogador], occupied=ocupadas)
+                if caminho:
+                    for pos in caminho[1:-1][:passos]:
+                        self.posicoes[cid] = pos
+                        if self._pode_atacar(cid):
+                            break
+                self.log.append(
+                    {"evento": "movimento_inimigo", "ator": cid, "para": (self.posicoes[cid].x, self.posicoes[cid].y)}
+                )
+                resultado = {"status": "resolvido", "acao": "moveu"}
+            # Comando "aproximar" encerra o turno ao se mover: não ataca neste turno.
+            if comando != "aproximar" and self._pode_atacar(cid) and self.ficha["pv_atuais"] > 0:
+                resultado = self._atacar_com_inimigo(cid)
         if self.session.status is EncounterStatus.ACTIVE and self.turno_de == cid:
             self.session.end_turn(cid)
+        # Desvantagem de Zombaria Perversa dura só até o fim deste turno.
+        inimigo.pop("desvantagem_proximo_ataque", None)
         return resultado
+
+    def _fugir(self, cid: str, passos: int) -> None:
+        """Comando Fugir: move-se para a casa alcançável mais distante do personagem."""
+        jogador = self.ficha["id"]
+        origem = self.posicoes[cid]
+        candidatos = self.board.reachable_positions(origem, passos * CASA_PES, occupied=self._ocupadas(cid))
+        destino = max(
+            candidatos,
+            key=lambda p: (
+                self.board.distance_feet(p, self.posicoes[jogador]),
+                -abs(p.x - origem.x) - abs(p.y - origem.y),
+            ),
+            default=origem,
+        )
+        if self.board.distance_feet(destino, self.posicoes[jogador]) > self.board.distance_feet(
+            origem, self.posicoes[jogador]
+        ):
+            self.posicoes[cid] = destino
+        self.log.append(
+            {"evento": "movimento_inimigo", "ator": cid, "para": (self.posicoes[cid].x, self.posicoes[cid].y)}
+        )
 
     def _pode_atacar(self, cid: str) -> bool:
         """Alcance máximo da ação. Desvantagem por alcance longo ainda não é aplicada."""
@@ -440,7 +606,11 @@ class Encontro:
 
     def _atacar_com_inimigo(self, cid: str) -> dict[str, Any]:
         resultado = atacar_inimigo(
-            self.orquestrador, self.inimigos[cid]["perfil"], self.ficha, seed=self._proxima_semente()
+            self.orquestrador,
+            self.inimigos[cid]["perfil"],
+            self.ficha,
+            seed=self._proxima_semente(),
+            desvantagem=bool(self.inimigos[cid].get("desvantagem_proximo_ataque")),
         )
         if resultado.get("status") == "bloqueado":
             return {"status": "bloqueado", "motivo": resultado.get("motivo")}
