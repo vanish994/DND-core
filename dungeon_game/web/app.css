@@ -78,6 +78,11 @@ body {
   grid-template-columns: minmax(0, 1fr);
   padding: 0;
   overflow: hidden;
+  /* Laterais fora da grade: parede de pedra, só visual. */
+  background-color: #1a1a24;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 18px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 36px);
 }
 .mapa-wrap { position: relative; display: flex; justify-content: center; align-items: center; min-height: 0; min-width: 0; overflow: hidden; }
 #mapa {
