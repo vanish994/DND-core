@@ -1,7 +1,7 @@
 // Interface do encontro: desenha o estado recebido do servidor e envia pedidos.
 // Nenhuma regra é calculada aqui; alcance e alvos vêm da API e são revalidados no backend.
 
-const TAMANHO = 32; // pixels por casa; cada pixel de sprite ocupa 4px
+const TAMANHO = 32; // pixels por casa; sprites procedurais 8×8 ampliados 4×, Bardo em 32×32 nativo
 const PIXEL = TAMANHO / 8;
 
 const SPRITES = {
@@ -47,6 +47,16 @@ const estado = {
 const canvas = document.getElementById("mapa");
 const ctx = canvas.getContext("2d");
 ctx.imageSmoothingEnabled = false;
+const TAMANHO_QUADRO_BARDO = 32;
+// A folha 4×4 segue as linhas baixo, esquerda, cima e direita; as colunas são quadros de caminhada.
+const LINHA_DIRECAO_BARDO = { baixo: 0, esquerda: 1, cima: 2, direita: 3 };
+const spriteBardo = new Image();
+let direcaoBardo = "direita";
+let quadroBardo = 0;
+spriteBardo.addEventListener("load", () => {
+  if (estado.dados) desenhar();
+});
+spriteBardo.src = "/static/assets/bardo.png";
 
 function desenharTerreno(x, y, tipo) {
   const e = ESTILO_TERRENO[tipo] || ESTILO_TERRENO.chao;
@@ -97,6 +107,32 @@ function desenharSprite(nome, x, y) {
       ctx.fillRect(x + colIdx * PIXEL, y + linhaIdx * PIXEL, PIXEL, PIXEL);
     });
   });
+}
+
+function desenharBardo(x, y) {
+  if (!spriteBardo.complete || spriteBardo.naturalWidth !== 128 || spriteBardo.naturalHeight !== 128) {
+    desenharSprite("heroi", x, y);
+    return;
+  }
+  ctx.drawImage(
+    spriteBardo,
+    quadroBardo * TAMANHO_QUADRO_BARDO,
+    LINHA_DIRECAO_BARDO[direcaoBardo] * TAMANHO_QUADRO_BARDO,
+    TAMANHO_QUADRO_BARDO,
+    TAMANHO_QUADRO_BARDO,
+    x,
+    y,
+    TAMANHO,
+    TAMANHO,
+  );
+}
+
+function orientarBardo(origem, destino, avancarQuadro = false) {
+  const dx = destino[0] - origem[0];
+  const dy = destino[1] - origem[1];
+  if (Math.abs(dx) > Math.abs(dy)) direcaoBardo = dx < 0 ? "esquerda" : "direita";
+  else if (dy !== 0) direcaoBardo = dy < 0 ? "cima" : "baixo";
+  if (avancarQuadro) quadroBardo = (quadroBardo + 1) % 4;
 }
 
 function barraVida(x, y, atual, maximo) {
@@ -171,7 +207,7 @@ function desenhar() {
     barraVida(x * TAMANHO, y * TAMANHO, u.pv_atuais, u.pv_maximo);
   });
   const p = d.personagem;
-  desenharSprite("heroi", p.posicao[0] * TAMANHO, p.posicao[1] * TAMANHO);
+  desenharBardo(p.posicao[0] * TAMANHO, p.posicao[1] * TAMANHO);
   barraVida(p.posicao[0] * TAMANHO, p.posicao[1] * TAMANHO, p.pv_atuais, p.pv_maximo);
 
   // Contorno do personagem ativo.
@@ -341,6 +377,10 @@ async function conjurar(magia, alvo, comando) {
   if (comando !== undefined) corpo.comando = comando;
   try {
     const resposta = await chamar(`/api/encontros/${estado.id}/conjurar`, corpo);
+    if (alvo !== undefined) {
+      const unidade = estado.dados.unidades.find((u) => u.id === alvo);
+      if (unidade) orientarBardo(estado.dados.personagem.posicao, unidade.posicao);
+    }
     estado.modo = "mover";
     estado.magia = null;
     aplicarEstado(resposta);
@@ -417,7 +457,12 @@ function aplicarEstado(dados) {
 async function executar(acao, corpo) {
   try {
     const resposta = await chamar(`/api/encontros/${estado.id}/${acao}`, corpo);
+    if (acao === "mover" && resposta.resultado?.status === "resolvido") {
+      orientarBardo(estado.dados.personagem.posicao, resposta.estado.personagem.posicao, true);
+    }
     if (acao === "atacar") {
+      const alvo = estado.dados.unidades.find((u) => u.id === corpo.alvo);
+      if (alvo) orientarBardo(estado.dados.personagem.posicao, alvo.posicao);
       estado.modo = "mover";
       estado.magia = null;
     }

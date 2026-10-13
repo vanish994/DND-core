@@ -138,6 +138,17 @@ class EstaticosTests(unittest.TestCase):
         self.assertIn(b"Ordem de Iniciativa", corpo)
         self.assertIn(b"Encerrar Turno", corpo)
 
+    def test_sprite_sheet_do_bardo_e_servida_com_tipo_e_dimensoes_corretos(self):
+        status, corpo, tipo = servidor.despachar("GET", "/static/assets/bardo.png", {})
+        self.assertEqual(status, 200)
+        self.assertEqual(tipo, "image/png")
+        self.assertTrue(corpo.startswith(b"\x89PNG\r\n\x1a\n"))
+        dimensoes = (int.from_bytes(corpo[16:20], "big"), int.from_bytes(corpo[20:24], "big"))
+        self.assertEqual(dimensoes, (128, 128))
+        status, javascript = chamar("GET", "/static/app.js")
+        self.assertEqual(status, 200)
+        self.assertIn(b"/static/assets/bardo.png", javascript)
+
     def test_arquivo_fora_da_pasta_web_e_recusado(self):
         status, _ = chamar("GET", "/static/../servidor.py")
         self.assertEqual(status, 404)
