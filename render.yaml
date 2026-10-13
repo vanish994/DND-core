@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: dnd-core-game
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn dungeon_game.servidor:app --bind 0.0.0.0:$PORT --workers 1
+    healthCheckPath: /health
+    envVars:
+      - key: DND_REQUIRE_PERSISTENCE
+        value: "true"
+      - key: DATABASE_URL
+        sync: false

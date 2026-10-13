@@ -1,4 +1,4 @@
-"""API e página do encontro de cripta. Estado em memória (persistência: Etapa 5).
+"""API e página do encontro de cripta, com persistência de snapshots configurável.
 
 Toda decisão de regra fica no Encontro/Orquestrador. A API só traduz pedidos
 HTTP em chamadas ao encontro e devolve o estado para a interface.
@@ -16,6 +16,7 @@ from rule_engine import build_default_engine
 
 from .combat_session import EncounterStatus
 from .encontro import CASA_PES, Encontro, calcular_ca, criar_ficha_bardo
+from .session_store import SessionStoreError, criar_session_store
 
 WEB_DIR = Path(__file__).parent / "web"
 INIMIGOS_PADRAO = [("goblin-1", "goblin", (13, 3)), ("esqueleto-1", "esqueleto", (13, 10))]
@@ -27,7 +28,7 @@ TIPOS_CONTENT = {
 }
 
 _orquestrador = OrquestradorAcoes(build_default_engine())
-ENCONTROS: dict[str, Encontro] = {}
+SESSION_STORE = criar_session_store()
 
 
 class ErroAPI(Exception):
@@ -41,15 +42,19 @@ def criar_encontro(seed_base: int = 100) -> str:
     ficha = criar_ficha_bardo()
     ficha["ca"] = calcular_ca(_orquestrador, ficha)
     encontro = Encontro(_orquestrador, "cripta_inicial", ficha, INIMIGOS_PADRAO, seed_base=seed_base)
-    identificador = uuid.uuid4().hex[:10]
-    ENCONTROS[identificador] = encontro
+    identificador = uuid.uuid4().hex
+    SESSION_STORE.save(identificador, encontro.to_state())
     return identificador
 
 
 def _encontro(identificador: str) -> Encontro:
-    encontro = ENCONTROS.get(identificador)
-    if encontro is None:
+    state = SESSION_STORE.load(identificador)
+    if state is None:
         raise ErroAPI(404, "Encontro não encontrado")
+    try:
+        encontro = Encontro.from_state(_orquestrador, state)
+    except (KeyError, TypeError, ValueError) as erro:
+        raise SessionStoreError("O snapshot do encontro está inválido") from erro
     return encontro
 
 
@@ -209,13 +214,17 @@ def _resposta(status: int, corpo: Any, tipo: str = "application/json; charset=ut
 
 
 def despachar(metodo: str, caminho: str, environ: dict[str, Any]) -> tuple[int, bytes, str]:
+    if metodo == "GET" and caminho == "/health":
+        SESSION_STORE.ping()
+        return _resposta(200, {"status": "ok"})
     if metodo == "GET" and caminho in {"/", "/encontro"}:
         return _arquivo("index.html")
     if metodo == "GET" and caminho.startswith("/static/"):
         return _arquivo(caminho.removeprefix("/static/"))
     if caminho == "/api/encontros" and metodo == "POST":
         identificador = criar_encontro()
-        return _resposta(201, estado(ENCONTROS[identificador], identificador))
+        encontro = _encontro(identificador)
+        return _resposta(201, estado(encontro, identificador))
     partes = caminho.strip("/").split("/")
     if len(partes) >= 3 and partes[:2] == ["api", "encontros"]:
         encontro = _encontro(partes[2])
@@ -223,6 +232,7 @@ def despachar(metodo: str, caminho: str, environ: dict[str, Any]) -> tuple[int, 
             return _resposta(200, estado(encontro, partes[2]))
         if len(partes) == 4 and metodo == "POST":
             resultado = acao(encontro, partes[3], _ler_json(environ))
+            SESSION_STORE.save(partes[2], encontro.to_state())
             return _resposta(200, {"resultado": resultado, "estado": estado(encontro, partes[2])})
     raise ErroAPI(404, "Rota não encontrada")
 
@@ -253,6 +263,8 @@ def app(environ: dict[str, Any], start_response: Callable[..., Any]) -> Iterable
         status, corpo, tipo = despachar(metodo, caminho, environ)
     except ErroAPI as erro:
         status, corpo, tipo = _resposta(erro.status, {"erro": erro.mensagem})
+    except SessionStoreError:
+        status, corpo, tipo = _resposta(503, {"erro": "persistencia_indisponivel"})
     # Sem cache: o celular sempre recebe a versão atual de HTML, CSS e JS.
     cabecalhos = [
         ("Content-Type", tipo),
