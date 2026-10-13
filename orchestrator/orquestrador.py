@@ -288,6 +288,12 @@ class OrquestradorAcoes:
         bloco = consultar_monstro(nome)
         if bloco is None:
             return ResultadoAcao.bloqueado("monstro_desconhecido_no_bestiario", atacante=nome)
+        if fatos.get("type") == "initiative":
+            # Iniciativa da criatura: o bônus vem do bloco oficial, nunca do pedido.
+            fatos["modifier"] = int(bloco["iniciativa"])
+            fatos["modifier_source"] = "bestiario"
+            fatos["atacante"] = bloco["nome"]
+            return _Preparo(fatos)
         nome_acao = str(fatos.get("acao_monstro", "")).strip()
         acao = next(
             (a for a in bloco.get("acoes", []) if a.get("nome") == nome_acao and a.get("tipo") == "ataque"),
