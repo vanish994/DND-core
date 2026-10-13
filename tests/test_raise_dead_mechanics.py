@@ -20,7 +20,7 @@ class RaiseDeadMechanicsTests(unittest.TestCase):
         self.assertEqual(mecanica["tipo"], "ressurreicao")
         self.assertEqual(mecanica["acao"], "1_hora")
         self.assertEqual(mecanica["alcance"], "toque")
-        self.assertEqual(mecanica["custo_material_po"], 500)
+        self.assertEqual(mecanica["custo_material_minimo_po"], 500)
         self.assertEqual(mecanica["limite_dias_morto"], 10)
         self.assertEqual(mecanica["pv_ao_reviver"], 1)
         self.assertFalse(mecanica["revive_morto_vivo"])
