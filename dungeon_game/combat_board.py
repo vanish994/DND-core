@@ -1,16 +1,16 @@
-"""Tabuleiro tático discreto para encontros; não resolve regras de combate.
+"""Tabuleiro tático puro: geometria de mapa, sem importar regras de D&D.
 
-A geometria usa casas de 5 pés e delega o cálculo de distância ao helper
-existente do Rule Engine. A UI pode ocultar a grade até selecionar movimento
-ou uma magia. Este módulo só valida posições e caminhos no tabuleiro.
+A convenção de distância é injetada pela camada de integração. Isso permite
+testar o tabuleiro isoladamente e mantém o Rule Engine fora deste módulo.
 """
 from __future__ import annotations
 
 from collections import deque
-from dataclasses import dataclass
-from typing import Iterable
+from dataclasses import dataclass, field
+from typing import Callable, Iterable
 
-from rule_engine.combat_geometry import distancia_grade
+
+DistanceInSquares = Callable[[int, int], int]
 
 
 @dataclass(frozen=True, slots=True, order=True)
@@ -25,6 +25,7 @@ class CombatBoard:
     height: int
     blocked: frozenset[BoardPosition] = frozenset()
     tile_feet: int = 5
+    distance_in_squares: DistanceInSquares | None = field(default=None, compare=False, repr=False)
 
     def __post_init__(self) -> None:
         if self.width < 1 or self.height < 1:
@@ -41,10 +42,12 @@ class CombatBoard:
         return self.in_bounds(pos) and pos not in self.blocked
 
     def distance_feet(self, origin: BoardPosition, target: BoardPosition) -> int:
-        """Distância de combate em pés, conforme a convenção de grade do motor."""
+        """Delega a convenção mecânica de distância à integração configurada."""
         if not self.in_bounds(origin) or not self.in_bounds(target):
             raise ValueError("Posição fora do tabuleiro")
-        return distancia_grade(target.x - origin.x, target.y - origin.y) * self.tile_feet
+        if self.distance_in_squares is None:
+            raise RuntimeError("Configure a distância através da camada de integração")
+        return self.distance_in_squares(target.x - origin.x, target.y - origin.y) * self.tile_feet
 
     def reachable_positions(
         self,
@@ -77,9 +80,6 @@ class CombatBoard:
                     continue
                 if not self.is_walkable(next_pos):
                     continue
-                # A convenção atual do motor trata cada diagonal como uma casa.
-                # Restrições de passagem diagonal entre dois obstáculos são
-                # aplicadas para evitar atravessar cantos fechados.
                 if dx and dy:
                     side_a = BoardPosition(current.x + dx, current.y)
                     side_b = BoardPosition(current.x, current.y + dy)
@@ -100,7 +100,9 @@ class CombatBoard:
         """Retorna caminho incluindo origem e destino, ou None se bloqueado."""
         if not self.is_walkable(origin) or not self.is_walkable(target):
             return None
-        occupied_set = set(occupied) - {origin, target}
+        occupied_set = set(occupied) - {origin}
+        if target in occupied_set:
+            return None
         parents: dict[BoardPosition, BoardPosition | None] = {origin: None}
         queue = deque([origin])
         directions = ((1, 0), (-1, 0), (0, 1), (0, -1),
