@@ -8,8 +8,8 @@
   --destaque: #4f8cff;
   --perigo: #ff5252;
   --vida: #e04848;
-  --altura-barra: clamp(34px, 11vh, 50px);
-  --altura-topo: clamp(30px, 10vh, 46px);
+  --altura-barra: clamp(36px, 12vh, 52px);
+  --altura-topo: clamp(40px, 13vh, 58px);
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -21,7 +21,7 @@ body {
   background: var(--fundo);
   color: var(--texto);
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  font-size: clamp(10px, 2vh, 13px);
+  font-size: clamp(12px, 2.6vh, 14px);
   display: grid;
   grid-template-rows: var(--altura-topo) minmax(0, 1fr) var(--altura-barra);
   user-select: none;
@@ -122,7 +122,7 @@ body {
   line-height: 1.1;
   background: var(--painel); color: var(--texto);
   border: 1px solid var(--borda); border-radius: 8px;
-  font-size: 0.8em; cursor: pointer; min-width: 0; height: 100%;
+  font-size: clamp(11px, 2.8vh, 14px); cursor: pointer; min-width: 0; height: 100%;
   white-space: nowrap; overflow: hidden;
 }
 .botao-acao .icone { font-size: 1em; line-height: 1; }
@@ -148,6 +148,9 @@ body {
   .botao-acao .icone { display: none; }
   .iniciativa h2 { display: none; }
   .ficha .linha:last-child { display: none; }
+  .ficha .barra-vida { display: none; }
+  .ficha h1 { font-size: 0.95em; }
+  .ficha .linha.pv { font-size: 0.9em; }
 }
 /* Sem rolagem em nenhuma hipótese: conteúdo excedente é cortado, não empurra a página. */
 body *, body *::before, body *::after { max-height: 100%; }
