@@ -250,6 +250,8 @@ class OrquestradorAcoes:
         self, fatos: dict[str, Any], personagens: list[dict[str, Any]] | None
     ) -> _Preparo | ResultadoAcao:
         """Ataque com arma, ataque de magia, ataque de sopro ou iniciativa."""
+        if fatos.get("atacante_monstro"):
+            return self._preparar_ataque_de_monstro(fatos, personagens)
         ficha = self._personagem(fatos.get("character_id"), personagens)
         if ficha is None:
             return ResultadoAcao.bloqueado("personagem_ausente_ou_nao_identificado")
@@ -272,6 +274,52 @@ class OrquestradorAcoes:
             return _Preparo(preparo["fatos"])
 
         return self._preparar_ataque_com_arma(fatos, ficha, personagens)
+
+    def _preparar_ataque_de_monstro(
+        self, fatos: dict[str, Any], personagens: list[dict[str, Any]] | None
+    ) -> _Preparo | ResultadoAcao:
+        """Ataque de criatura do bestiário contra uma ficha.
+
+        O bônus de ataque, a expressão de dano e o tipo vêm do bloco oficial da
+        ação. A CA vem da ficha do alvo, nunca do pedido. A criatura não tem
+        ficha de personagem, então não há modificador derivado do jogador.
+        """
+        nome = str(fatos.get("atacante_monstro", "")).strip()
+        bloco = consultar_monstro(nome)
+        if bloco is None:
+            return ResultadoAcao.bloqueado("monstro_desconhecido_no_bestiario", atacante=nome)
+        if fatos.get("type") == "initiative":
+            # Iniciativa da criatura: o bônus vem do bloco oficial, nunca do pedido.
+            fatos["modifier"] = int(bloco["iniciativa"])
+            fatos["modifier_source"] = "bestiario"
+            fatos["atacante"] = bloco["nome"]
+            return _Preparo(fatos)
+        nome_acao = str(fatos.get("acao_monstro", "")).strip()
+        acao = next(
+            (a for a in bloco.get("acoes", []) if a.get("nome") == nome_acao and a.get("tipo") == "ataque"),
+            None,
+        )
+        if acao is None:
+            return ResultadoAcao.bloqueado("acao_de_ataque_ausente_no_monstro", atacante=bloco["nome"], acao=nome_acao)
+        alvo = self._personagem(fatos.get("alvo_id"), personagens)
+        if alvo is None:
+            return ResultadoAcao.bloqueado("alvo_ausente_ou_nao_identificado")
+        ca = alvo.get("ca")
+        if not isinstance(ca, int) or isinstance(ca, bool):
+            return ResultadoAcao.bloqueado("ca_do_alvo_ausente_na_ficha", alvo=alvo.get("id"))
+        fatos.update(
+            {
+                "modifier": int(acao["bonus_ataque"]),
+                "modifier_source": "bestiario",
+                "target_ac": ca,
+                "target_name": alvo.get("nome"),
+                "alvo_id": alvo.get("id"),
+                "atacante": bloco["nome"],
+                "damage_expression": acao["dano_dados"],
+                "damage_type": str(acao.get("tipo_dano", "")).lower(),
+            }
+        )
+        return _Preparo(fatos)
 
     def _preparar_ataque_com_arma(
         self,

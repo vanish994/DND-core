@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>DND-core · Encontro de cripta</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <div class="girar" role="alert">Gire o celular para a horizontal para jogar.</div>
+  <header class="topo">
+    <section class="ficha" id="ficha" aria-label="Ficha do personagem"></section>
+    <div class="andar" id="andar">Carregando…</div>
+    <section class="iniciativa" aria-label="Ordem de iniciativa">
+      <h2>Ordem de Iniciativa</h2>
+      <ol id="iniciativa"></ol>
+    </section>
+  </header>
+
+  <main class="area-mapa">
+    <div class="mapa-wrap">
+      <canvas id="mapa" aria-label="Mapa de batalha"></canvas>
+      <div class="fim" id="fim" hidden>
+        <p id="fim-texto"></p>
+        <button id="novo" type="button">Novo encontro</button>
+      </div>
+    </div>
+    <aside class="painel">
+      <p class="dica" id="dica" role="status">Carregando encontro…</p>
+      <ul class="opcoes" id="opcoes" aria-label="Magias e truques"></ul>
+      <ul class="registro" id="registro" aria-label="Registro do combate"></ul>
+    </aside>
+  </main>
+
+  <nav class="barra" aria-label="Ações do turno">
+    <button type="button" data-acao="mover" class="botao-acao">
+      <span class="icone">👣</span><span>Mover</span>
+    </button>
+    <button type="button" data-acao="atacar" class="botao-acao">
+      <span class="icone">🗡</span><span>Atacar</span>
+    </button>
+    <button type="button" data-acao="magias" class="botao-acao">
+      <span class="icone">✦</span><span>Magias</span>
+    </button>
+    <button type="button" data-acao="truques" class="botao-acao">
+      <span class="icone">⚡</span><span>Truques</span>
+    </button>
+    <button type="button" data-acao="itens" class="botao-acao" disabled title="Em breve: itens ainda não estão ligados ao combate">
+      <span class="icone">⚗</span><span>Itens</span>
+    </button>
+    <button type="button" data-acao="encerrar" class="botao-acao">
+      <span class="icone">⌛</span><span>Encerrar Turno</span>
+    </button>
+  </nav>
+
+  <script src="/static/app.js" type="module"></script>
+</body>
+</html>

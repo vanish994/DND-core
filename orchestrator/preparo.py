@@ -57,6 +57,17 @@ NOMES_ATAQUE_DE_SOPRO = (
 )
 
 
+def cd_de_magia(engine: RuleEngine, personagem: Mapping[str, Any]) -> int | None:
+    """CD de magia = 8 + bônus de proficiência + modificador do atributo de conjuração (PHB 2024)."""
+    atributo = atributo_de_conjuracao(engine, personagem)
+    modificador = modificador_do_atributo(personagem, atributo) if atributo else None
+    if not atributo or modificador is None:
+        return None
+    nivel = max(1, int(personagem.get("nivel", 1) or 1))
+    proficiencia = int(personagem.get("bonus_proficiencia", 2 + (nivel - 1) // 4))
+    return 8 + proficiencia + modificador
+
+
 def preparar_ataque_de_magia(
     engine: RuleEngine,
     facts: dict[str, Any],
@@ -244,11 +255,9 @@ def preparar_dano_de_magia(
     }
     if personagem is not None:
         atributo = atributo_de_conjuracao(engine, personagem)
-        modificador = modificador_do_atributo(personagem, atributo) if atributo else None
-        if atributo and modificador is not None:
-            proficiencia = int(personagem.get("bonus_proficiencia", 2 + (nivel - 1) // 4))
-            # CD de magia = 8 + proficiência + modificador do atributo de conjuração.
-            fatos["cd_magia"] = 8 + proficiencia + modificador
+        cd = cd_de_magia(engine, personagem)
+        if cd is not None:
+            fatos["cd_magia"] = cd
             fatos["magia_atributo"] = atributo
         fatos["character_id"] = personagem.get("id")
     return {"fatos": fatos}

@@ -1,0 +1,168 @@
+/* Layout fixo, sem rolagem, pensado para celular na horizontal (landscape). */
+:root {
+  --fundo: #0b0b12;
+  --painel: #14141f;
+  --borda: #2c3150;
+  --texto: #e6e8f2;
+  --suave: #9aa3c7;
+  --destaque: #4f8cff;
+  --perigo: #ff5252;
+  --vida: #e04848;
+  --altura-barra: clamp(36px, 12vh, 52px);
+  --altura-topo: clamp(40px, 13vh, 58px);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
+body {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  background: var(--fundo);
+  color: var(--texto);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: clamp(12px, 2.6vh, 14px);
+  display: block;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.topo {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 2; pointer-events: none;
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) auto minmax(0, 1.6fr);
+  gap: 6px;
+  padding: 4px 6px 0;
+  min-height: 0;
+  height: auto;
+  align-items: stretch;
+}
+
+.ficha, .iniciativa, .andar, .painel {
+  background: rgba(20, 20, 31, 0.82);
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  min-height: 0;
+}
+.ficha { padding: 3px 8px; display: grid; grid-template-columns: 1fr auto; column-gap: 8px; align-items: center; }
+.ficha h1 { font-size: 1em; margin: 0; grid-column: 1 / -1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ficha h1 small { color: var(--suave); font-weight: 400; }
+.ficha .barra-vida { grid-column: 1; height: 6px; background: #2a1414; border-radius: 4px; overflow: hidden; }
+.ficha .barra-vida > div { height: 100%; background: var(--vida); transition: width .25s; }
+.ficha .linha { display: flex; gap: 8px; color: var(--suave); white-space: nowrap; font-size: 0.9em; overflow: hidden; }
+.ficha .linha.pv { grid-column: 1; }
+
+.andar { padding: 3px 10px; text-align: center; font-weight: 600; display: flex; flex-direction: column; justify-content: center; white-space: nowrap; }
+.andar small { display: block; color: var(--suave); font-weight: 400; font-size: 0.85em; }
+
+.iniciativa { padding: 3px 6px; display: flex; align-items: center; gap: 6px; overflow: hidden; }
+.iniciativa h2 { font-size: 0.8em; margin: 0; color: var(--suave); white-space: nowrap; font-weight: 600; }
+.iniciativa ol { list-style: none; margin: 0; padding: 0; display: flex; gap: 4px; min-width: 0; overflow: hidden; flex: 1; }
+.iniciativa li {
+  padding: 2px 6px;
+  border: 1px solid var(--borda);
+  border-radius: 6px;
+  font-size: 0.9em;
+  display: flex;
+  gap: 4px;
+  white-space: nowrap;
+  min-width: 0;
+}
+.iniciativa li.ativo { border-color: #36c275; box-shadow: 0 0 0 1px #36c275 inset; }
+.iniciativa li.derrotado { opacity: .4; text-decoration: line-through; }
+
+.area-mapa {
+  position: absolute; inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  padding: 0;
+  overflow: hidden;
+  /* Laterais fora da grade: parede de pedra, só visual. */
+  background-color: #1a1a24;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 18px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0 1px, transparent 1px 36px);
+}
+.mapa-wrap { position: relative; display: flex; justify-content: center; align-items: center; min-height: 0; min-width: 0; overflow: hidden; }
+#mapa {
+  display: block;
+  image-rendering: pixelated;
+  border: 1px solid var(--borda);
+  border-radius: 6px;
+  background: #000;
+  cursor: pointer;
+  /* Dimensões definidas em app.js para caber sem cortar e sem rolagem. */
+}
+.fim {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  background: rgba(0,0,0,.72); border-radius: 6px;
+  font-size: 1.3em; font-weight: 700;
+}
+.fim[hidden] { display: none; }
+.fim p { margin: 0; }
+.fim button { padding: 6px 14px; border-radius: 8px; border: 1px solid var(--destaque); background: var(--destaque); color: #fff; font-weight: 600; cursor: pointer; }
+
+.painel {
+  position: absolute; right: 6px; top: 46px; bottom: 44px; z-index: 2;
+  width: clamp(130px, 22vw, 200px);
+  padding: 4px 6px; display: flex; flex-direction: column; gap: 4px; overflow: hidden;
+  background: rgba(20, 20, 31, 0.86); pointer-events: auto;
+}
+.dica { margin: 0; font-size: 0.9em; line-height: 1.25; }
+.dica.erro { color: var(--perigo); }
+.registro { list-style: none; margin: 0; padding: 0; font-size: 0.8em; color: var(--suave); display: flex; flex-direction: column-reverse; gap: 2px; overflow: hidden; min-height: 0; flex: 1; }
+.registro li { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.barra {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; pointer-events: none;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+  padding: 2px 6px 4px;
+}
+.botao-acao {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 0 4px;
+  line-height: 1.1;
+  color: var(--texto);
+  border: 1px solid var(--borda); border-radius: 8px;
+  font-size: clamp(10px, 2.4vh, 12px); cursor: pointer; min-width: 0; height: 30px;
+  background: rgba(20, 20, 31, 0.86); pointer-events: auto;
+  white-space: nowrap; overflow: hidden;
+}
+.botao-acao .icone { font-size: 1em; line-height: 1; }
+.botao-acao[aria-pressed="true"] { border-color: var(--destaque); box-shadow: 0 0 0 1px var(--destaque) inset; background: #17203a; }
+.botao-acao:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Retrato: o jogo é para horizontal; pede para girar o aparelho. */
+.girar {
+  display: none;
+  position: fixed; inset: 0; z-index: 10;
+  background: var(--fundo);
+  align-items: center; justify-content: center; text-align: center;
+  padding: 24px; font-size: 1.1em;
+}
+@media (orientation: portrait) {
+  .girar { display: flex; }
+}
+
+/* Telas muito baixas (paisagem de celular): reduz o painel lateral. */
+@media (max-height: 420px) {
+  .painel .registro { display: none; }
+  .botao-acao .icone { font-size: 10px; }
+  .iniciativa h2 { display: none; }
+  .ficha .linha:last-child { display: none; }
+  .ficha .barra-vida { display: none; }
+  .ficha h1 { font-size: 0.95em; }
+  .ficha .linha.pv { font-size: 0.9em; }
+}
+/* Sem rolagem em nenhuma hipótese: conteúdo excedente é cortado, não empurra a página. */
+body *, body *::before, body *::after { max-height: 100%; }
+
+/* Lista de magias e truques, dentro do painel lateral. */
+.opcoes { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; flex: 0 0 auto; }
+.opcoes button { width: 100%; display: block; text-align: left; padding: 2px 6px; font: inherit; font-size: 0.9em; line-height: 1.15; color: inherit; background: #242033; border: 1px solid #4a4266; border-radius: 4px; white-space: normal; overflow: hidden; }
+.opcoes button:disabled { opacity: .55; }
+.opcoes small { display: block; font-size: 0.8em; opacity: .75; }
