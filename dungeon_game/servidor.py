@@ -218,7 +218,19 @@ def _arquivo(nome: str) -> tuple[int, bytes, str]:
     caminho = (WEB_DIR / nome).resolve()
     if WEB_DIR.resolve() not in caminho.parents or not caminho.is_file():
         raise ErroAPI(404, "Arquivo não encontrado")
-    return _resposta(200, caminho.read_bytes(), TIPOS_CONTENT.get(caminho.suffix, "application/octet-stream"))
+    dados = caminho.read_bytes()
+    if caminho.suffix == ".html":
+        dados = _html_com_versoes(dados)
+    return _resposta(200, dados, TIPOS_CONTENT.get(caminho.suffix, "application/octet-stream"))
+
+
+def _html_com_versoes(html: bytes) -> bytes:
+    """Acrescenta ?v=<data de modificação> aos CSS/JS, para que uma mudança nunca use arquivo antigo do cache."""
+    texto = html.decode("utf-8")
+    for arquivo in ("app.css", "app.js"):
+        versao = int((WEB_DIR / arquivo).stat().st_mtime)
+        texto = texto.replace(f"/static/{arquivo}", f"/static/{arquivo}?v={versao}")
+    return texto.encode("utf-8")
 
 
 def app(environ: dict[str, Any], start_response: Callable[..., Any]) -> Iterable[bytes]:

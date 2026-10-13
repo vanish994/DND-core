@@ -163,3 +163,12 @@ class ApiMagiaTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class PaginaVersionadaTests(unittest.TestCase):
+    def test_pagina_aponta_css_e_js_com_versao_e_sem_cache(self):
+        status, corpo = chamar("GET", "/encontro")
+        self.assertEqual(status, 200)
+        html = corpo.decode("utf-8")
+        self.assertRegex(html, r"/static/app\.js\?v=\d+")
+        self.assertRegex(html, r"/static/app\.css\?v=\d+")
