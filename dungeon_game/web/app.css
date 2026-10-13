@@ -22,26 +22,25 @@ body {
   color: var(--texto);
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   font-size: clamp(12px, 2.6vh, 14px);
-  display: grid;
-  grid-template-rows: var(--altura-topo) minmax(0, 1fr) var(--altura-barra);
+  display: block;
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
 }
 
 .topo {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 2; pointer-events: none;
   display: grid;
   grid-template-columns: minmax(150px, 1fr) auto minmax(0, 1.6fr);
   gap: 6px;
-  padding: 4px 8px 0;
+  padding: 4px 6px 0;
   min-height: 0;
-  height: 100%;
-  overflow: hidden;
+  height: auto;
   align-items: stretch;
 }
 
 .ficha, .iniciativa, .andar, .painel {
-  background: var(--painel);
+  background: rgba(20, 20, 31, 0.82);
   border: 1px solid var(--borda);
   border-radius: 8px;
   min-height: 0;
@@ -74,12 +73,10 @@ body {
 .iniciativa li.derrotado { opacity: .4; text-decoration: line-through; }
 
 .area-mapa {
+  position: absolute; inset: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(120px, 22vw);
-  gap: 6px;
-  padding: 4px 8px;
-  min-height: 0;
-  height: 100%;
+  grid-template-columns: minmax(0, 1fr);
+  padding: 0;
   overflow: hidden;
 }
 .mapa-wrap { position: relative; display: flex; justify-content: center; align-items: center; min-height: 0; min-width: 0; overflow: hidden; }
@@ -102,28 +99,32 @@ body {
 .fim p { margin: 0; }
 .fim button { padding: 6px 14px; border-radius: 8px; border: 1px solid var(--destaque); background: var(--destaque); color: #fff; font-weight: 600; cursor: pointer; }
 
-.painel { padding: 4px 6px; display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+.painel {
+  position: absolute; right: 6px; top: 46px; bottom: 44px; z-index: 2;
+  width: clamp(130px, 22vw, 200px);
+  padding: 4px 6px; display: flex; flex-direction: column; gap: 4px; overflow: hidden;
+  background: rgba(20, 20, 31, 0.86); pointer-events: auto;
+}
 .dica { margin: 0; font-size: 0.9em; line-height: 1.25; }
 .dica.erro { color: var(--perigo); }
 .registro { list-style: none; margin: 0; padding: 0; font-size: 0.8em; color: var(--suave); display: flex; flex-direction: column-reverse; gap: 2px; overflow: hidden; min-height: 0; flex: 1; }
 .registro li { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .barra {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; pointer-events: none;
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 6px;
-  padding: 3px 8px 5px;
-  min-height: 0;
-  height: 100%;
-  overflow: hidden;
+  gap: 4px;
+  padding: 2px 6px 4px;
 }
 .botao-acao {
   display: flex; align-items: center; justify-content: center; gap: 6px;
   padding: 0 4px;
   line-height: 1.1;
-  background: var(--painel); color: var(--texto);
+  color: var(--texto);
   border: 1px solid var(--borda); border-radius: 8px;
-  font-size: clamp(11px, 2.8vh, 14px); cursor: pointer; min-width: 0; height: 100%;
+  font-size: clamp(10px, 2.4vh, 12px); cursor: pointer; min-width: 0; height: 30px;
+  background: rgba(20, 20, 31, 0.86); pointer-events: auto;
   white-space: nowrap; overflow: hidden;
 }
 .botao-acao .icone { font-size: 1em; line-height: 1; }
@@ -145,8 +146,7 @@ body {
 /* Telas muito baixas (paisagem de celular): reduz o painel lateral. */
 @media (max-height: 420px) {
   .painel .registro { display: none; }
-  .area-mapa { grid-template-columns: minmax(0, 1fr) minmax(150px, 23vw); }
-  .botao-acao .icone { display: none; }
+  .botao-acao .icone { font-size: 10px; }
   .iniciativa h2 { display: none; }
   .ficha .linha:last-child { display: none; }
   .ficha .barra-vida { display: none; }
