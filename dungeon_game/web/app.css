@@ -154,3 +154,9 @@ body {
 }
 /* Sem rolagem em nenhuma hipótese: conteúdo excedente é cortado, não empurra a página. */
 body *, body *::before, body *::after { max-height: 100%; }
+
+/* Lista de magias e truques, dentro do painel lateral. */
+.opcoes { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; overflow: hidden; min-height: 0; }
+.opcoes button { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 6px; text-align: left; padding: 3px 6px; font: inherit; color: inherit; background: #242033; border: 1px solid #4a4266; border-radius: 4px; }
+.opcoes button:disabled { opacity: .55; }
+.opcoes small { font-size: 10px; opacity: .8; text-align: right; }

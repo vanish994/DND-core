@@ -30,6 +30,21 @@ from .rule_adapter import DungeonRuleAdapter
 MAPAS_DIR = Path(__file__).parent / "mapas"
 SIMBOLOS_BLOQUEADOS = {"#", "+", "o"}
 CASA_PES = 5
+ATRIBUTO_CONJURACAO = "carisma"
+
+# Magias com efeito resolvido no encontro. Curar Ferimentos: o motor confirma a
+# conjuração e a rolagem vem da regra; o catálogo ainda grava o efeito só como
+# "cura 2d8", sem o modificador, que aqui é aplicado pela fórmula do PHB 2024.
+EFEITOS_EM_COMBATE = {"Curar Ferimentos"}
+
+MOTIVOS_SEM_EFEITO = {
+    "Comando": "efeito ainda não resolvido pelo motor (salvaguarda e comando)",
+    "Golpe Certeiro": "magia sem resolução específica no motor",
+    "Luz": "sem efeito em combate",
+    "Ilusão Menor": "sem efeito em combate",
+    "Detectar Magia": "sem efeito em combate",
+    "Enfeitiçar Pessoa": "efeito ainda não resolvido pelo motor (salvaguarda e condição)",
+}
 
 
 def carregar_mapa(mapa_id: str) -> dict[str, Any]:
@@ -83,11 +98,28 @@ def criar_ficha_bardo(nome: str = "Vanish", *, id_ficha: str = "bardo-1") -> dic
         raise ValueError(f"Ficha de Bardo incompleta: {previa.get('missing')}")
     ficha = dict(previa["character"])
     ficha["id"] = id_ficha
+    ficha["conjuracao"] = _conjuracao_validada(previa)
     # O criador grava o deslocamento em metros (9 m = 30 pés); o tabuleiro usa casas de 5 pés.
     ficha["deslocamento_pes"] = round(float(ficha["deslocamento"]) * 3.28084 / CASA_PES) * CASA_PES
     ficha["pv_atuais"] = ficha["pv_maximo"]
     ficha["pv_temporarios"] = 0
     return ficha
+
+
+def _conjuracao_validada(previa: dict[str, Any]) -> dict[str, Any]:
+    """Converte as escolhas de magia já validadas pelo criador na conjuração da ficha.
+
+    O criador valida truques, magias e espaços, mas não os grava na ficha; esta
+    função faz essa ponte sem acrescentar nenhuma magia.
+    """
+    detalhes = previa["validation"]["spell_choices"]["details"]
+    espacos = int(detalhes["slots"][0])
+    return {
+        "truques": list(detalhes["cantrips"]),
+        "magias_preparadas": list(detalhes["selected"]),
+        "espacos_totais": {"1": espacos},
+        "espacos_restantes": {"1": espacos},
+    }
 
 
 def calcular_ca(orquestrador: OrquestradorAcoes, ficha: dict[str, Any]) -> int:
@@ -214,6 +246,79 @@ class Encontro:
         return [self.ficha["id"]] if self.ficha["pv_atuais"] > 0 else []
 
     # ------------------------------------------------------------------
+    # ------------------------------------------------------------------
+    # Magias e truques
+    # ------------------------------------------------------------------
+    def magias_do_personagem(self) -> list[dict[str, Any]]:
+        """Magias e truques da ficha, cada um com a razão de estar ou não disponível."""
+        conjuracao = self.ficha.get("conjuracao") or {}
+        espacos = (conjuracao.get("espacos_restantes") or {}).get("1", 0)
+        itens = []
+        for nome in conjuracao.get("truques", []):
+            motivo = MOTIVOS_SEM_EFEITO.get(nome, "sem efeito em combate")
+            itens.append({"nome": nome, "circulo": 0, "disponivel": False, "motivo": motivo})
+        for nome in conjuracao.get("magias_preparadas", []):
+            if nome in EFEITOS_EM_COMBATE:
+                motivo = None if espacos > 0 else "sem espaço de 1º círculo"
+                itens.append({"nome": nome, "circulo": 1, "disponivel": motivo is None, "motivo": motivo})
+            else:
+                motivo = MOTIVOS_SEM_EFEITO.get(nome, "sem efeito em combate")
+                itens.append({"nome": nome, "circulo": 1, "disponivel": False, "motivo": motivo})
+        return itens
+
+    def conjurar(self, magia: str, alvo_id: str | None = None) -> dict[str, Any]:
+        """Conjura uma magia do personagem. Só as de efeito resolvido pelo motor são aceitas."""
+        ator = self._exigir_turno_do_jogador()
+        if magia not in EFEITOS_EM_COMBATE:
+            motivo = MOTIVOS_SEM_EFEITO.get(magia, "magia_nao_disponivel_no_combate")
+            return {"status": "bloqueado", "motivo": motivo}
+        if magia not in (self.ficha.get("conjuracao") or {}).get("magias_preparadas", []):
+            return {"status": "bloqueado", "motivo": "magia_nao_escolhida_na_ficha"}
+        if alvo_id not in (None, ator):
+            return {"status": "bloqueado", "motivo": "alvo_invalido_toque_em_si_mesmo"}
+        if self.ficha["pv_atuais"] <= 0:
+            return {"status": "bloqueado", "motivo": "personagem_inconsciente"}
+
+        # 1) Conjuração: preparo, espaço e círculo são conferidos e o espaço é gasto no orquestrador.
+        conjuracao = self._executar(
+            {"type": "spell_cast", "magia": magia, "character_id": ator, "seed": self._proxima_semente()},
+            [self.ficha],
+        )
+        if conjuracao.dados.get("resultado") != "conjurada":
+            return {"status": "bloqueado", "motivo": conjuracao.motivo or conjuracao.dados.get("motivo")}
+
+        # 2) Efeito: 2d8 + modificador de Carisma (2024). A fórmula completa vem da regra;
+        #    o catálogo do motor ainda registra só "cura 2d8" (ver EFEITOS_EM_COMBATE).
+        modificador = int(self.ficha["modificadores"][ATRIBUTO_CONJURACAO])
+        rolagem = self._executar(
+            {
+                "type": "damage",
+                "damage_expression": f"2d8+{modificador}",
+                "damage_type": "cura",
+                "critical": False,
+                "seed": self._proxima_semente(),
+            },
+            [self.ficha],
+        ).dados["total"]
+        estado = EstadoVital(
+            pv_maximos=int(self.ficha["pv_maximo"]),
+            pv_atuais=int(self.ficha["pv_atuais"]),
+            pv_temporarios=int(self.ficha.get("pv_temporarios", 0)),
+        )
+        pv_antes = estado.pv_atuais
+        self._executar({"type": "healing", "estado": estado, "amount": int(rolagem)}, [])
+        self.ficha["pv_atuais"] = estado.pv_atuais
+        curado = estado.pv_atuais - pv_antes
+        self.log.append({"evento": "magia", "ator": ator, "magia": magia, "curado": curado})
+        return {
+            "status": "resolvido",
+            "magia": magia,
+            "rolagem": int(rolagem),
+            "curado": curado,
+            "pv_atuais": estado.pv_atuais,
+            "espacos_restantes": conjuracao.dados.get("espacos_restantes"),
+        }
+
     def mover(self, destino: tuple[int, int]) -> dict[str, Any]:
         ator = self._exigir_turno_do_jogador()
         origem = self.posicoes[ator]

@@ -118,6 +118,7 @@ def estado(encontro: Encontro, identificador: str) -> dict[str, Any]:
         ],
         "alcancaveis": alcancaveis,
         "alvos": alvos,
+        "magias": encontro.magias_do_personagem() if de_jogador or encontro.status is EncounterStatus.ACTIVE else [],
         "log": [_resumo(evento, nomes) for evento in encontro.log[-12:]],
     }
 
@@ -133,6 +134,8 @@ def _resumo(evento: dict[str, Any], nomes: dict[str, str]) -> str:
     if tipo == "ataque_jogador":
         alvo = nomes.get(evento.get("alvo"), evento.get("alvo"))
         return f"Ataque em {alvo}: " + (f"acerto, {evento['dano']} de dano" if evento.get("acertou") else "erro")
+    if tipo == "magia":
+        return f"{nomes.get(evento['ator'], evento['ator'])} conjura {evento['magia']}: cura {evento['curado']} PV"
     if tipo == "ataque_inimigo":
         ator = nomes.get(evento.get("ator"), evento.get("ator"))
         return f"{ator} ataca: " + (f"acerto, {evento['dano']} de dano" if evento.get("acertou") else "erro")
@@ -145,6 +148,9 @@ def acao(encontro: Encontro, nome: str, corpo: dict[str, Any]) -> dict[str, Any]
             resultado = encontro.mover((int(corpo["x"]), int(corpo["y"])))
         elif nome == "atacar":
             resultado = encontro.atacar_jogador(str(corpo["alvo"]))
+        elif nome == "conjurar":
+            alvo = corpo.get("alvo")
+            resultado = encontro.conjurar(str(corpo["magia"]), None if alvo is None else str(alvo))
         elif nome == "encerrar":
             encontro.encerrar_turno()
             _avancar_ate_jogador(encontro)

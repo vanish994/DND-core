@@ -117,5 +117,40 @@ class EstaticosTests(unittest.TestCase):
         self.assertEqual(status, 404)
 
 
+class ApiMagiaTests(unittest.TestCase):
+    def setUp(self):
+        servidor.ENCONTROS.clear()
+
+    def abrir_turno_do_bardo(self) -> tuple[str, dict]:
+        _, estado = chamar("POST", "/api/encontros", {})
+        encontro_id = estado["encontro_id"]
+        while not estado["de_jogador"]:
+            status, corpo = chamar("POST", f"/api/encontros/{encontro_id}/encerrar", {})
+            self.assertEqual(status, 200)
+            estado = corpo["estado"]
+        return encontro_id, estado
+
+    def test_estado_lista_magias_com_disponibilidade(self):
+        _, estado = self.abrir_turno_do_bardo()
+        nomes = {m["nome"]: m for m in estado["magias"]}
+        self.assertTrue(nomes["Curar Ferimentos"]["disponivel"])
+        self.assertIsNotNone(nomes["Comando"]["motivo"])
+
+    def test_conjurar_magia_sem_efeito_retorna_409_com_motivo(self):
+        encontro_id, _ = self.abrir_turno_do_bardo()
+        status, corpo = chamar("POST", f"/api/encontros/{encontro_id}/conjurar", {"magia": "Comando"})
+        self.assertEqual(status, 409)
+        self.assertIn("efeito ainda não resolvido", corpo["erro"])
+
+    def test_conjurar_curar_ferimentos_no_turno_do_bardo(self):
+        encontro_id, _ = self.abrir_turno_do_bardo()
+        status, corpo = chamar("POST", f"/api/encontros/{encontro_id}/conjurar", {"magia": "Curar Ferimentos"})
+        self.assertEqual(status, 200)
+        self.assertEqual(corpo["resultado"]["status"], "resolvido")
+        personagem = corpo["estado"]["personagem"]
+        self.assertEqual(personagem["pv_atuais"], corpo["resultado"]["pv_atuais"])
+        self.assertLessEqual(personagem["pv_atuais"], personagem["pv_maximo"])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -196,13 +196,16 @@ function renderizarIniciativa() {
 
 function renderizarBarra() {
   // Ações só existem no turno do personagem e enquanto o combate está ativo.
-  // Magias, truques e itens continuam desabilitados no HTML até serem implementados.
+  // Itens continua desabilitado até ser implementado.
   const podeAgir = estado.dados.de_jogador && estado.dados.status === "active";
   document.querySelectorAll(".botao-acao").forEach((botao) => {
     const acao = botao.dataset.acao;
     const ativo = acao === estado.modo;
     botao.setAttribute("aria-pressed", ativo ? "true" : "false");
-    if (acao === "mover" || acao === "atacar" || acao === "encerrar") {
+    if (acao === "itens") {
+      botao.disabled = true;
+      botao.title = "Em breve: itens ainda não estão ligados ao combate";
+    } else {
       botao.disabled = !podeAgir;
     }
   });
@@ -216,12 +219,54 @@ function mensagemDica() {
   }
   if (!d.de_jogador) return { texto: "Aguardando inimigos…", erro: false };
   if (estado.modo === "mover") return { texto: "Toque em uma casa destacada para se mover.", erro: false };
+  if (estado.modo === "magias") {
+    return { texto: "Escolha uma magia disponível. Magias sem efeito no combate ficam bloqueadas.", erro: false };
+  }
+  if (estado.modo === "truques") {
+    return { texto: "Truques ainda não têm efeito no combate.", erro: false };
+  }
   if (estado.modo === "atacar") {
     return d.alvos.length
       ? { texto: "Toque no inimigo destacado para atacar.", erro: false }
       : { texto: "Nenhum inimigo ao alcance. Aproxime-se primeiro.", erro: false };
   }
   return { texto: "", erro: false };
+}
+
+function renderizarOpcoes() {
+  // Lista de magias ou truques do modo atual; cada item traz o motivo quando indisponível.
+  const lista = document.getElementById("opcoes");
+  lista.replaceChildren();
+  const d = estado.dados;
+  if (!d.de_jogador || d.status !== "active") return;
+  if (estado.modo !== "magias" && estado.modo !== "truques") return;
+  const circulo = estado.modo === "magias" ? 1 : 0;
+  d.magias
+    .filter((m) => m.circulo === circulo)
+    .forEach((m) => {
+      const li = document.createElement("li");
+      const botao = document.createElement("button");
+      botao.type = "button";
+      botao.disabled = !m.disponivel;
+      botao.innerHTML = `<span></span><small></small>`;
+      botao.querySelector("span").textContent = m.nome;
+      botao.querySelector("small").textContent = m.disponivel ? "usar" : m.motivo;
+      botao.addEventListener("click", () => conjurar(m.nome));
+      li.append(botao);
+      lista.append(li);
+    });
+}
+
+async function conjurar(magia) {
+  estado.erro = null;
+  try {
+    const resposta = await chamar(`/api/encontros/${estado.id}/conjurar`, { magia });
+    estado.modo = "mover";
+    aplicarEstado(resposta);
+  } catch (erro) {
+    estado.erro = erro.message;
+    renderizarTudo();
+  }
 }
 
 function renderizarRegistro() {
@@ -260,6 +305,7 @@ function renderizarTudo() {
   renderizarIniciativa();
   renderizarBarra();
   renderizarRegistro();
+  renderizarOpcoes();
   const dica = document.getElementById("dica");
   const msg = mensagemDica();
   dica.textContent = msg.texto;
@@ -328,6 +374,7 @@ canvas.addEventListener("click", (evento) => {
 document.querySelectorAll(".botao-acao").forEach((botao) => {
   botao.addEventListener("click", () => {
     const acao = botao.dataset.acao;
+    if (acao === "itens") return;
     if (acao === "encerrar") {
       estado.erro = null;
       executar("encerrar", {});
