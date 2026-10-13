@@ -173,6 +173,22 @@ _DETALHADAS = {
         "Ataque mágico à distância; 1d10 dano ígneo; alcance 36 m",
         {"dano": "escala nos níveis 5, 11 e 17"},
     ),
+    "golpe certeiro": (
+        0,
+        "adivinhação",
+        "S, M (uma arma com a qual você tenha proficiência e que valha pelo menos 1 PC)",
+        False,
+        "Faça um ataque com a arma usada na conjuração; use seu atributo de conjuração para ataque e dano em vez de Força ou Destreza; escolha dano radiante ou o tipo normal da arma",
+        {"dano_radiante_adicional": {5: "1d6", 11: "2d6", 17: "3d6"}},
+    ),
+    "elementalismo": (
+        0,
+        "transmutação",
+        "V, S",
+        False,
+        "Cria um efeito sensorial inofensivo ligado a ar, terra, fogo ou água em alcance curto; não causa dano nem impõe condição",
+        {"tipo": "efeito_sensorial", "dano": 0},
+    ),
     "escudo": (1, "abjuração", "V, S", False, "+5 CA até o início do próximo turno", {}),
     "curar ferimentos": (
         1,
@@ -592,6 +608,13 @@ for nome, (circulo, escola, componentes, conc, efeito, upcast) in _DETALHADAS.it
         "upcasting": upcast,
     }
 
+# Tags de Ritual das magias de 1º círculo relevantes para o Artífice.
+# Mantemos o catálogo mecânico como fonte de efeito e corrigimos a tag aqui.
+for _ritual_name in ("alarme", "detectar magia", "identificar", "purificar alimentos e bebidas"):
+    if _ritual_name in MAGIAS:
+        MAGIAS[_ritual_name]["ritual"] = True
+
+
 # Durações específicas que a regra genérica (concentração ou instantânea) não cobre.
 for _nome, _duracao in {
     "auxílio": "8 horas",
@@ -699,6 +722,7 @@ for _nome_c, (_circ, _esc, _comp, _conc, _dur) in _PHB2024_COMPLEMENTAR.items():
             "duracao": _dur or ("concentração, até 10 minutos" if _conc else "instantânea"),
         }
 
+
 # Círculo de magias do catálogo extraído que não tinham círculo (cabeçalhos do PHB 2024).
 _CIRCULOS_PHB2024 = json.loads(
     (pathlib.Path(__file__).parent / "dados" / "circulos_phb2024.json").read_text(encoding="utf-8")
@@ -729,6 +753,27 @@ for _chave_l, _meta_l in _META_LISTAS.items():
             "duracao": "concentração" if _meta_l["concentracao"] else "instantânea",
         }
 
+# Passos Longos é uma magia de 1º círculo da lista de Artífice; o efeito é um bônus de deslocamento sem concentração.
+_DETALHADAS["passos longos"] = (
+    1,
+    "transmutação",
+    "V, S, M (uma pitada de terra)",
+    False,
+    "Toque uma criatura; seu deslocamento aumenta em 3 m por 1 hora; não requer concentração",
+    {"bonus_deslocamento_m": 3, "duracao": "1 hora"},
+)
+
+MAGIAS["passos longos"] = {
+    "nome": "Passos Longos",
+    "circulo": 1,
+    "escola": "transmutação",
+    "componentes": "V, S, M",
+    "concentracao": False,
+    "ritual": False,
+    "duracao": "1 hora",
+    "efeito": "Aumenta o deslocamento da criatura tocada em 3 m por 1 hora, sem concentração.",
+}
+
 for _antigo, _novo in _ALIAS_PARA_2024:
     _entrada = MAGIAS.get(_antigo.lower())
     if _entrada is not None:
@@ -739,6 +784,14 @@ for _antigo, _novo in _ALIAS_PARA_2024:
 # Fórmulas são devolvidas como dados; o motor de combate continua responsável
 # por rolagens, salvaguardas, aplicação de dano e atualização de estado.
 MECANICAS_MAGIA: dict[str, dict[str, Any]] = {
+    "passos longos": {
+        "tipo": "buff_deslocamento",
+        "bonus_deslocamento_m": 3,
+        "duracao": "1 hora",
+        "concentracao": False,
+        "alvo": "uma criatura tocada",
+        "acao": "acao",
+    },
     "bolha ácida": {
         "tipo": "dano_multialvo",
         "dados_dano_base": "1d6",
@@ -778,6 +831,50 @@ MECANICAS_MAGIA: dict[str, dict[str, Any]] = {
         "tipo_dano": "igneo",
         "alcance_m": 36,
         "escala_niveis": [5, 11, 17],
+    },
+    "golpe certeiro": {
+        "tipo": "ataque_com_arma",
+        "alcance": "arma_usada",
+        "acao": "acao",
+        "requer_arma_em_maos": True,
+        "requer_proficiencia_com_arma": True,
+        "requer_valor_minimo_cp": 1,
+        "atributo_ataque_e_dano": "atributo_conjuracao",
+        "tipo_dano_opcoes": ["radiante", "tipo_normal_da_arma"],
+        "dano_radiante_adicional_niveis": {5: "1d6", 11: "2d6", 17: "3d6"},
+    },
+    "elementalismo": {
+        "tipo": "controle_elemental_inofensivo",
+        "alcance_m": 9,
+        "acao": "acao",
+        "dano": 0,
+        "impoe_condicao": False,
+        "escolhas": {
+            "ar": {
+                "area": {"forma": "cubo", "lado_m": 1.5},
+                "efeitos": ["agitar_tecido", "mover_po", "farfalhar_folhas", "fechar_portas_janelas_abertas_nao_sustentadas"],
+            },
+            "terra": {
+                "efeitos": ["cobrir_superficie_com_po_ou_areia_em_quadrado_1_5m", "escrever_uma_palavra_em_po_ou_areia"],
+            },
+            "fogo": {
+                "area": {"forma": "cubo", "lado_m": 1.5},
+                "efeitos": ["brasas_inofensivas", "fumaca_com_cor_e_aroma_escolhidos", "acender_velas_tochas_lampadas"],
+                "aroma_da_fumaca_dura": "1 minuto",
+            },
+            "agua": {
+                "subescolhas": ["borrifo_de_nevoa", "criar_agua_limpa"],
+                "area_nevoa": {"forma": "cubo", "lado_m": 1.5},
+                "quantidade_agua_limpa_xicaras": 1,
+                "agua_criada_evapora": "1 minuto",
+            },
+            "esculpir_elemento": {
+                "materiais": ["terra", "areia", "fogo", "fumaca", "nevoa", "agua"],
+                "volume_maximo": "cubo de 1 pé",
+                "duracao": "1 hora",
+                "forma": "rudimentar",
+            },
+        },
     },
     "armadura de agathys": {
         "tipo": "pv_temporarios_e_dano_retorno",

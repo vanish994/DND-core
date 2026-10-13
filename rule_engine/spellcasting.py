@@ -1,4 +1,4 @@
-"""Validação de conjuração do Artífice (lista de Tasha's usada pelo projeto).
+"""Validação de conjuração do Artífice 5.5e (Eberron: Forge of the Artificer).
 
 A progressão de espaços segue o Artífice de meio conjurador com progressão
 arredondada para cima, incluindo dois espaços de 1º círculo no nível 1.
@@ -9,8 +9,10 @@ from __future__ import annotations
 import unicodedata
 from typing import Any
 
-# Subconjunto explícito de magias do Artífice disponível no catálogo executável.
-# Os nomes são os localizados em português usados pela interface.
+from .artificer_base import ARTIFICER_PREPARED_SPELLS
+
+# Lista base de magias do Artífice 5.5e, conforme Eberron: Forge of the Artificer.
+# Consertar é concedido separadamente pela característica Magia de Artífice.
 ARTIFICER_SPELL_LEVELS: dict[str, int] = {
     # Truques
     "Acudir os Moribundos": 0,
@@ -54,7 +56,6 @@ ARTIFICER_SPELL_LEVELS: dict[str, int] = {
     "Escalada de Aranha": 2,
     "Invisibilidade": 2,
     "Levitação": 2,
-    "Pirotecnia": 2,
     "Proteção Contra Veneno": 2,
     "Restauração Menor": 2,
     "Teia": 2,
@@ -69,17 +70,14 @@ ARTIFICER_SPELL_LEVELS: dict[str, int] = {
     "Caminhar Sobre as Águas": 3,
     "Criar Comida e Água": 3,
     "Dissipar Magia": 3,
-    "Flechas Flamejantes": 3,
     "Glifo de Proteção": 3,
     "Piscar": 3,
     "Proteção Contra Energia": 3,
     "Respirar na Água": 3,
     "Revivificar": 3,
-    "Servo Minúsculo": 3,
     "Voo": 3,
     # 4º círculo
     "Movimentação Livre": 4,
-    "Maldição Elemental": 4,
     "Moldar Rochas": 4,
     "Olho Arcano": 4,
     "Fabricar": 4,
@@ -92,7 +90,6 @@ ARTIFICER_SPELL_LEVELS: dict[str, int] = {
     # 5º círculo
     "Animar Objetos": 5,
     "Criação": 5,
-    "Fortalecimento de Perícia": 5,
     "Mão de Bigby": 5,
     "Muralha de Pedra": 5,
     "Restauração Maior": 5,
@@ -139,11 +136,11 @@ def normalizar_nome_magia(nome: object) -> str:
 def progresso_artifice(nivel: int, inteligencia: int) -> dict[str, Any]:
     if not 1 <= int(nivel) <= 20:
         raise ValueError("O nível do Artífice deve estar entre 1 e 20")
-    modificador = (int(inteligencia) - 10) // 2
     slots = {str(i + 1): quantidade for i, quantidade in enumerate(ARTIFICER_SLOTS[int(nivel)])}
     circulo_maximo = max(int(circulo) for circulo in slots)
-    truques = 2 if nivel < 10 else 3 if nivel < 18 else 4
-    preparadas = max(1, modificador + int(nivel) // 2)
+    nivel = int(nivel)
+    truques = 2 if nivel < 10 else 3 if nivel < 14 else 4
+    preparadas = ARTIFICER_PREPARED_SPELLS[int(nivel)]
     return {
         "resultado": "resolvido",
         "classe": "artifice",
@@ -318,9 +315,14 @@ def validar_escolhas_artifice(
             f"Com INT {inteligencia}, este Artífice deve registrar exatamente {progresso['magias_preparadas']} magias preparadas"
         )
     for nome in truques:
-        circulo = permitidas.get(normalizar_nome_magia(nome))
-        if circulo != 0 or not obter_magia(nome):
+        chave = normalizar_nome_magia(nome)
+        circulo = permitidas.get(chave)
+        if circulo is None:
             raise ValueError(f"Truque não disponível para Artífice: {nome}")
+        if circulo != 0:
+            raise ValueError(f"Magia de círculo {circulo} não é um truque: {nome}")
+        if not obter_magia(nome):
+            raise ValueError(f"Truque ausente do catálogo: {nome}")
     for nome in magias_preparadas:
         circulo = permitidas.get(normalizar_nome_magia(nome))
         if circulo is None or circulo == 0:

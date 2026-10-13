@@ -143,27 +143,124 @@ def vender_item(fatos: dict) -> dict[str, Any]:
 
 def resolver_inventario(fatos: dict) -> dict[str, Any]:
     forca = int(fatos.get("forca", 10))
-    peso = float(fatos.get("peso_atual", 0)) + float(fatos.get("peso_adicionado", 0))
     capacidade = max(0, forca) * 7.5
     itens = list(fatos.get("itens", []))
+    peso_inventario = (
+        float(fatos["peso_atual"])
+        if "peso_atual" in fatos
+        else sum(
+            float(item.get("peso", 0)) * int(item.get("quantidade", 1))
+            for item in itens
+            if isinstance(item, dict)
+        )
+    )
+    peso = peso_inventario + float(fatos.get("peso_adicionado", 0))
+    removidos: list[dict[str, Any]] = []
+    remove_ids = {str(x) for x in fatos.get("remover_ids", [])}
+    remove_plans = {str(x) for x in fatos.get("remover_planos", [])}
+    if remove_ids or remove_plans:
+        retained = []
+        for item in itens:
+            if not isinstance(item, dict):
+                retained.append(item)
+                continue
+            item_id = str(item.get("id", ""))
+            plan = str(item.get("plano", ""))
+            if (item_id and item_id in remove_ids) or (plan and plan in remove_plans):
+                removidos.append(item)
+                peso -= float(item.get("peso", 0)) * int(item.get("quantidade", 1))
+            else:
+                retained.append(item)
+        itens = retained
+
+    current_ids = {
+        str(item.get("id"))
+        for item in itens
+        if isinstance(item, dict) and item.get("id") is not None
+    }
+    new_items = fatos.get("itens_novos", [])
+    if new_items is None:
+        new_items = []
+    if not isinstance(new_items, list):
+        return {"resultado": "requer_dados", "motivo": "itens_novos_deve_ser_uma_lista"}
+
+    one_new_item = fatos.get("item_novo")
+    if one_new_item is not None:
+        new_items = [*new_items, one_new_item]
+
+    validated_items: list[dict[str, Any]] = []
+    incoming_ids: set[str] = set()
+    for new_item in new_items:
+        if not isinstance(new_item, dict) or not new_item.get("id"):
+            return {"resultado": "requer_dados", "motivo": "cada_item_novo_precisa_de_metadados_e_id_unico"}
+        new_id = str(new_item["id"])
+        if new_id in current_ids or new_id in incoming_ids:
+            return {"resultado": "bloqueado", "motivo": "id_de_item_ja_existe", "item_id": new_id}
+        try:
+            new_weight = float(new_item.get("peso", 0))
+            quantity = int(new_item.get("quantidade", 1))
+        except (TypeError, ValueError):
+            return {"resultado": "bloqueado", "motivo": "peso_ou_quantidade_de_item_invalida", "item_id": new_id}
+        if isinstance(new_item.get("quantidade", 1), bool) or new_weight < 0 or quantity < 1:
+            return {"resultado": "bloqueado", "motivo": "peso_ou_quantidade_de_item_invalida", "item_id": new_id}
+        item_copy = dict(new_item)
+        item_copy["quantidade"] = quantity
+        validated_items.append(item_copy)
+        incoming_ids.add(new_id)
+
+    for item_copy in validated_items:
+        itens.append(item_copy)
+        peso += float(item_copy.get("peso", 0)) * int(item_copy.get("quantidade", 1))
+
     if fatos.get("adicionar"):
         itens.append({"nome": fatos["adicionar"], "quantidade": int(fatos.get("quantidade", 1))})
+    sintonizados = list(fatos.get("sintonizados", []))
+    if removidos:
+        removed_ids = {str(item.get("id")) for item in removidos if item.get("id") is not None}
+        sintonizados = [x for x in sintonizados if str(x) not in removed_ids]
     return {
         "resultado": "sobrecarregado" if peso > capacidade else "normal",
         "peso": peso,
         "capacidade": capacidade,
         "itens": itens,
+        "itens_adicionados": validated_items,
+        "itens_removidos": removidos,
+        "sintonizados": sintonizados,
+    }
+
+
+def _item_magico_de_fatos(fatos: dict) -> dict[str, Any] | None:
+    item = consultar_item(fatos["item"])
+    if item and item.get("categoria") == "item_magico":
+        return item
+    metadata = fatos.get("metadados_item")
+    if not isinstance(metadata, dict) or not metadata:
+        return None
+    return {
+        **metadata,
+        "nome": metadata.get("nome", str(fatos["item"])),
+        "categoria": "item_magico",
     }
 
 
 def resolver_sintonizacao(fatos: dict) -> dict[str, Any]:
-    item = consultar_item(fatos["item"])
-    if not item or item.get("categoria") != "item_magico":
+    item = _item_magico_de_fatos(fatos)
+    if not item:
         return {"resultado": "bloqueado", "motivo": "item_magico_desconhecido"}
     sintonizados = list(fatos.get("sintonizados", []))
-    nome = fatos["item"].lower()
-    if not item.get("sintonizacao"):
+    nome = str(fatos["item"]).lower()
+    requires_attunement = item.get("sintonizacao")
+    if requires_attunement == "varia":
+        if fatos.get("sintonizacao_requerida") is None:
+            return {"resultado": "requer_dados", "motivo": "sintonizacao_depende_do_item_escolhido"}
+        requires_attunement = bool(fatos["sintonizacao_requerida"])
+    if not requires_attunement:
         return {"resultado": "nao_requerida", "item": item["nome"]}
+    if item.get("sintonizacao_requer_classe") == "conjurador":
+        if fatos.get("conjurador") is None:
+            return {"resultado": "requer_dados", "motivo": "confirmar_se_usuario_e_conjurador"}
+        if fatos.get("conjurador") is not True:
+            return {"resultado": "bloqueado", "motivo": "item_requer_sintonizacao_por_conjurador"}
     if fatos.get("acao", "sintonizar") == "encerrar":
         if nome not in {str(x).lower() for x in sintonizados}:
             return {"resultado": "bloqueado", "motivo": "item_nao_sintonizado"}
@@ -174,30 +271,150 @@ def resolver_sintonizacao(fatos: dict) -> dict[str, Any]:
         }
     if nome in {str(x).lower() for x in sintonizados}:
         return {"resultado": "bloqueado", "motivo": "item_ja_sintonizado"}
-    if len(sintonizados) >= 3:
-        return {"resultado": "bloqueado", "motivo": "limite_de_tres_itens"}
+    limite_informado = fatos.get("limite_sintonizacao")
+    if limite_informado is None and str(fatos.get("classe", "")).lower() in {"artifice", "artificer"}:
+        from .artificer_base import ARTIFICER_ATTUNEMENT_LIMIT, _tier_value
+        limite_informado = _tier_value(ARTIFICER_ATTUNEMENT_LIMIT, int(fatos.get("nivel", 1)))
+    limite = max(1, int(limite_informado if limite_informado is not None else 3))
+    if len(sintonizados) >= limite:
+        motivo = "limite_de_tres_itens" if limite == 3 else "limite_de_itens_sintonizados"
+        return {"resultado": "bloqueado", "motivo": motivo, "limite": limite}
     sintonizados.append(nome)
     return {
         "resultado": "sintonizado",
         "item": item["nome"],
         "sintonizados": sintonizados,
-        "limite": 3,
+        "limite": limite,
         "requer_descanso_curto": True,
     }
 
 
 def usar_item_magico(fatos: dict) -> dict[str, Any]:
-    item = consultar_item(fatos["item"])
-    if not item or item.get("categoria") != "item_magico":
+    item = _item_magico_de_fatos(fatos)
+    if not item:
         return {"resultado": "bloqueado", "motivo": "item_magico_desconhecido"}
-    if item.get("sintonizacao") and fatos["item"].lower() not in {
-        str(x).lower() for x in fatos.get("sintonizados", [])
-    }:
+    requires_attunement = item.get("sintonizacao")
+    if requires_attunement == "varia":
+        if fatos.get("sintonizacao_requerida") is None:
+            return {"resultado": "requer_dados", "motivo": "sintonizacao_depende_do_item_escolhido"}
+        requires_attunement = bool(fatos["sintonizacao_requerida"])
+    item_id = str(fatos["item"]).lower()
+    if requires_attunement and item_id not in {str(x).lower() for x in fatos.get("sintonizados", [])}:
         return {"resultado": "bloqueado", "motivo": "requer_sintonizacao"}
-    cargas = fatos.get("cargas")
-    if cargas is not None and int(cargas) <= 0:
+    plan = str(item.get("plano", fatos.get("plano", ""))).lower()
+    action = str(fatos.get("acao", "passivo")).lower()
+    charges = fatos.get("cargas")
+
+    if plan == "manifold_tool":
+        if action not in {"transformar", "transform", "usar"}:
+            return {"resultado": "escolha", "item": item["nome"], "opcoes": ["transformar"],
+                    "acao": "acao_magica"}
+        tool = fatos.get("ferramenta_artesao")
+        if not tool:
+            return {"resultado": "escolha", "motivo": "escolha_tipo_de_ferramenta_de_artesao"}
+        return {"resultado": "transformado", "item": item["nome"], "ferramenta": tool,
+                "proficiencia_concedida_ao_usar": True, "acao": "acao_magica"}
+    if plan == "boots_of_the_winding_path":
+        if action not in {"teleportar", "teleport", "usar"}:
+            return {"resultado": "escolha", "item": item["nome"], "opcoes": ["teleportar"],
+                    "acao": "acao_bonus", "distancia_maxima_m": 4.5}
+        if fatos.get("distancia_m") is None or fatos.get("espaco_visto") is None or fatos.get("espaco_desocupado") is None or fatos.get("ocupou_este_turno") is None:
+            return {"resultado": "requer_dados", "motivo": "distancia_visibilidade_espaco_e_posicao_anterior_necessarios"}
+        if float(fatos["distancia_m"]) > 4.5:
+            return {"resultado": "bloqueado", "motivo": "destino_fora_de_4_5_metros"}
+        if fatos.get("espaco_visto") is not True or fatos.get("espaco_desocupado") is not True or fatos.get("ocupou_este_turno") is not True:
+            return {"resultado": "bloqueado", "motivo": "destino_deve_ser_visto_livre_e_ocupado_este_turno"}
+        return {"resultado": "teletransportado", "item": item["nome"], "distancia_m": float(fatos["distancia_m"]),
+                "acao": "acao_bonus"}
+    if plan == "dazzling_weapon":
+        if action in {"iluminar", "light"}:
+            return {"resultado": "usado", "item": item["nome"], "acao": "acao_bonus",
+                    "luz_brilhante_raio_m": 9, "luz_fraca_raio_adicional_m": 9,
+                    "efeito": item.get("efeito")}
+        if action in {"cegar_atacante", "blind_attacker"}:
+            if fatos.get("foi_atingido_por_ataque") is not True:
+                return {"resultado": "bloqueado", "motivo": "gatilho_requer_ser_atingido_por_ataque"}
+            if fatos.get("reacao_disponivel") is not True:
+                return {"resultado": "bloqueado", "motivo": "reacao_indisponivel"}
+            if charges is None:
+                return {"resultado": "requer_dados", "motivo": "cargas_atuais_necessarias"}
+            if int(charges) <= 0:
+                return {"resultado": "bloqueado", "motivo": "sem_cargas"}
+            save_total = fatos.get("salvaguarda_constituicao_total")
+            if save_total is None:
+                return {"resultado": "requer_dados", "motivo": "resultado_da_salvaguarda_de_constituicao_necessario",
+                        "cd": 15}
+            return {"resultado": "usado", "item": item["nome"], "cargas_restantes": int(charges) - 1,
+                    "cd": 15, "salvaguarda_sucesso": int(save_total) >= 15,
+                    "condicao_aplicada": None if int(save_total) >= 15 else "cego",
+                    "duracao_condicao": "ate_o_fim_do_proximo_turno_do_atacante", "reacao": True}
+        return {"resultado": "passivo", "item": item["nome"], "bonus_ataque": 1, "bonus_dano": 1}
+    if plan == "helm_of_awareness":
+        return {"resultado": "passivo", "item": item["nome"], "vantagem_iniciativa": True,
+                "nao_pode_ser_surpreendido_enquanto_consciente": True}
+    if plan == "mind_sharpener":
+        if action not in {"manter_concentracao", "maintain_concentration"}:
+            return {"resultado": "escolha", "item": item["nome"], "opcoes": ["manter_concentracao"]}
+        if fatos.get("salvaguarda_constituicao_falhou") is not True:
+            return {"resultado": "bloqueado", "motivo": "gatilho_requer_falha_em_salvaguarda_de_constituicao"}
+        if fatos.get("reacao_disponivel") is not True:
+            return {"resultado": "bloqueado", "motivo": "reacao_indisponivel"}
+        if charges is None:
+            return {"resultado": "requer_dados", "motivo": "cargas_atuais_necessarias"}
+        if int(charges) <= 0:
+            return {"resultado": "bloqueado", "motivo": "sem_cargas"}
+        return {"resultado": "concentracao_mantida", "item": item["nome"],
+                "salvaguarda_sucesso": True, "cargas_restantes": int(charges) - 1, "reacao": True}
+    if plan == "repeating_shot":
+        return {"resultado": "passivo", "item": item["nome"], "bonus_ataque": 1, "bonus_dano": 1,
+                "somente_ataques_a_distancia": True, "ignora_propriedade_recarga": True,
+                "cria_municao_magica_se_necessario": True}
+    if plan == "repulsion_shield":
+        if action in {"repelir", "repel"}:
+            if fatos.get("foi_atingido_por_ataque_corpo_a_corpo") is not True:
+                return {"resultado": "bloqueado", "motivo": "gatilho_requer_ataque_corpo_a_corpo"}
+            if fatos.get("tamanho_atacante") not in {"miudo", "pequeno", "medio", "grande", "tiny", "small", "medium", "large"}:
+                return {"resultado": "bloqueado", "motivo": "atacante_deve_ser_grande_ou_menor"}
+            if fatos.get("distancia_m") is None:
+                return {"resultado": "requer_dados", "motivo": "distancia_do_atacante_necessaria"}
+            if float(fatos["distancia_m"]) > 1.5:
+                return {"resultado": "bloqueado", "motivo": "atacante_fora_de_1_5_metro"}
+            if fatos.get("reacao_disponivel") is not True:
+                return {"resultado": "bloqueado", "motivo": "reacao_indisponivel"}
+            if charges is None:
+                return {"resultado": "requer_dados", "motivo": "cargas_atuais_necessarias"}
+            if int(charges) <= 0:
+                return {"resultado": "bloqueado", "motivo": "sem_cargas"}
+            return {"resultado": "repelido", "item": item["nome"], "cargas_restantes": int(charges) - 1,
+                    "deslocamento_empurrado_m": 4.5, "direcao": "linha_reta_para_longe_de_voce", "reacao": True}
+        return {"resultado": "passivo", "item": item["nome"], "bonus_ca": 1}
+    if plan == "returning_weapon":
+        return {"resultado": "passivo", "item": item["nome"], "bonus_ataque": 1, "bonus_dano": 1,
+                "retorna_apos_ataque_a_distancia": True, "requer_propriedade_arremesso": True}
+    if plan == "spell_refueling_ring":
+        if action not in {"recuperar_espaco", "recover_slot"}:
+            return {"resultado": "escolha", "item": item["nome"], "opcoes": ["recuperar_espaco"],
+                    "acao": "acao_bonus", "nivel_maximo_espaco": 3, "limite": "uma_vez_ate_o_proximo_amanhecer"}
+        if fatos.get("conjurador") is not True:
+            return {"resultado": "bloqueado", "motivo": "anel_requer_usuario_conjurador"}
+        if fatos.get("usado_hoje") is None:
+            return {"resultado": "requer_dados", "motivo": "estado_diario_do_anel_necessario"}
+        if fatos.get("usado_hoje") is True:
+            return {"resultado": "bloqueado", "motivo": "anel_ja_usado_antes_do_proximo_amanhecer"}
+        if fatos.get("espaco_gasto") is not True:
+            return {"resultado": "bloqueado", "motivo": "deve_haver_espaco_de_magia_gasto"}
+        slot_level = int(fatos.get("nivel_espaco", 0))
+        if slot_level < 1 or slot_level > 3:
+            return {"resultado": "bloqueado", "motivo": "anel_recupera_apenas_espaco_de_nivel_1_a_3"}
+        return {"resultado": "espaco_recuperado", "item": item["nome"], "nivel_espaco": slot_level,
+                "usado_hoje": True, "acao": "acao_bonus"}
+
+    if requires_attunement and item.get("sintonizacao_requer_classe") == "conjurador" and fatos.get("conjurador") is not True:
+        return {"resultado": "bloqueado", "motivo": "item_requer_sintonizacao_por_conjurador"}
+    charges = fatos.get("cargas")
+    if charges is not None and int(charges) <= 0:
         return {"resultado": "bloqueado", "motivo": "sem_cargas"}
     retorno = {"resultado": "usado", "item": item["nome"], "efeito": item.get("efeito")}
-    if cargas is not None:
-        retorno["cargas_restantes"] = int(cargas) - 1
+    if charges is not None:
+        retorno["cargas_restantes"] = int(charges) - 1
     return retorno

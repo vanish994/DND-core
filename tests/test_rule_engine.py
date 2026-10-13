@@ -2204,6 +2204,13 @@ class RuleEngineTests(unittest.TestCase):
                 "recurso": "flash_of_genius",
                 "nivel": 7,
                 "inteligencia": 18,
+                "criatura_falhou": True,
+                "tipo_teste": "salvaguarda",
+                "usos_gastos": 0,
+                "reacao_disponivel": True,
+                "distancia_m": 5,
+                "alvo_visivel": True,
+                "total": 10,
             }
         )
         self.assertEqual(genius.outcome["bonus"], 4)
@@ -2214,13 +2221,20 @@ class RuleEngineTests(unittest.TestCase):
                 "recurso": "spell_storing_item",
                 "nivel": 11,
                 "inteligencia": 18,
+                "magia": "Dissipar Magia",
+                "nivel_magia": 3,
+                "tempo_conjuracao_acao": True,
+                "objeto_adequado": True,
+                "descanso_longo_concluido": True,
+                "distancia_m": 1,
             }
         )
-        self.assertEqual(stored.outcome["conjuracoes"], 8)
+        self.assertEqual(stored.outcome["usos"], 8)
         soul = self.engine.evaluate(
             {"type": "class_feature", "classe": "artifice", "recurso": "soul_of_artifice", "nivel": 20}
         )
-        self.assertTrue(soul.outcome["reacao_evitar_morte"])
+        self.assertTrue(soul.outcome["cheat_death"])
+        self.assertTrue(soul.outcome["restaura_lampejo_apos_descanso_curto"])
 
     def test_engine_generates_auditable_d20_and_waits_for_mj_dc(self):
         pending = self.engine.evaluate(

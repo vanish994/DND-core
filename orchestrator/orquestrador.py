@@ -210,6 +210,9 @@ class OrquestradorAcoes:
         tipo = fatos.get("type")
         if tipo == "class_feature":
             return self._preparar_caracteristica(fatos, personagens)
+        if tipo == "long_rest":
+            ficha = self._personagem(fatos.get("character_id"), personagens)
+            return _Preparo(fatos, personagem_magia=ficha)
         if tipo in {"attack", "initiative"}:
             return self._preparar_ataque(fatos, personagens)
         if tipo == "damage" and str(fatos.get("magia", fatos.get("spell", ""))).strip():
@@ -244,7 +247,28 @@ class OrquestradorAcoes:
             if atributo in (ficha.get("atributos") or {}):
                 fatos[atributo] = ficha["atributos"][atributo]
         fatos["bonus_proficiencia"] = ficha.get("bonus_proficiencia", 2 + (nivel - 1) // 4)
-        return _Preparo(fatos)
+
+        recurso = normalizar_texto(fatos.get("recurso", fatos.get("feature", "")))
+        acao_recurso = normalizar_texto(fatos.get("acao", ""))
+        if (
+            str(ficha.get("classe", "")).strip().lower() == "artifice"
+            and recurso in {"tinkers magic", "magia de artifice", "tinker s magic"}
+            and acao_recurso in {"criar", "create"}
+        ):
+            estados_recursos = ficha.get("recursos_atuais") or ficha.get("recursos_iniciais") or {}
+            estado_magia = estados_recursos.get("magia_de_artifice") or {}
+            fatos["usos_gastos"] = int(estado_magia.get("usos_gastos", 0) or 0)
+            ids_existentes = fatos.get("ids_objetos_existentes")
+            itens_tinkers = ficha.get("itens_tinkers_criados") or []
+            ids_rastreados = [
+                str(item["id"])
+                for item in itens_tinkers
+                if isinstance(item, dict) and item.get("id")
+            ]
+            if isinstance(ids_existentes, list):
+                fatos["ids_objetos_existentes"] = [*ids_existentes, *ids_rastreados]
+
+        return _Preparo(fatos, personagem_magia=ficha)
 
     def _preparar_ataque(
         self, fatos: dict[str, Any], personagens: list[dict[str, Any]] | None
@@ -582,20 +606,32 @@ class OrquestradorAcoes:
         sempre_preparada = False
 
         if classe == "artifice":
+            conjuracao = ficha.get("conjuracao") or {}
             progresso = progresso_artifice(nivel, int((ficha.get("atributos") or {}).get("inteligencia", 10)))
             circulo_maximo = int(progresso["circulo_maximo"])
-            circulo = next(
-                (n for nome, n in ARTIFICER_SPELL_LEVELS.items() if normalizar_nome_magia(nome) == nome_magia),
-                None,
-            )
-            if circulo is None:
-                subclasse = ficha.get("subclasse") or ficha.get("subclass")
-                if magia_sempre_preparada_do_artifice(subclasse, nivel, nome_canonico):
-                    # Magia de subclasse já liberada: sempre preparada, fora da escolha da ficha.
-                    sempre_preparada = True
-                    circulo = circulo_magia_subclasse(nome_canonico)
-                else:
-                    return ResultadoAcao.bloqueado("magia_nao_disponivel_para_artifice", magia=fatos.get("magia"))
+            truque_concedido = normalizar_nome_magia(str(conjuracao.get("truque_concedido") or ""))
+            if (
+                nivel >= 1
+                and truque_concedido
+                and truque_concedido == nome_magia
+            ):
+                # Reparar é concedido pela característica de classe; não ocupa
+                # uma das escolhas de truques da ficha nem usa espaço.
+                circulo = 0
+                sempre_preparada = True
+            else:
+                circulo = next(
+                    (n for nome, n in ARTIFICER_SPELL_LEVELS.items() if normalizar_nome_magia(nome) == nome_magia),
+                    None,
+                )
+                if circulo is None:
+                    subclasse = ficha.get("subclasse") or ficha.get("subclass")
+                    if magia_sempre_preparada_do_artifice(subclasse, nivel, nome_canonico):
+                        # Magia de subclasse já liberada: sempre preparada, fora da escolha da ficha.
+                        sempre_preparada = True
+                        circulo = circulo_magia_subclasse(nome_canonico)
+                    else:
+                        return ResultadoAcao.bloqueado("magia_nao_disponivel_para_artifice", magia=fatos.get("magia"))
         else:
             # Qualquer classe conjuradora usa o círculo do catálogo; a lista de
             # magias preparadas da própria ficha é a autoridade.
@@ -608,7 +644,14 @@ class OrquestradorAcoes:
         conjuracao = ficha.get("conjuracao") or {}
         if not conjuracao:
             return ResultadoAcao.bloqueado("ficha_sem_dados_de_conjuracao", classe=classe)
-        escolhidas = conjuracao.get("truques", []) if circulo == 0 else conjuracao.get("magias_preparadas", [])
+        if circulo == 0:
+            escolhidas = conjuracao.get("truques_conhecidos")
+            if not isinstance(escolhidas, (list, tuple, set)):
+                escolhidas = conjuracao.get("truques")
+        else:
+            escolhidas = conjuracao.get("magias_preparadas", [])
+        if not isinstance(escolhidas, (list, tuple, set)):
+            escolhidas = []
         if not sempre_preparada and nome_magia not in {normalizar_nome_magia(x) for x in escolhidas}:
             return ResultadoAcao.bloqueado("magia_nao_escolhida_na_ficha", magia=fatos.get("magia"))
         if circulo > circulo_maximo:
@@ -901,7 +944,68 @@ class OrquestradorAcoes:
         altera PV. Só a operação confirmada gera alteração — nunca duplicada,
         porque a alteração nasce da ficha recebida, não de um contador paralelo.
         """
-        if slot_a_consumir is None or personagem_magia is None:
+        if personagem_magia is None:
+            return []
+
+        if (
+            fatos.get("type") == "long_rest"
+            and resultado.get("descanso") == "longo"
+            and resultado.get("resultado") is None
+            and str(personagem_magia.get("classe", "")).strip().lower() == "artifice"
+        ):
+            return self._aplicar_recuperacao_artifice(personagem_magia, resultado, on_alteracao)
+
+        recurso = normalizar_texto(fatos.get("recurso", fatos.get("feature", "")))
+        acao_recurso = normalizar_texto(fatos.get("acao", ""))
+        if (
+            fatos.get("type") == "class_feature"
+            and str(personagem_magia.get("classe", "")).strip().lower() == "artifice"
+            and recurso in {"tinkers magic", "magia de artifice", "tinker s magic"}
+            and acao_recurso in {"criar", "create"}
+            and resultado.get("resultado") == "criado"
+            and isinstance(resultado.get("item_criado"), dict)
+        ):
+            estados_recursos = personagem_magia.setdefault("recursos_iniciais", {})
+            if not isinstance(estados_recursos, dict):
+                estados_recursos = {}
+                personagem_magia["recursos_iniciais"] = estados_recursos
+            estado_magia = estados_recursos.setdefault("magia_de_artifice", {})
+            if not isinstance(estado_magia, dict):
+                estado_magia = {}
+                estados_recursos["magia_de_artifice"] = estado_magia
+            usos_antes = int(estado_magia.get("usos_gastos", 0) or 0)
+            usos_depois = int(resultado.get("usos_gastos_depois", usos_antes + 1))
+            estado_magia["usos_gastos"] = usos_depois
+            itens_antes = list(personagem_magia.get("itens_tinkers_criados") or [])
+            item = dict(resultado["item_criado"])
+            if not any(isinstance(atual, dict) and str(atual.get("id")) == str(item.get("id")) for atual in itens_antes):
+                itens_depois = [*itens_antes, item]
+            else:
+                itens_depois = itens_antes
+            personagem_magia["itens_tinkers_criados"] = itens_depois
+            resultado["usos_gastos"] = usos_depois
+            alteracoes = []
+            if usos_antes != usos_depois:
+                alteracoes.append({
+                    "personagem_id": personagem_magia.get("id"),
+                    "campo": "recursos_iniciais.magia_de_artifice.usos_gastos",
+                    "de": usos_antes,
+                    "para": usos_depois,
+                })
+            if itens_depois != itens_antes:
+                alteracoes.append({
+                    "personagem_id": personagem_magia.get("id"),
+                    "campo": "itens_tinkers_criados",
+                    "de": itens_antes,
+                    "para": itens_depois,
+                    "delta_mundo": resultado.get("delta_mundo"),
+                })
+            if on_alteracao is not None:
+                for alteracao in alteracoes:
+                    on_alteracao(personagem_magia, alteracao)
+            return alteracoes
+
+        if slot_a_consumir is None:
             return []
         if resultado.get("resultado") != "conjurada":
             return []
@@ -910,6 +1014,103 @@ class OrquestradorAcoes:
         if on_alteracao is not None:
             on_alteracao(personagem_magia, alteracao)
         return [alteracao]
+
+    def _aplicar_recuperacao_artifice(
+        self,
+        ficha: dict[str, Any],
+        resultado: dict[str, Any],
+        on_alteracao: Callable[[dict[str, Any], dict[str, Any]], None] | None,
+    ) -> list[dict[str, Any]]:
+        """Aplica à ficha o delta de recuperação do Artífice após um descanso longo."""
+        saida = self.engine.evaluate({
+            "type": "class_feature",
+            "classe": "artifice",
+            "nivel": int(ficha.get("nivel", 1) or 1),
+            "recurso": "resource_recovery",
+            "tipo_descanso": "longo",
+            "inteligencia": int((ficha.get("atributos") or {}).get("inteligencia", 10)),
+            "itens_tinkers_atuais": list(ficha.get("itens_tinkers_criados") or []),
+        })
+        recuperacao = dict(saida.outcome)
+        resultado["recuperacao_recursos_artifice"] = recuperacao
+        if saida.status != "resolved" or recuperacao.get("resultado") != "recursos_recuperados":
+            resultado["recuperacao_artifice_bloqueada"] = recuperacao.get("motivo", recuperacao.get("resultado"))
+            return []
+
+        delta_conjuracao = dict(recuperacao.get("delta_conjuracao") or {})
+        espacos_depois = dict(delta_conjuracao.get("espacos_restantes") or {})
+        conjuracao = dict(ficha.get("conjuracao") or {})
+        espacos_antes = dict(conjuracao.get("espacos_restantes") or conjuracao.get("espacos_totais") or {})
+        conjuracao["espacos_restantes"] = espacos_depois
+        conjuracao["troca_truque_disponivel"] = bool(delta_conjuracao.get("troca_truque_disponivel"))
+        conjuracao["mudanca_magias_preparadas_disponivel"] = bool(
+            delta_conjuracao.get("mudanca_magias_preparadas_disponivel")
+        )
+        ficha["conjuracao"] = conjuracao
+
+        recursos_atuais = ficha.setdefault("recursos_iniciais", {})
+        if not isinstance(recursos_atuais, dict):
+            recursos_atuais = {}
+            ficha["recursos_iniciais"] = recursos_atuais
+        magia_de_artifice = recursos_atuais.setdefault("magia_de_artifice", {})
+        if not isinstance(magia_de_artifice, dict):
+            magia_de_artifice = {}
+            recursos_atuais["magia_de_artifice"] = magia_de_artifice
+        usos_antes = int(magia_de_artifice.get("usos_gastos", 0) or 0)
+        magia_de_artifice.update(recuperacao.get("recursos", {}).get("magia_de_artifice", {}))
+        magia_de_artifice["usos_gastos"] = 0
+
+        espacos_atuais = recursos_atuais.setdefault("espacos_de_magia", {})
+        if not isinstance(espacos_atuais, dict):
+            espacos_atuais = {}
+            recursos_atuais["espacos_de_magia"] = espacos_atuais
+        espacos_atuais["espacos_restantes"] = dict(espacos_depois)
+        espacos_atuais["usos_gastos"] = {chave: 0 for chave in espacos_depois}
+        recursos_atuais["troca_truque_disponivel"] = bool(delta_conjuracao.get("troca_truque_disponivel"))
+        recursos_atuais["mudanca_magias_preparadas_disponivel"] = bool(
+            delta_conjuracao.get("mudanca_magias_preparadas_disponivel")
+        )
+
+        itens_antes = list(ficha.get("itens_tinkers_criados") or [])
+        ids_expirados = list(recuperacao.get("delta_mundo", {}).get("remover_ids") or [])
+        ids_expirados_set = {str(item_id) for item_id in ids_expirados}
+        itens_depois = [
+            item for item in itens_antes
+            if not isinstance(item, dict) or str(item.get("id")) not in ids_expirados_set
+        ]
+        ficha["itens_tinkers_criados"] = itens_depois
+
+        resultado["delta_conjuracao"] = delta_conjuracao
+        resultado["delta_inventario"] = recuperacao.get("delta_inventario", {"remover_ids": []})
+        resultado["delta_mundo"] = recuperacao.get("delta_mundo", {"remover_ids": []})
+
+        alteracoes = []
+        if espacos_antes != espacos_depois:
+            alteracoes.append({
+                "personagem_id": ficha.get("id"),
+                "campo": "conjuracao.espacos_restantes",
+                "de": espacos_antes,
+                "para": espacos_depois,
+            })
+        if usos_antes != 0:
+            alteracoes.append({
+                "personagem_id": ficha.get("id"),
+                "campo": "recursos_iniciais.magia_de_artifice.usos_gastos",
+                "de": usos_antes,
+                "para": 0,
+            })
+        if itens_antes != itens_depois:
+            alteracoes.append({
+                "personagem_id": ficha.get("id"),
+                "campo": "itens_tinkers_criados",
+                "de": itens_antes,
+                "para": itens_depois,
+                "ids_expirados": ids_expirados,
+            })
+        if on_alteracao is not None:
+            for alteracao in alteracoes:
+                on_alteracao(ficha, alteracao)
+        return alteracoes
 
     def _coletar_rolagens(
         self,

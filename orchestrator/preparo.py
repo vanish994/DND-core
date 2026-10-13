@@ -96,9 +96,13 @@ def preparar_ataque_de_magia(
     conjuracao = personagem.get("conjuracao") or {}
     chave_magia = normalizar_nome_magia(nome_canonico)
     if circulo == 0:
-        registradas = conjuracao.get("truques") or []
+        registradas = conjuracao.get("truques_conhecidos")
+        if not isinstance(registradas, (list, tuple, set)):
+            registradas = conjuracao.get("truques")
     else:
         registradas = conjuracao.get("magias_preparadas") or conjuracao.get("magias") or []
+    if not isinstance(registradas, (list, tuple, set)):
+        registradas = []
     registradas = {normalizar_nome_magia(n) for n in registradas}
     if not registradas:
         return {

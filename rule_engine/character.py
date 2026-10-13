@@ -1,4 +1,4 @@
-"""Criação e progressão de personagens do Livro do Jogador 2024."""
+"""Criação e progressão de personagens do PHB 2024 e do Artífice 5.5e."""
 
 from __future__ import annotations
 
@@ -23,6 +23,20 @@ ESPECIES = {
     "orc": {"tamanho": "medio", "deslocamento": 9},
     "tiefling": {"tamanho": "pequeno_ou_medio", "deslocamento": 9},
 }
+EQUIPAMENTO_INICIAL_ARTIFICE = {
+    "A": {
+        "itens": [
+            "Armadura de Couro Batido",
+            "Adaga",
+            "Ferramentas de Ladrão",
+            "Ferramentas de Funileiro",
+            "Pacote de Exploração de Masmorras",
+        ],
+        "ouro": 16,
+    },
+    "B": {"itens": [], "ouro": 150},
+}
+
 CLASSES = {
     "barbaro": {"dado_vida": 12, "atributo_primario": "forca"},
     "bardo": {"dado_vida": 8, "atributo_primario": "carisma"},
@@ -58,8 +72,7 @@ SUBCLASSES_RAVENLOFT = {
 TALENTOS = set(FEATS)
 ATRIBUTOS = {"forca", "destreza", "constituicao", "inteligencia", "sabedoria", "carisma"}
 
-# Opções de perícias de classe do PHB 2024. Artífice segue a lista publicada
-# em Tasha's Cauldron of Everything, usada pelo projeto.
+# Opções de perícias de classe: PHB 2024; Artífice conforme Eberron: Forge of the Artificer (2025).
 PERICIAS_CLASSE_OPCOES = {
     "barbaro": {"adestrar_animais", "atletismo", "intimidacao", "natureza", "percepcao", "sobrevivencia"},
     "bardo": set(
@@ -287,6 +300,10 @@ class Personagem:
     heranca_draconica: str | None = None
     ferramenta_antecedente: str | None = None
     equipamento_antecedente: str | None = None
+    equipamento_classe: str | None = None
+    truques_artifice: list[str] = field(default_factory=list)
+    magias_preparadas_artifice: list[str] = field(default_factory=list)
+    id: str | None = None
 
     @property
     def bonus_proficiencia(self) -> int:
@@ -368,6 +385,11 @@ def criar_personagem(fatos: Mapping[str, Any]) -> Personagem:
         invalidas = pericias_classe - PERICIAS_CLASSE_OPCOES[classe]
         if invalidas:
             raise ValueError("Perícia não disponível para esta classe: " + ", ".join(sorted(invalidas)))
+    equipamento_classe = fatos.get("class_equipment", fatos.get("equipamento_classe"))
+    if equipamento_classe is not None:
+        equipamento_classe = str(equipamento_classe).strip().upper()
+        if classe != "artifice" or equipamento_classe not in EQUIPAMENTO_INICIAL_ARTIFICE:
+            raise ValueError("Escolha de equipamento inicial inválida para esta classe")
     ferramenta_artesao = fatos.get("artisan_tool_proficiency", fatos.get("ferramenta_artesao"))
     if ferramenta_artesao:
         ferramenta_artesao = str(ferramenta_artesao).strip()
@@ -406,6 +428,30 @@ def criar_personagem(fatos: Mapping[str, Any]) -> Personagem:
         if escolha_origem.startswith("iniciado_em_magia:")
         else {}
     )
+
+    cantrip_keys = ("artificer_cantrips", "truques_artifice")
+    prepared_keys = ("artificer_prepared_spells", "magias_preparadas_artifice")
+    cantrips_supplied = any(key in fatos for key in cantrip_keys)
+    prepared_supplied = any(key in fatos for key in prepared_keys)
+    if classe != "artifice" and (cantrips_supplied or prepared_supplied):
+        raise ValueError("Escolhas de magia de Artífice só podem ser informadas para essa classe")
+    truques_artifice: list[str] = []
+    magias_preparadas_artifice: list[str] = []
+    if classe == "artifice" and (cantrips_supplied or prepared_supplied):
+        if not (cantrips_supplied and prepared_supplied):
+            raise ValueError("Informe juntos os truques e as magias preparadas do Artífice")
+        truques_artifice = list(fatos.get("artificer_cantrips", fatos.get("truques_artifice")) or [])
+        magias_preparadas_artifice = list(
+            fatos.get("artificer_prepared_spells", fatos.get("magias_preparadas_artifice")) or []
+        )
+        from .spellcasting import progresso_artifice, validar_escolhas_artifice
+
+        progress = progresso_artifice(nivel, atributos["inteligencia"])
+        validar_escolhas_artifice(
+            nivel, atributos["inteligencia"], truques_artifice,
+            magias_preparadas_artifice, progress["espacos_totais"], subclasse,
+        )
+
     return Personagem(
         nome=str(fatos["name"]).strip(),
         especie=especie,
@@ -421,6 +467,10 @@ def criar_personagem(fatos: Mapping[str, Any]) -> Personagem:
         heranca_draconica=heranca_draconica,
         ferramenta_antecedente=ferramenta_antecedente,
         equipamento_antecedente=equipamento_antecedente,
+        equipamento_classe=equipamento_classe,
+        truques_artifice=truques_artifice,
+        magias_preparadas_artifice=magias_preparadas_artifice,
+        id=(str(fatos.get("character_id") or fatos.get("id") or "").strip() or None),
     )
 
 
@@ -441,6 +491,121 @@ def _talento_do_antecedente(antecedente: str, escolha: Any = None) -> str | None
 
 def modificador(valor: int) -> int:
     return (valor - 10) // 2
+
+
+def _inventario_inicial_artifice(personagem: Personagem) -> dict[str, Any] | None:
+    """Constrói itens reais do pacote inicial, prontos para persistir no inventário."""
+    if personagem.classe != "artifice":
+        return None
+    escolha = personagem.equipamento_classe
+    if escolha is None:
+        return {
+            "resultado": "escolha",
+            "opcoes": {
+                chave: {"itens": list(dados["itens"]), "ouro": dados["ouro"]}
+                for chave, dados in EQUIPAMENTO_INICIAL_ARTIFICE.items()
+            },
+        }
+    if escolha == "B":
+        return {"resultado": "pronto", "escolha": "B", "itens": [], "ouro": 150}
+    if not personagem.id:
+        return {
+            "resultado": "requer_dados",
+            "motivo": "character_id_necessario_para_ids_unicos_de_inventario",
+            "escolha": "A",
+            "itens_sem_ids": list(EQUIPAMENTO_INICIAL_ARTIFICE["A"]["itens"]),
+            "ouro": 16,
+        }
+
+    from .catalog import CATALOGO_ARMADURAS, CATALOGO_ARMAS, CATALOGO_EQUIPAMENTOS
+
+    prefix = f"{personagem.id}:artifice-inicial"
+    inventario: list[dict[str, Any]] = []
+    indice = 0
+    for nome in EQUIPAMENTO_INICIAL_ARTIFICE["A"]["itens"]:
+        indice += 1
+        item_id = f"{prefix}:{indice}"
+        if nome == "Armadura de Couro Batido":
+            dados = CATALOGO_ARMADURAS.get("Couro Batido")
+            tipo_item = "armadura"
+        elif nome in CATALOGO_ARMAS:
+            dados = CATALOGO_ARMAS[nome]
+            tipo_item = "arma"
+        elif nome == "Pacote de Exploração de Masmorras":
+            dados = CATALOGO_EQUIPAMENTOS.get(nome)
+            tipo_item = "pacote"
+        else:
+            dados = CATALOGO_EQUIPAMENTOS.get(nome)
+            tipo_item = "ferramenta" if dados and dados.get("categoria") == "ferramenta" else "equipamento"
+
+        if not isinstance(dados, dict):
+            return {"resultado": "erro_catalogo", "motivo": "item_inicial_sem_dados_mecanicos", "item": nome}
+        if tipo_item != "pacote":
+            inventario.append({
+                **dict(dados),
+                "id": item_id,
+                "nome": nome,
+                "quantidade": 1,
+                "tipo_item": tipo_item,
+                "origem": "equipamento_inicial_artifice",
+            })
+            continue
+
+        # O pacote existe como recipiente, mas seu peso é contabilizado pelos
+        # itens internos, não novamente pelo peso total agregado do pacote.
+        conteudo_catalogo = dados.get("conteudo")
+        if not isinstance(conteudo_catalogo, list):
+            return {"resultado": "erro_catalogo", "motivo": "pacote_sem_conteudo_estruturado", "item": nome}
+        ids_conteudo: list[str] = []
+        id_pacote = item_id
+        inventario.append({
+            **dict(dados),
+            "id": id_pacote,
+            "nome": nome,
+            "peso": 0,
+            "quantidade": 1,
+            "tipo_item": "recipiente",
+            "peso_declarado_com_conteudo": dados.get("peso", 0),
+            "conteudo_ids": ids_conteudo,
+            "origem": "equipamento_inicial_artifice",
+        })
+        for conteudo in conteudo_catalogo:
+            nome_conteudo = str(conteudo.get("nome", ""))
+            dados_conteudo = CATALOGO_EQUIPAMENTOS.get(nome_conteudo)
+            if not isinstance(dados_conteudo, dict):
+                return {"resultado": "erro_catalogo", "motivo": "conteudo_de_pacote_sem_dados_mecanicos",
+                        "pacote": nome, "item": nome_conteudo}
+            indice += 1
+            id_conteudo = f"{prefix}:{indice}"
+            ids_conteudo.append(id_conteudo)
+            inventario.append({
+                **dict(dados_conteudo),
+                "id": id_conteudo,
+                "nome": nome_conteudo,
+                "quantidade": int(conteudo.get("quantidade", 1)),
+                "container_id": id_pacote,
+                "tipo_item": "equipamento",
+                "origem": "pacote_exploracao_masmorras",
+            })
+        inventario[indice - len(conteudo_catalogo) - 1]["conteudo_ids"] = list(ids_conteudo)
+
+    soma_peso = sum(float(item.get("peso", 0)) * int(item.get("quantidade", 1)) for item in inventario)
+    peso_catalogo_pacote = float(CATALOGO_EQUIPAMENTOS["Pacote de Exploração de Masmorras"]["peso"])
+    if abs(soma_peso - (peso_catalogo_pacote + sum(
+        float(d.get("peso", 0)) for name, d in
+        [(n, CATALOGO_ARMADURAS.get("Couro Batido", {})) if n == "Armadura de Couro Batido"
+         else (n, CATALOGO_ARMAS.get(n, CATALOGO_EQUIPAMENTOS.get(n, {})))
+         for n in EQUIPAMENTO_INICIAL_ARTIFICE["A"]["itens"] if n != "Pacote de Exploração de Masmorras"]
+    ))) > 0.01:
+        return {"resultado": "erro_catalogo", "motivo": "peso_do_pacote_nao_confere_com_seus_itens"}
+    return {
+        "resultado": "pronto",
+        "escolha": "A",
+        "itens": inventario,
+        "ouro": 16,
+        "peso_total": soma_peso,
+        "aplicar_com": "resolver_inventario",
+    }
 
 
 def ficha_personagem(personagem: Personagem) -> dict[str, Any]:
@@ -480,7 +645,97 @@ def ficha_personagem(personagem: Personagem) -> dict[str, Any]:
         escolhas_pendentes.append(f"{escolha_ferramenta['rotulo']} (antecedente)")
     if equipamento_pendente:
         escolhas_pendentes.append("Equipamento de antecedente (A ou B)")
+    equipamento_classe_pendente = personagem.classe == "artifice" and not personagem.equipamento_classe
+    if equipamento_classe_pendente:
+        escolhas_pendentes.append("Equipamento inicial de Artífice (A ou B)")
+
+    classe_de_armadura: dict[str, Any] = {}
+    from .magic_equipment import calcular_ca
+
+    modificador_destreza = modificador(personagem.atributos["destreza"])
+    classe_de_armadura["sem_armadura"] = calcular_ca({
+        "armor": "nenhuma",
+        "dexterity_modifier": modificador_destreza,
+        "armor_proficient": True,
+    })["ca"]
+    classe_de_armadura["sem_armadura_com_escudo"] = calcular_ca({
+        "armor": "nenhuma",
+        "dexterity_modifier": modificador_destreza,
+        "shield": True,
+        "shield_bonus": 2,
+        "armor_proficient": True,
+    })["ca"]
+    classe_de_armadura["nota_escudo"] = "Valores com escudo são hipotéticos; o equipamento inicial do Artífice não inclui escudo."
+    classe_de_armadura["armadura_inicial"] = None
+    classe_de_armadura["armadura_inicial_com_escudo"] = None
+    if personagem.classe == "artifice" and personagem.equipamento_classe == "A":
+        from .catalog import CATALOGO_ARMADURAS
+
+        armadura_inicial = CATALOGO_ARMADURAS["Couro Batido"]
+        ca_armadura = calcular_ca({
+            "armor": armadura_inicial["categoria"],
+            "armor_bonus": int(armadura_inicial["ca"]) - 10,
+            "dexterity_modifier": modificador_destreza,
+            "armor_proficient": True,
+        })
+        classe_de_armadura["armadura_inicial"] = {
+            "nome": "Armadura de Couro Batido",
+            "ca": ca_armadura["ca"],
+            "base": int(armadura_inicial["ca"]),
+            "equipada_automaticamente": False,
+        }
+        ca_armadura_escudo = calcular_ca({
+            "armor": armadura_inicial["categoria"],
+            "armor_bonus": int(armadura_inicial["ca"]) - 10,
+            "dexterity_modifier": modificador_destreza,
+            "shield": True,
+            "shield_bonus": 2,
+            "armor_proficient": True,
+        })
+        classe_de_armadura["armadura_inicial_com_escudo"] = ca_armadura_escudo["ca"]
+
+    conjuracao_artifice = None
+    recursos_iniciais_artifice = None
+    if personagem.classe == "artifice":
+        from .spellcasting import progresso_artifice
+
+        progresso_magico = progresso_artifice(personagem.nivel, personagem.atributos["inteligencia"])
+        truques_corretos = len(personagem.truques_artifice) == progresso_magico["truques"]
+        preparadas_corretas = len(personagem.magias_preparadas_artifice) == progresso_magico["magias_preparadas"]
+        if not truques_corretos:
+            escolhas_pendentes.append("Truques de Artífice")
+        if not preparadas_corretas:
+            escolhas_pendentes.append("Magias preparadas de Artífice")
+        modificador_int = modificador(personagem.atributos["inteligencia"])
+        recursos_iniciais_artifice = {
+            "magia_de_artifice": {"usos_gastos": 0, "usos_maximos": max(1, modificador_int)},
+            "espacos_de_magia": {
+                "espacos_restantes": dict(progresso_magico["espacos_totais"]),
+                "usos_gastos": {circulo: 0 for circulo in progresso_magico["espacos_totais"]},
+            },
+            "troca_truque_disponivel": False,
+            "mudanca_magias_preparadas_disponivel": False,
+            "itens_tinkers_criados": [],
+        }
+        conjuracao_artifice = {
+            **progresso_magico,
+            "atributo_conjuracao": "inteligencia",
+            "cd_magia": 8 + personagem.bonus_proficiencia + modificador_int,
+            "ataque_magia": personagem.bonus_proficiencia + modificador_int,
+            "truques_conhecidos": list(personagem.truques_artifice),
+            "magias_preparadas": list(personagem.magias_preparadas_artifice),
+            "truque_concedido": "Reparar",
+            "caracteristica_de_classe": "Magia de Artífice",
+            "escolhas_completas": truques_corretos and preparadas_corretas,
+            "foco_magico": [
+                "Ferramentas de Ladrão", "Ferramentas de Funileiro",
+                "Ferramentas de Artesão com proficiência",
+            ],
+            "espacos_totais": dict(progresso_magico["espacos_totais"]),
+        }
+
     return {
+        "id": personagem.id,
         "nome": personagem.nome,
         "especie": personagem.especie,
         "classe": personagem.classe,
@@ -535,7 +790,27 @@ def ficha_personagem(personagem: Personagem) -> dict[str, Any]:
         "ferramenta_pendente": ferramenta_pendente,
         "equipamento_antecedente": {**pacotes, "escolha": personagem.equipamento_antecedente},
         "equipamento_pendente": equipamento_pendente,
-        "escolhas_pendentes": escolhas_pendentes,
+        "equipamento_classe": (
+            {
+                **EQUIPAMENTO_INICIAL_ARTIFICE[personagem.equipamento_classe],
+                "escolha": personagem.equipamento_classe,
+                "itens": [
+                    personagem.ferramenta_artesao if item == "Ferramentas de Artesão (mesmas escolhidas na proficiência)" else item
+                    for item in EQUIPAMENTO_INICIAL_ARTIFICE[personagem.equipamento_classe]["itens"]
+                ],
+            }
+            if personagem.classe == "artifice" and personagem.equipamento_classe
+            else {"A": EQUIPAMENTO_INICIAL_ARTIFICE["A"], "B": EQUIPAMENTO_INICIAL_ARTIFICE["B"], "escolha": None}
+            if personagem.classe == "artifice"
+            else None
+        ),
+        "equipamento_classe_pendente": equipamento_classe_pendente,
+        "inventario_inicial": _inventario_inicial_artifice(personagem),
+        "caracteristicas_classe": caracteristicas_no_nivel(personagem.classe, personagem.nivel),
+        "conjuracao": conjuracao_artifice,
+        "recursos_iniciais": recursos_iniciais_artifice,
+        "classe_de_armadura": classe_de_armadura,
+        "escolhas_pendentes": list(dict.fromkeys(escolhas_pendentes)),
     }
 
 
@@ -548,7 +823,10 @@ def resolver_progressao(fatos: Mapping[str, Any]) -> dict[str, Any]:
     resultado: dict[str, Any] = {"resultado": "nivel_adquirido", "nivel": novo_nivel}
     asi_niveis = {"guerreiro": {4, 6, 8, 12, 14, 16, 19}, "ladino": {4, 8, 10, 12, 16, 19}}
     if novo_nivel in asi_niveis.get(classe, {4, 8, 12, 16, 19}):
-        resultado["escolha"] = "aumento_de_atributo_ou_talento"
+        resultado["escolha"] = (
+            "dadiva_epica_ou_talento" if classe == "artifice" and novo_nivel == 19
+            else "aumento_de_atributo_ou_talento"
+        )
     if novo_nivel == 3:
         resultado["escolha_subclasse"] = True
     resultado["bonus_proficiencia"] = 2 + (novo_nivel - 1) // 4

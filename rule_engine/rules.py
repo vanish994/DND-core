@@ -17,6 +17,7 @@ from .character import (
     criar_personagem,
     gerar_atributos_compra_pontos,
     gerar_atributos_matriz_padrao,
+    ficha_personagem,
     resolver_multiclasse,
     resolver_progressao,
 )
@@ -122,6 +123,17 @@ def _damage_total(facts: Mapping[str, Any], critical: bool = False) -> int:
     if critical:
         dice = dice + dice
     return sum(dice) + int(facts.get("damage_modifier", 0))
+
+
+def _resolver_criacao_personagem(fatos: Mapping[str, Any]) -> dict[str, Any]:
+    """Cria a entidade e deriva a ficha completa usando os mesmos dados persistíveis."""
+    personagem = criar_personagem(fatos)
+    ficha = ficha_personagem(personagem)
+    return {
+        "resultado": "criado",
+        "personagem": personagem,
+        "ficha": ficha,
+    }
 
 
 def build_default_engine() -> RuleEngine:
@@ -995,10 +1007,7 @@ def build_default_engine() -> RuleEngine:
             description="Valida espécie, classe, nível, atributos, subclasse e talentos.",
             priority=50,
             when=lambda f: f["type"] == "character_creation",
-            resolve=lambda f: {
-                "resultado": "criado",
-                "personagem": criar_personagem(f),
-            },
+            resolve=_resolver_criacao_personagem,
             source="D&D 2024 — criação de personagens",
         )
     )
