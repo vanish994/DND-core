@@ -228,9 +228,13 @@ def app(environ: dict[str, Any], start_response: Callable[..., Any]) -> Iterable
         status, corpo, tipo = despachar(metodo, caminho, environ)
     except ErroAPI as erro:
         status, corpo, tipo = _resposta(erro.status, {"erro": erro.mensagem})
-    start_response(
-        f"{status} {'OK' if status < 400 else 'ERRO'}", [("Content-Type", tipo), ("Content-Length", str(len(corpo)))]
-    )
+    # Sem cache: o celular sempre recebe a versão atual de HTML, CSS e JS.
+    cabecalhos = [
+        ("Content-Type", tipo),
+        ("Content-Length", str(len(corpo))),
+        ("Cache-Control", "no-cache, no-store, must-revalidate"),
+    ]
+    start_response(f"{status} {'OK' if status < 400 else 'ERRO'}", cabecalhos)
     return [corpo]
 
 
