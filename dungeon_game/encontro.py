@@ -162,6 +162,7 @@ class Encontro:
         A ficha precisa ter ``ca`` (use :func:`calcular_ca`).
         """
         self.orquestrador = orquestrador
+        self.mapa_id = mapa_id
         self.mapa = carregar_mapa(mapa_id)
         self.board = tabuleiro_do_mapa(self.mapa)
         self.ficha = ficha
@@ -197,6 +198,102 @@ class Encontro:
                 for cid, total in ordem
             ],
         )
+
+    def to_state(self) -> dict[str, Any]:
+        """Exporta somente o estado mutável necessário para retomar o encontro."""
+        efeitos_mutaveis = ("desvantagem_proximo_ataque", "comando_pendente", "caido")
+        return {
+            "versao": 1,
+            "mapa_id": self.mapa_id,
+            "ficha": self.ficha,
+            "deslocamento_pes": self.deslocamento_pes,
+            "movimento_usado_pes": self.movimento_usado_pes,
+            "acao_principal_usada": self.acao_principal_usada,
+            "semente": self._seed,
+            "log": self.log,
+            "posicoes": {cid: [pos.x, pos.y] for cid, pos in self.posicoes.items()},
+            "inimigos": {
+                cid: {
+                    "perfil": inimigo["perfil"],
+                    "pv_atuais": inimigo["pv_atuais"],
+                    "pv_temporarios": inimigo["pv_temporarios"],
+                    "efeitos": {chave: inimigo[chave] for chave in efeitos_mutaveis if chave in inimigo},
+                }
+                for cid, inimigo in self.inimigos.items()
+            },
+            "inimigos_derrotados": sorted(self.inimigos_derrotados),
+            "combatentes": [
+                {"id": c.id, "iniciativa": c.initiative, "is_player": c.is_player}
+                for c in self.session.combatants
+            ],
+            "sessao": {
+                "derrotados": sorted(self.session._defeated),
+                "rodada": self.session.round_number,
+                "indice_turno": self.session._turn_index,
+                "status": self.session.status.value,
+            },
+        }
+
+    @classmethod
+    def from_state(cls, orquestrador: OrquestradorAcoes, state: dict[str, Any]) -> Encontro:
+        """Reconstrói um encontro usando mapas e blocos de estatísticas canônicos."""
+        if state.get("versao") != 1:
+            raise ValueError("versão de snapshot não suportada")
+
+        encontro = cls.__new__(cls)
+        encontro.orquestrador = orquestrador
+        encontro.mapa_id = str(state["mapa_id"])
+        encontro.mapa = carregar_mapa(encontro.mapa_id)
+        encontro.board = tabuleiro_do_mapa(encontro.mapa)
+        encontro.ficha = dict(state["ficha"])
+        encontro.deslocamento_pes = int(state["deslocamento_pes"])
+        encontro.movimento_usado_pes = int(state["movimento_usado_pes"])
+        encontro.acao_principal_usada = bool(state["acao_principal_usada"])
+        encontro._seed = int(state["semente"])
+        encontro.log = list(state["log"])
+
+        encontro.posicoes = {
+            cid: BoardPosition(int(posicao[0]), int(posicao[1]))
+            for cid, posicao in state["posicoes"].items()
+        }
+        encontro.inimigos = {}
+        for cid, salvo in state["inimigos"].items():
+            stats = carregar_inimigo(str(salvo["perfil"]))
+            inimigo = {
+                "perfil": stats["perfil"],
+                "nome": stats["nome"],
+                "monstro": stats["monstro"],
+                "ca": stats["ca"],
+                "pv_maximo": stats["pv"],
+                "pv_atuais": int(salvo["pv_atuais"]),
+                "pv_temporarios": int(salvo["pv_temporarios"]),
+                "alcance_maximo": stats["acao"]["alcance_pes"]["maximo"],
+                "deslocamento_pes": stats["deslocamento_pes"],
+            }
+            for chave in ("desvantagem_proximo_ataque", "comando_pendente", "caido"):
+                if chave in salvo.get("efeitos", {}):
+                    inimigo[chave] = salvo["efeitos"][chave]
+            encontro.inimigos[cid] = inimigo
+
+        encontro.inimigos_derrotados = set(state["inimigos_derrotados"])
+        combatentes = [
+            Combatant(
+                id=str(item["id"]),
+                position=encontro.posicoes[str(item["id"])],
+                initiative=int(item["iniciativa"]),
+                is_player=bool(item["is_player"]),
+            )
+            for item in state["combatentes"]
+        ]
+        encontro.session = CombatSession(encontro.board, combatentes)
+        sessao = state["sessao"]
+        encontro.session._defeated = set(sessao["derrotados"])
+        encontro.session.round_number = int(sessao["rodada"])
+        encontro.session._turn_index = int(sessao["indice_turno"])
+        encontro.session.status = EncounterStatus(sessao["status"])
+        if not 0 <= encontro.session._turn_index < len(encontro.session.combatants):
+            raise ValueError("índice de turno inválido no snapshot")
+        return encontro
 
     # ------------------------------------------------------------------
     def _entrada_jogador(self) -> tuple[int, int]:

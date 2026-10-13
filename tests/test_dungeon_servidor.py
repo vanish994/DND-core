@@ -2,9 +2,12 @@
 
 import io
 import json
+import tempfile
 import unittest
+from pathlib import Path
 
 from dungeon_game import servidor
+from dungeon_game.session_store import MemorySessionStore, SQLiteSessionStore, SessionStoreError
 
 
 def chamar(metodo: str, caminho: str, corpo: dict | None = None) -> tuple[int, dict | bytes]:
@@ -26,9 +29,15 @@ def chamar(metodo: str, caminho: str, corpo: dict | None = None) -> tuple[int, d
     return capturado["status"], json.loads(corpo_bytes)
 
 
+def usar_store_memoria(teste: unittest.TestCase) -> None:
+    store_anterior = servidor.SESSION_STORE
+    teste.addCleanup(setattr, servidor, "SESSION_STORE", store_anterior)
+    servidor.SESSION_STORE = MemorySessionStore()
+
+
 class ApiEncontroTests(unittest.TestCase):
     def setUp(self):
-        servidor.ENCONTROS.clear()
+        usar_store_memoria(self)
 
     def criar(self) -> tuple[str, dict]:
         status, estado = chamar("POST", "/api/encontros", {})
@@ -37,6 +46,7 @@ class ApiEncontroTests(unittest.TestCase):
 
     def test_criar_devolve_estado_com_ca_do_motor_e_iniciativa(self):
         _, estado = self.criar()
+        self.assertEqual(len(estado["encontro_id"]), 32)
         self.assertEqual(estado["personagem"]["ca"], 13)
         self.assertEqual(estado["personagem"]["deslocamento_pes"], 30)
         self.assertEqual(estado["movimento_usado_pes"], 0)
@@ -108,6 +118,46 @@ class ApiEncontroTests(unittest.TestCase):
             estado = corpo["estado"]
             self.assertTrue(estado["de_jogador"] or estado["status"] != "active")
 
+    def test_sessao_sqlite_sobrevive_a_recriacao_do_store(self):
+        with tempfile.TemporaryDirectory() as diretorio:
+            caminho_banco = Path(diretorio) / "encontros.sqlite3"
+            servidor.SESSION_STORE = SQLiteSessionStore(caminho_banco)
+            encontro_id, estado = self.criar()
+            while not estado["de_jogador"]:
+                status, corpo = chamar("POST", f"/api/encontros/{encontro_id}/encerrar", {})
+                self.assertEqual(status, 200)
+                estado = corpo["estado"]
+
+            destino = estado["alcancaveis"][0]
+            status, corpo = chamar(
+                "POST", f"/api/encontros/{encontro_id}/mover", {"x": destino[0], "y": destino[1]}
+            )
+            self.assertEqual(status, 200)
+            estado_esperado = corpo["estado"]
+
+            servidor.SESSION_STORE = SQLiteSessionStore(caminho_banco)
+            status, retomado = chamar("GET", f"/api/encontros/{encontro_id}")
+            self.assertEqual(status, 200)
+            self.assertEqual(retomado["personagem"]["posicao"], estado_esperado["personagem"]["posicao"])
+            self.assertEqual(retomado["movimento_usado_pes"], estado_esperado["movimento_usado_pes"])
+            self.assertEqual(retomado["turno_de"], estado_esperado["turno_de"])
+
+    def test_health_check_retorna_ok_quando_o_store_responde(self):
+        status, corpo = chamar("GET", "/health")
+        self.assertEqual(status, 200)
+        self.assertEqual(corpo, {"status": "ok"})
+
+    def test_health_check_oculta_detalhes_quando_o_store_falha(self):
+        class StoreIndisponivel:
+            def ping(self):
+                raise SessionStoreError("DATABASE_URL=credencial-secreta")
+
+        servidor.SESSION_STORE = StoreIndisponivel()
+        status, corpo = chamar("GET", "/health")
+        self.assertEqual(status, 503)
+        self.assertEqual(corpo, {"erro": "persistencia_indisponivel"})
+        self.assertNotIn("credencial-secreta", str(corpo))
+
     def test_encontro_inexistente_devolve_404(self):
         status, corpo = chamar("GET", "/api/encontros/nao-existe")
         self.assertEqual(status, 404)
@@ -166,7 +216,7 @@ class EstaticosTests(unittest.TestCase):
 
 class ApiMagiaTests(unittest.TestCase):
     def setUp(self):
-        servidor.ENCONTROS.clear()
+        usar_store_memoria(self)
 
     def abrir_turno_do_bardo(self) -> tuple[str, dict]:
         _, estado = chamar("POST", "/api/encontros", {})
