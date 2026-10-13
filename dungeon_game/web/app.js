@@ -227,7 +227,7 @@ function mensagemDica() {
 function renderizarRegistro() {
   const lista = document.getElementById("registro");
   lista.replaceChildren(
-    ...estado.dados.log.slice(-10).map((linha) => {
+    ...estado.dados.log.slice(-6).reverse().map((linha) => {
       const li = document.createElement("li");
       li.textContent = linha;
       return li;
@@ -235,9 +235,27 @@ function renderizarRegistro() {
   );
 }
 
+function ajustarMapa() {
+  // Encaixa o mapa no espaço disponível mantendo a proporção da grade.
+  if (!estado.dados) return;
+  const wrap = document.querySelector(".mapa-wrap");
+  const { largura, altura } = estado.dados.mapa;
+  const aspecto = largura / altura;
+  const area = wrap.getBoundingClientRect();
+  let w = area.width - 4;
+  let h = w / aspecto;
+  if (h > area.height - 4) {
+    h = area.height - 4;
+    w = h * aspecto;
+  }
+  canvas.style.width = `${Math.floor(w)}px`;
+  canvas.style.height = `${Math.floor(h)}px`;
+}
+
 function renderizarTudo() {
   const d = estado.dados;
   desenhar();
+  ajustarMapa();
   renderizarFicha();
   renderizarIniciativa();
   renderizarBarra();
@@ -344,5 +362,8 @@ async function iniciar(novo = false) {
     document.getElementById("dica").classList.add("erro");
   }
 }
+
+window.addEventListener("resize", ajustarMapa);
+window.addEventListener("orientationchange", () => setTimeout(ajustarMapa, 150));
 
 iniciar();
