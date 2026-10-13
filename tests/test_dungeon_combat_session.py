@@ -35,7 +35,7 @@ class CombatSessionTests(unittest.TestCase):
         adapter.execute_rule.return_value = ResultadoAcao("resolved", {"result": "hit"})
         result = self.session.resolve_action(adapter, "hero", {"type": "attack"})
         self.assertEqual(result.status, "resolved")
-        facts = adapter.execute_rule.call_args.args[1]
+        facts = adapter.execute_rule.call_args.args[0]
         self.assertEqual(facts["character_id"], "hero")
 
     def test_defeated_combatant_is_skipped_and_victory_is_recorded(self):
