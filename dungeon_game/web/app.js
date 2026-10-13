@@ -189,7 +189,7 @@ function renderizarFicha() {
     <h1>${p.nome} <small>Nv ${p.nivel} · ${p.classe}</small></h1>
     <div class="barra-vida"><div style="width:${pct}%"></div></div>
     <div class="linha"><span>PV ${p.pv_atuais} / ${p.pv_maximo}</span><span>CA ${p.ca}</span></div>
-    <div class="linha"><span>Deslocamento</span><span>${p.deslocamento_pes} pés</span></div>`;
+    <div class="linha"><span>Movimento</span><span>${estado.dados.movimento_restante_pes}/${p.deslocamento_pes} pés</span></div>`;
 }
 
 function renderizarIniciativa() {
@@ -215,7 +215,10 @@ function renderizarIniciativa() {
 function renderizarBarra() {
   // Ações só existem no turno do personagem e enquanto o combate está ativo.
   // Itens continua desabilitado até ser implementado.
-  const podeAgir = estado.dados.de_jogador && estado.dados.status === "active";
+  const d = estado.dados;
+  const podeAgir = d.de_jogador && d.status === "active";
+  const podeMover = d.movimento_restante_pes > 0;
+  const podeUsarAcaoPrincipal = !d.acao_principal_usada;
   document.querySelectorAll(".botao-acao").forEach((botao) => {
     const acao = botao.dataset.acao;
     const ativo = acao === estado.modo;
@@ -223,8 +226,15 @@ function renderizarBarra() {
     if (acao === "itens") {
       botao.disabled = true;
       botao.title = "Em breve: itens ainda não estão ligados ao combate";
+    } else if (acao === "mover") {
+      botao.disabled = !podeAgir || !podeMover;
+      botao.title = podeMover ? "" : "Deslocamento do turno esgotado";
+    } else if (["atacar", "magias", "truques"].includes(acao)) {
+      botao.disabled = !podeAgir || !podeUsarAcaoPrincipal;
+      botao.title = podeUsarAcaoPrincipal ? "" : "Ação principal já usada neste turno";
     } else {
       botao.disabled = !podeAgir;
+      botao.title = "";
     }
   });
 }
@@ -236,7 +246,22 @@ function mensagemDica() {
     return { texto: d.status === "completed" ? "Vitória! Todos os inimigos caíram." : "Derrota. O Bardo caiu.", erro: false };
   }
   if (!d.de_jogador) return { texto: "Aguardando inimigos…", erro: false };
-  if (estado.modo === "mover") return { texto: "Toque em uma casa destacada para se mover.", erro: false };
+  if (estado.modo === "mover") {
+    if (d.movimento_restante_pes <= 0) {
+      return {
+        texto: d.acao_principal_usada
+          ? "Ação principal e movimento usados; encerre o turno."
+          : "Movimento esgotado; ainda pode atacar ou conjurar.",
+        erro: false,
+      };
+    }
+    return {
+      texto: d.acao_principal_usada
+        ? `Ação principal usada. Restam ${d.movimento_restante_pes} pés de movimento.`
+        : `Toque em uma casa destacada para se mover (${d.movimento_restante_pes} pés restantes).`,
+      erro: false,
+    };
+  }
   if (estado.magia && estado.magia.nome === "Comando" && estado.magia.comando === undefined) {
     return { texto: "Escolha o comando que o inimigo deve cumprir.", erro: false };
   }
@@ -392,6 +417,10 @@ function aplicarEstado(dados) {
 async function executar(acao, corpo) {
   try {
     const resposta = await chamar(`/api/encontros/${estado.id}/${acao}`, corpo);
+    if (acao === "atacar") {
+      estado.modo = "mover";
+      estado.magia = null;
+    }
     aplicarEstado(resposta);
   } catch (erro) {
     estado.erro = erro.message;

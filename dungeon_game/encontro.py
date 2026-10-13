@@ -166,6 +166,8 @@ class Encontro:
         self.board = tabuleiro_do_mapa(self.mapa)
         self.ficha = ficha
         self.deslocamento_pes = int(ficha.get("deslocamento_pes", 30))
+        self.movimento_usado_pes = 0
+        self.acao_principal_usada = False
         self._seed = seed_base
         self.log: list[dict[str, Any]] = []
 
@@ -286,6 +288,8 @@ class Encontro:
     def conjurar(self, magia: str, alvo_id: str | None = None, comando: str | None = None) -> dict[str, Any]:
         """Conjura uma magia do personagem. Só as de efeito resolvido pelo motor são aceitas."""
         ator = self._exigir_turno_do_jogador()
+        if self.acao_principal_usada:
+            return {"status": "bloqueado", "motivo": "acao_principal_usada"}
         if magia not in EFEITOS_EM_COMBATE:
             motivo = MOTIVOS_SEM_EFEITO.get(magia, "magia_nao_disponivel_no_combate")
             return {"status": "bloqueado", "motivo": motivo}
@@ -318,6 +322,7 @@ class Encontro:
         )
         if conjuracao.dados.get("resultado") != "conjurada":
             return {"status": "bloqueado", "motivo": conjuracao.motivo or conjuracao.dados.get("motivo")}
+        self.acao_principal_usada = True
 
         # 2) Efeito, sempre pelo motor.
         if magia == "Curar Ferimentos":
@@ -440,19 +445,31 @@ class Encontro:
         )
         return {"status": "resolvido", "magia": "Comando", "alvo": cid, "resultado": "falhou", "comando": comando}
 
+    @property
+    def movimento_restante_pes(self) -> int:
+        return max(0, self.deslocamento_pes - self.movimento_usado_pes)
+
     def mover(self, destino: tuple[int, int]) -> dict[str, Any]:
         ator = self._exigir_turno_do_jogador()
         origem = self.posicoes[ator]
         alvo = BoardPosition(*destino)
-        alcancaveis = self.board.reachable_positions(origem, self.deslocamento_pes, occupied=self._ocupadas(ator))
+        if self.movimento_restante_pes <= 0:
+            return {"status": "bloqueado", "motivo": "deslocamento_esgotado"}
+        alcancaveis = self.board.reachable_positions(
+            origem, self.movimento_restante_pes, occupied=self._ocupadas(ator)
+        )
         if alvo not in alcancaveis or alvo == origem:
             return {"status": "bloqueado", "motivo": "casa_fora_do_alcance_ou_ocupada"}
+        custo = alcancaveis[alvo]
         self.posicoes[ator] = alvo
-        self.log.append({"evento": "mover", "ator": ator, "para": destino, "custo_pes": alcancaveis[alvo]})
-        return {"status": "resolvido", "custo_pes": alcancaveis[alvo]}
+        self.movimento_usado_pes += custo
+        self.log.append({"evento": "mover", "ator": ator, "para": destino, "custo_pes": custo})
+        return {"status": "resolvido", "custo_pes": custo}
 
     def atacar_jogador(self, alvo_id: str) -> dict[str, Any]:
         ator = self._exigir_turno_do_jogador()
+        if self.acao_principal_usada:
+            return {"status": "bloqueado", "motivo": "acao_principal_usada"}
         if alvo_id not in self.inimigos or alvo_id in self.inimigos_derrotados:
             return {"status": "bloqueado", "motivo": "alvo_invalido"}
         alcance = 5  # Rapieira é corpo a corpo
@@ -469,7 +486,11 @@ class Encontro:
             },
             [self.ficha],
         )
-        if ataque.dados.get("result") != "hit":
+        resultado = ataque.dados.get("result")
+        if resultado not in {"hit", "miss"}:
+            return {"status": "bloqueado", "motivo": ataque.motivo or "ataque_nao_resolvido"}
+        self.acao_principal_usada = True
+        if resultado == "miss":
             self.log.append({"evento": "ataque_jogador", "alvo": alvo_id, "acertou": False})
             return {"status": "resolvido", "acertou": False}
         dados = ataque.dados
@@ -517,6 +538,8 @@ class Encontro:
         if ator != self.ficha["id"]:
             return self._turno_inimigo(ator)
         self.session.end_turn(ator)
+        self.movimento_usado_pes = 0
+        self.acao_principal_usada = False
         return {"status": "resolvido"}
 
     def _exigir_turno_do_jogador(self) -> str:

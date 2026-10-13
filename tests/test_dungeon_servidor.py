@@ -39,6 +39,9 @@ class ApiEncontroTests(unittest.TestCase):
         _, estado = self.criar()
         self.assertEqual(estado["personagem"]["ca"], 13)
         self.assertEqual(estado["personagem"]["deslocamento_pes"], 30)
+        self.assertEqual(estado["movimento_usado_pes"], 0)
+        self.assertEqual(estado["movimento_restante_pes"], 30)
+        self.assertFalse(estado["acao_principal_usada"])
         self.assertEqual(len(estado["iniciativa"]), 3)
         self.assertEqual(estado["mapa"]["largura"], 24)
         self.assertEqual(len(estado["mapa"]["grade"]), 14)
@@ -74,6 +77,29 @@ class ApiEncontroTests(unittest.TestCase):
         status, corpo = chamar("POST", f"/api/encontros/{encontro_id}/mover", {"x": destino[0], "y": destino[1]})
         self.assertEqual(status, 200)
         self.assertEqual(corpo["estado"]["personagem"]["posicao"], destino)
+
+    def test_movimento_acumula_em_chamadas_sucessivas_e_bloqueia_excesso(self):
+        encontro_id, estado = self.criar()
+        if not estado["de_jogador"]:
+            _, corpo = chamar("POST", f"/api/encontros/{encontro_id}/encerrar", {})
+            estado = corpo["estado"]
+
+        status, corpo = chamar("POST", f"/api/encontros/{encontro_id}/mover", {"x": 5, "y": 7})
+        self.assertEqual(status, 200)
+        self.assertEqual(corpo["estado"]["movimento_usado_pes"], 15)
+        self.assertEqual(corpo["estado"]["movimento_restante_pes"], 15)
+
+        status, corpo = chamar("POST", f"/api/encontros/{encontro_id}/mover", {"x": 8, "y": 7})
+        self.assertEqual(status, 200)
+        self.assertEqual(corpo["estado"]["movimento_usado_pes"], 30)
+        self.assertEqual(corpo["estado"]["movimento_restante_pes"], 0)
+
+        status, corpo = chamar("POST", f"/api/encontros/{encontro_id}/mover", {"x": 9, "y": 7})
+        self.assertEqual(status, 409)
+        self.assertEqual(corpo["erro"], "deslocamento_esgotado")
+        status, estado = chamar("GET", f"/api/encontros/{encontro_id}")
+        self.assertEqual(status, 200)
+        self.assertEqual(estado["personagem"]["posicao"], [8, 7])
 
     def test_encerrar_turno_leva_os_inimigos_ate_o_jogador(self):
         encontro_id, estado = self.criar()
@@ -159,6 +185,20 @@ class ApiMagiaTests(unittest.TestCase):
         personagem = corpo["estado"]["personagem"]
         self.assertEqual(personagem["pv_atuais"], corpo["resultado"]["pv_atuais"])
         self.assertLessEqual(personagem["pv_atuais"], personagem["pv_maximo"])
+        self.assertTrue(corpo["estado"]["acao_principal_usada"])
+        curar = next(m for m in corpo["estado"]["magias"] if m["nome"] == "Curar Ferimentos")
+        self.assertFalse(curar["disponivel"])
+        self.assertEqual(curar["motivo"], "Ação principal já usada neste turno")
+
+        status, repeticao = chamar(
+            "POST", f"/api/encontros/{encontro_id}/conjurar", {"magia": "Curar Ferimentos"}
+        )
+        self.assertEqual(status, 409)
+        self.assertEqual(repeticao["erro"], "acao_principal_usada")
+
+        status, ataque = chamar("POST", f"/api/encontros/{encontro_id}/atacar", {"alvo": "goblin-1"})
+        self.assertEqual(status, 409)
+        self.assertEqual(ataque["erro"], "acao_principal_usada")
 
 
 if __name__ == "__main__":

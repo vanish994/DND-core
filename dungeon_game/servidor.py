@@ -69,10 +69,19 @@ def estado(encontro: Encontro, identificador: str) -> dict[str, Any]:
     if de_jogador:
         origem = encontro.posicoes[jogador_id]
         mapa = encontro.board.reachable_positions(
-            origem, encontro.deslocamento_pes, occupied=encontro._ocupadas(jogador_id)
+            origem, encontro.movimento_restante_pes, occupied=encontro._ocupadas(jogador_id)
         )
         alcancaveis = sorted([p.x, p.y] for p in mapa if p != origem)
-        alvos = encontro.alvos_ao_alcance(jogador_id, 5)
+        if not encontro.acao_principal_usada:
+            alvos = encontro.alvos_ao_alcance(jogador_id, 5)
+    magias = encontro.magias_do_personagem()
+    if encontro.acao_principal_usada:
+        magias = [
+            {**magia, "disponivel": False, "motivo": "Ação principal já usada neste turno"}
+            if magia["disponivel"]
+            else magia
+            for magia in magias
+        ]
     nomes = {jogador_id: ficha["nome"], **{cid: i["nome"] for cid, i in encontro.inimigos.items()}}
     return {
         "encontro_id": identificador,
@@ -80,6 +89,9 @@ def estado(encontro: Encontro, identificador: str) -> dict[str, Any]:
         "rodada": encontro.session.round_number,
         "turno_de": encontro.turno_de,
         "de_jogador": de_jogador,
+        "movimento_usado_pes": encontro.movimento_usado_pes,
+        "movimento_restante_pes": encontro.movimento_restante_pes,
+        "acao_principal_usada": encontro.acao_principal_usada,
         "mapa": {
             "id": encontro.mapa["id"],
             "nome": encontro.mapa["nome"],
@@ -118,8 +130,8 @@ def estado(encontro: Encontro, identificador: str) -> dict[str, Any]:
         ],
         "alcancaveis": alcancaveis,
         "alvos": alvos,
-        "magias": encontro.magias_do_personagem(),
-        "alvos_magia": encontro.alvos_magia() if de_jogador else [],
+        "magias": magias,
+        "alvos_magia": encontro.alvos_magia() if de_jogador and not encontro.acao_principal_usada else [],
         "log": [_resumo(evento, nomes) for evento in encontro.log[-12:]],
     }
 

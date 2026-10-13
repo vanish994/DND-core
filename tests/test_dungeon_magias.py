@@ -107,10 +107,11 @@ class TestConjurarRecusas(unittest.TestCase):
     def test_comando_fora_de_alcance_e_recusado(self):
         encontro = novo_encontro()
         no_turno_do_bardo(encontro)
-        resultado = encontro.conjurar("Comando", "esqueleto-1", "parar")
         encontro.posicoes["esqueleto-1"] = encontro.posicoes["esqueleto-1"].__class__(23, 13)
         resultado = encontro.conjurar("Comando", "esqueleto-1", "parar")
         self.assertEqual(resultado["motivo"], "alvo_fora_do_alcance")
+        self.assertFalse(encontro.acao_principal_usada)
+        self.assertEqual(encontro.ficha["conjuracao"]["espacos_restantes"], {"1": 2})
 
     def test_curar_ferimentos_com_alvo_outro_e_recusada(self):
         encontro = novo_encontro()

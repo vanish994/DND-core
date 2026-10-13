@@ -87,12 +87,88 @@ class MovimentoEAlcanceTests(unittest.TestCase):
             encontro.encerrar_turno()
         resultado = encontro.mover((5, 7))  # 3 casas
         self.assertEqual(resultado, {"status": "resolvido", "custo_pes": 15})
+        self.assertEqual(encontro.movimento_usado_pes, 15)
+        self.assertEqual(encontro.movimento_restante_pes, 15)
+
+    def test_movimentos_sucessivos_compartilham_o_deslocamento_do_turno(self):
+        encontro = novo_encontro()
+        while encontro.turno_de != "bardo-1":
+            encontro.encerrar_turno()
+
+        self.assertEqual(encontro.mover((5, 7)), {"status": "resolvido", "custo_pes": 15})
+        self.assertEqual(encontro.mover((8, 7)), {"status": "resolvido", "custo_pes": 15})
+        self.assertEqual(encontro.movimento_usado_pes, 30)
+        self.assertEqual(encontro.movimento_restante_pes, 0)
+        self.assertEqual(
+            encontro.mover((9, 7)), {"status": "bloqueado", "motivo": "deslocamento_esgotado"}
+        )
 
     def test_ataque_fora_do_alcance_e_recusado(self):
         encontro = novo_encontro()
         while encontro.turno_de != "bardo-1":
             encontro.encerrar_turno()
         self.assertEqual(encontro.atacar_jogador("goblin-1")["motivo"], "alvo_fora_do_alcance")
+        self.assertFalse(encontro.acao_principal_usada)
+
+    def test_acao_principal_so_pode_ser_usada_uma_vez_e_nao_gasta_movimento(self):
+        encontro = novo_encontro()
+        while encontro.turno_de != "bardo-1":
+            encontro.encerrar_turno()
+        encontro.posicoes["goblin-1"] = BoardPosition(5, 7)
+
+        self.assertEqual(encontro.mover((4, 7)), {"status": "resolvido", "custo_pes": 10})
+        encontro._proxima_semente = lambda: 25  # 1 natural: o ataque erra, mas a ação é gasta.
+        ataque = encontro.atacar_jogador("goblin-1")
+        self.assertEqual(ataque, {"status": "resolvido", "acertou": False})
+        self.assertTrue(encontro.acao_principal_usada)
+        pv_goblin = encontro.inimigos["goblin-1"]["pv_atuais"]
+        self.assertEqual(
+            encontro.atacar_jogador("goblin-1"), {"status": "bloqueado", "motivo": "acao_principal_usada"}
+        )
+        self.assertEqual(encontro.inimigos["goblin-1"]["pv_atuais"], pv_goblin)
+
+        # O personagem ainda pode terminar de se mover depois de atacar.
+        self.assertEqual(encontro.mover((2, 7)), {"status": "resolvido", "custo_pes": 10})
+        self.assertEqual(encontro.movimento_usado_pes, 20)
+        self.assertEqual(encontro.movimento_restante_pes, 10)
+
+    def test_conjuracao_gasta_acao_e_acoes_invalidas_nao_a_gastam(self):
+        encontro = novo_encontro()
+        while encontro.turno_de != "bardo-1":
+            encontro.encerrar_turno()
+        espacos_antes = encontro.ficha["conjuracao"]["espacos_restantes"]["1"]
+
+        bloqueada = encontro.conjurar("Luz")
+        self.assertEqual(bloqueada["status"], "bloqueado")
+        self.assertFalse(encontro.acao_principal_usada)
+
+        conjuracao = encontro.conjurar("Curar Ferimentos")
+        self.assertEqual(conjuracao["status"], "resolvido")
+        self.assertTrue(encontro.acao_principal_usada)
+        espacos_apos = encontro.ficha["conjuracao"]["espacos_restantes"]["1"]
+        self.assertEqual(espacos_apos, espacos_antes - 1)
+        self.assertEqual(
+            encontro.conjurar("Curar Ferimentos"),
+            {"status": "bloqueado", "motivo": "acao_principal_usada"},
+        )
+        self.assertEqual(encontro.ficha["conjuracao"]["espacos_restantes"]["1"], espacos_apos)
+
+    def test_encerrar_turno_restaura_movimento_e_acao_principal(self):
+        encontro = novo_encontro()
+        while encontro.turno_de != "bardo-1":
+            encontro.encerrar_turno()
+        encontro.mover((3, 7))
+        encontro.conjurar("Curar Ferimentos")
+        self.assertGreater(encontro.movimento_usado_pes, 0)
+        self.assertTrue(encontro.acao_principal_usada)
+
+        encontro.encerrar_turno()
+        while encontro.status is EncounterStatus.ACTIVE and encontro.turno_de != "bardo-1":
+            encontro.encerrar_turno()
+
+        self.assertEqual(encontro.movimento_usado_pes, 0)
+        self.assertEqual(encontro.movimento_restante_pes, encontro.deslocamento_pes)
+        self.assertFalse(encontro.acao_principal_usada)
 
     def test_acao_fora_do_turno_nao_e_permitida(self):
         encontro = novo_encontro()
