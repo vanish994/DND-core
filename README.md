@@ -12,6 +12,8 @@ Núcleo mecânico determinístico para D&D, com uma experiência web responsiva 
 
 A implementação do Mestre de Jogo (MJ), prompts, clientes de LLM e campanhas não fazem parte deste repositório.
 
+Agentes que forem desenvolver ou revisar o projeto devem começar pelo [guia de desenvolvimento](AGENTS.md).
+
 ## Arquitetura
 
 ```text
