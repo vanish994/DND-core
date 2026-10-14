@@ -1545,3 +1545,7 @@ select:focus-visible {
   .bottom { height: 64px; }
   .action, .turn-button { height: 48px; }
 }
+
+
+/* Registro de combate removido da interface para liberar o mapa */
+.combat-log { display: none !important; }
