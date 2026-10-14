@@ -1319,3 +1319,42 @@ select:focus-visible {
 @media (max-width: 1050px) {
   .iniciativa-wrap { top: 56px; }
 }
+
+
+/* Correção de escala: prioriza área útil vertical para o mapa tático */
+.game, .main-column, .arena, .area-mapa, .mapa-wrap { min-height: 0; min-width: 0; }
+.main-column {
+  grid-template-rows: 46px minmax(0, 1fr) 84px !important;
+  height: 100dvh;
+  overflow: hidden;
+}
+.topbar { min-height: 0; padding-top: 3px; padding-bottom: 3px; }
+.bottom {
+  min-height: 0;
+  height: 84px;
+  grid-template-columns: minmax(0, 1fr) 160px;
+  padding: 4px 8px;
+  gap: 8px;
+  overflow: hidden;
+}
+.character-panel { min-height: 0; overflow: hidden; padding: 4px 8px; }
+.portrait { height: 54px; flex-basis: 48px; width: 48px; }
+#retrato { width: 42px; height: 42px; }
+.stats { flex-basis: 190px; min-width: 110px; }
+.action { height: 62px; width: clamp(42px, 5.4vw, 68px); }
+.actions { min-width: 0; overflow: hidden; gap: 5px; }
+.turn-button { min-height: 0; font-size: 12px; }
+.arena, .area-mapa, .mapa-wrap { height: 100%; }
+#mapa { max-width: 100%; max-height: 100%; }
+@media (max-width: 1050px) {
+  .main-column { grid-template-rows: 44px minmax(0, 1fr) 78px !important; }
+  .bottom { height: 78px; grid-template-columns: minmax(0, 1fr) 120px; padding: 3px 5px; }
+  .portrait { height: 46px; width: 40px; flex-basis: 40px; }
+  #retrato { width: 34px; height: 34px; }
+  .action { height: 58px; width: clamp(34px, 5vw, 52px); }
+}
+@media (max-height: 560px) and (orientation: landscape) {
+  .main-column { grid-template-rows: 38px minmax(0, 1fr) 68px !important; }
+  .bottom { height: 68px; }
+  .action { height: 52px; }
+}
