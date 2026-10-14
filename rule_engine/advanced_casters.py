@@ -87,11 +87,36 @@ def resolver_bruxo(fatos: dict) -> dict:
             return {"resultado": "bloqueado", "motivo": "nivel_sem_arcana_mistica"}
         return {"resultado": "resolvido", "circulo": circulo_arcana, "usos": 1, "recarga": "descanso_longo"}
     if acao == "progressao":
+        truques = 2 if nivel < 4 else 3 if nivel < 10 else 4
+        magias_preparadas = {
+            1: 2,
+            2: 3,
+            3: 4,
+            4: 5,
+            5: 6,
+            6: 7,
+            7: 8,
+            8: 9,
+            9: 10,
+            10: 10,
+            11: 11,
+            12: 11,
+            13: 12,
+            14: 12,
+            15: 13,
+            16: 13,
+            17: 14,
+            18: 14,
+            19: 15,
+            20: 15,
+        }[nivel]
         return {
             "resultado": "resolvido",
             "espacos": espacos,
             "circulo": circulo,
             "invocacoes": invocacoes,
+            "truques": truques,
+            "magias_preparadas": magias_preparadas,
             "atributo_conjuracao": "carisma",
         }
     return {"resultado": "bloqueado", "motivo": "acao_desconhecida", "acao": acao}
@@ -122,10 +147,35 @@ def resolver_feiticeiro(fatos: dict) -> dict:
     if acao == "apoteose_arcana":
         return {"resultado": "resolvido", "metamagia_gratuita_por_turno": True}
     if acao == "progressao":
+        truques = 4 if nivel < 4 else 5 if nivel < 10 else 6
+        magias_preparadas = {
+            1: 2,
+            2: 4,
+            3: 6,
+            4: 7,
+            5: 9,
+            6: 10,
+            7: 11,
+            8: 12,
+            9: 14,
+            10: 15,
+            11: 16,
+            12: 16,
+            13: 17,
+            14: 17,
+            15: 18,
+            16: 18,
+            17: 19,
+            18: 20,
+            19: 21,
+            20: 22,
+        }[nivel]
         return {
             "resultado": "resolvido",
             "pontos_de_feiticaria": pontos,
             "espacos": list(FULL_CASTER_SLOTS[nivel]),
+            "truques": truques,
+            "magias_preparadas": magias_preparadas,
             "atributo_conjuracao": "carisma",
         }
     return {"resultado": "bloqueado", "motivo": "acao_desconhecida", "acao": acao}
@@ -137,9 +187,33 @@ def resolver_guardiao(fatos: dict) -> dict:
         return {"resultado": "bloqueado", "motivo": "nivel_invalido"}
     acao = str(fatos.get("acao", "progressao")).lower()
     if acao == "progressao":
+        magias_preparadas = {
+            1: 2,
+            2: 3,
+            3: 4,
+            4: 5,
+            5: 6,
+            6: 6,
+            7: 7,
+            8: 7,
+            9: 9,
+            10: 9,
+            11: 10,
+            12: 10,
+            13: 11,
+            14: 11,
+            15: 12,
+            16: 12,
+            17: 14,
+            18: 14,
+            19: 15,
+            20: 15,
+        }[nivel]
         return {
             "resultado": "resolvido",
             "espacos": HALF_CASTER_SLOTS[nivel],
+            "truques": 0,
+            "magias_preparadas": magias_preparadas,
             "atributo_conjuracao": "sabedoria",
             "inimigo_favorito_usos": (
                 2 if nivel < 5 else 3 if nivel < 9 else 4 if nivel < 13 else 5 if nivel < 17 else 6

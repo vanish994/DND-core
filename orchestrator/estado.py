@@ -133,3 +133,19 @@ def consumir_espaco(personagem: dict[str, Any], slot: str) -> dict[str, Any]:
         "para": restantes[str(slot)],
         "espacos_restantes": restantes,
     }
+
+
+def aplicar_recompensa(personagem: dict[str, Any], *, xp: int = 0, ouro_po: int = 0) -> dict[str, Any]:
+    """Soma XP e peças de ouro (PO) à ficha e descreve a alteração aplicada."""
+    xp_ganho = max(0, int(xp))
+    ouro_ganho = max(0, int(ouro_po))
+    xp_anterior = int(personagem.get("xp", 0))
+    ouro_anterior = int(personagem.get("ouro_po", 0))
+    personagem["xp"] = xp_anterior + xp_ganho
+    personagem["ouro_po"] = ouro_anterior + ouro_ganho
+    return {
+        "personagem_id": personagem.get("id"),
+        "campo": "recompensa",
+        "xp": {"de": xp_anterior, "para": personagem["xp"], "ganho": xp_ganho},
+        "ouro_po": {"de": ouro_anterior, "para": personagem["ouro_po"], "ganho": ouro_ganho},
+    }

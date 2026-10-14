@@ -539,13 +539,58 @@ def ficha_personagem(personagem: Personagem) -> dict[str, Any]:
     }
 
 
+TABELA_XP_POR_NIVEL = {
+    1: 0,
+    2: 300,
+    3: 900,
+    4: 2700,
+    5: 6500,
+    6: 14000,
+    7: 23000,
+    8: 34000,
+    9: 48000,
+    10: 64000,
+    11: 85000,
+    12: 100000,
+    13: 120000,
+    14: 140000,
+    15: 165000,
+    16: 195000,
+    17: 225000,
+    18: 265000,
+    19: 305000,
+    20: 355000,
+}
+
+
 def resolver_progressao(fatos: Mapping[str, Any]) -> dict[str, Any]:
     nivel_atual = int(fatos["current_level"])
     novo_nivel = nivel_atual + 1
     classe = str(fatos["class"]).lower()
     if classe not in CLASSES or not 1 <= nivel_atual < 20:
         raise ValueError("Progressão de nível inválida")
-    resultado: dict[str, Any] = {"resultado": "nivel_adquirido", "nivel": novo_nivel}
+    xp_necessario = TABELA_XP_POR_NIVEL[novo_nivel]
+    if "xp" in fatos and fatos["xp"] is not None:
+        xp_atual = int(fatos["xp"])
+        if xp_atual < xp_necessario:
+            return {
+                "resultado": "xp_insuficiente",
+                "nivel": nivel_atual,
+                "xp_atual": xp_atual,
+                "xp_necessario": xp_necessario,
+            }
+    dado_vida = CLASSES[classe]["dado_vida"]
+    mod_con = int(fatos.get("constitution_modifier", 0))
+    talentos = {str(t).lower() for t in (fatos.get("talentos") or ())}
+    pv_ganhos = max(1, dado_vida // 2 + 1 + mod_con + (2 if "vigoroso" in talentos else 0))
+    resultado: dict[str, Any] = {
+        "resultado": "nivel_adquirido",
+        "nivel": novo_nivel,
+        "dado_vida": dado_vida,
+        "pv_ganhos": pv_ganhos,
+        "xp_necessario": xp_necessario,
+        "xp_proximo_nivel": TABELA_XP_POR_NIVEL.get(novo_nivel + 1),
+    }
     asi_niveis = {"guerreiro": {4, 6, 8, 12, 14, 16, 19}, "ladino": {4, 8, 10, 12, 16, 19}}
     if novo_nivel in asi_niveis.get(classe, {4, 8, 12, 16, 19}):
         resultado["escolha"] = "aumento_de_atributo_ou_talento"

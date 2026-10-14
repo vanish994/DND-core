@@ -15,7 +15,7 @@ canônico sem duplicar efeitos e devolve um resultado estruturado.
 """
 
 from .contratos import FERRAMENTAS_CONHECIDAS, Acao, ResultadoAcao
-from .estado import consumir_espaco, resumo_autoritativo, texto_equipamento_antecedente
+from .estado import aplicar_recompensa, consumir_espaco, resumo_autoritativo, texto_equipamento_antecedente
 from .orquestrador import OrquestradorAcoes
 from .rolagens import normalizar_rolagem
 
@@ -24,6 +24,7 @@ __all__ = [
     "Acao",
     "ResultadoAcao",
     "OrquestradorAcoes",
+    "aplicar_recompensa",
     "consumir_espaco",
     "normalizar_rolagem",
     "resumo_autoritativo",

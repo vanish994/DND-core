@@ -2,6 +2,10 @@
   "id": "cripta-inicial",
   "nome": "Cripta Inicial",
   "ambiente": "cripta",
+  "andar": 1,
+  "sala": 1,
+  "proxima_sala": "santuario_circular",
+  "recompensa_ouro_po": 15,
   "casa_pes": 5,
   "legenda": {
     ".": {"tipo": "chao", "nome": "Chão de pedra"},

@@ -1,0 +1,41 @@
+{
+  "id": "catacumba-dos-mortos",
+  "nome": "Catacumba dos Mortos",
+  "ambiente": "cripta",
+  "andar": 1,
+  "sala": 3,
+  "proxima_sala": "camara_profana",
+  "recompensa_ouro_po": 45,
+  "casa_pes": 5,
+  "legenda": {
+    ".": {"tipo": "chao", "nome": "Chão de pedra"},
+    "#": {"tipo": "parede", "nome": "Parede", "bloqueia_movimento": true, "bloqueia_visao": true},
+    "+": {"tipo": "porta", "nome": "Porta", "bloqueia_movimento": true, "bloqueia_visao": true},
+    "~": {"tipo": "agua", "nome": "Água estagnada", "custo_movimento": 2},
+    "o": {"tipo": "pilar", "nome": "Sarcófago de pedra", "bloqueia_movimento": true, "bloqueia_visao": false},
+    "t": {"tipo": "tocha", "nome": "Tocha fúnebre", "bloqueia_movimento": true, "bloqueia_visao": false}
+  },
+  "entradas": {
+    "jogador": [{"x": 2, "y": 8}],
+    "inimigos": [{"x": 13, "y": 3}, {"x": 14, "y": 8}, {"x": 17, "y": 12}]
+  },
+  "grade": [
+    "##########################",
+    "#....t..............t....#",
+    "#........................#",
+    "#...o....o...............#",
+    "#........................#",
+    "#........~~~~............#",
+    "#........~~~~.....o......#",
+    "#........................#",
+    "+.......................+#",
+    "#........................#",
+    "#...o....o........o......#",
+    "#........................#",
+    "#........................#",
+    "#....t..............t....#",
+    "#........................#",
+    "##########################"
+  ],
+  "fonte": "Mapa original do DND-core; não derivado de outras obras."
+}

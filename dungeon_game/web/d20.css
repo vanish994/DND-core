@@ -1,0 +1,92 @@
+/**
+ * Dados & Dragões — animação visual do D20 (sprite sheet 256×32, 8 quadros de 32×32).
+ * O resultado mecânico real vem exclusivamente do Rule Engine.
+ */
+
+.d20 {
+  --d20-size: 40px;
+  width: var(--d20-size);
+  height: var(--d20-size);
+  display: inline-block;
+  flex: 0 0 var(--d20-size);
+  background-image: url("/static/assets/d20-spritesheet.png");
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-size: calc(var(--d20-size) * 8) var(--d20-size);
+  image-rendering: pixelated;
+  cursor: pointer;
+  user-select: none;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.75));
+  transition: transform 0.15s ease;
+}
+
+.d20:hover {
+  transform: scale(1.08);
+}
+
+.d20.is-rolling {
+  animation: d20-roll 0.48s steps(8) 2;
+}
+
+@keyframes d20-roll {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: calc(var(--d20-size) * -8) 0;
+  }
+}
+
+.d20-tray {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border: 1px solid #70502c;
+  border-radius: 5px;
+  background: linear-gradient(145deg, #241b13, #120f0e);
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.65);
+}
+
+.d20-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  min-width: 78px;
+}
+
+.d20-titulo {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 10px;
+  color: #a49a8c;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.d20-resultado {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 700;
+  font-size: 12.5px;
+  color: #ffdc91;
+  white-space: nowrap;
+}
+
+.d20-resultado.critico {
+  color: #65f08e;
+}
+
+.d20-resultado.falha {
+  color: #ff7b7b;
+}
+
+@media (max-width: 820px) {
+  .d20 {
+    --d20-size: 32px;
+  }
+  .d20-info {
+    min-width: 60px;
+  }
+  .d20-resultado {
+    font-size: 11px;
+  }
+}

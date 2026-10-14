@@ -65,7 +65,8 @@ def cd_de_magia(engine: RuleEngine, personagem: Mapping[str, Any]) -> int | None
         return None
     nivel = max(1, int(personagem.get("nivel", 1) or 1))
     proficiencia = int(personagem.get("bonus_proficiencia", 2 + (nivel - 1) // 4))
-    return 8 + proficiencia + modificador
+    bonus_extra = int(personagem.get("bonus_cd_magia", 0) or 0)
+    return 8 + proficiencia + modificador + bonus_extra
 
 
 def preparar_ataque_de_magia(

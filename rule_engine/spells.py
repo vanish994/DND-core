@@ -97,6 +97,8 @@ _ALIAS_PARA_2024 = (
     ("Respiração Aquática", "Respirar na Água"),
     ("Aquecer Metal", "Esquentar Metal"),
     ("Criar Alimentos e Água", "Criar Comida e Água"),
+    ("Marca do Caçador", "Marca do Predador"),
+    ("Rajada Mística", "Raio Místico"),
 )
 
 
@@ -734,11 +736,42 @@ for _antigo, _novo in _ALIAS_PARA_2024:
     if _entrada is not None:
         _entrada["alias_de"] = _novo
 
+for _m in MAGIAS.values():
+    if _m["nome"] == "Marca do Predador":
+        _m["duracao"] = "concentração, até 1 hora"
+        _m.setdefault(
+            "efeito",
+            "Marca uma criatura a até 27 m como Ação Bônus; ataques contra ela causam +1d6 energético",
+        )
+    elif _m["nome"] == "Raio de Bruxa":
+        _m["duracao"] = "concentração, até 1 minuto"
+        _m.setdefault("efeito", "Ataque mágico à distância a até 18 m; 2d12 elétrico no acerto")
+        _m.setdefault("upcasting", {"dano": "+1d12 por círculo acima de 1"})
+
 
 # Mecânicas estruturadas para integrar o resultado da magia ao combate.
 # Fórmulas são devolvidas como dados; o motor de combate continua responsável
 # por rolagens, salvaguardas, aplicação de dano e atualização de estado.
 MECANICAS_MAGIA: dict[str, dict[str, Any]] = {
+    "marca do predador": {
+        "tipo": "marca_alvo",
+        "dados_dano_extra": "1d6",
+        "tipo_dano": "energetico",
+        "alcance_m": 27,
+        "acao": "bonus",
+        "concentracao": True,
+        "duracao": "ate_1_hora",
+    },
+    "raio de bruxa": {
+        "tipo": "ataque_magico",
+        "dados_dano_base": "2d12",
+        "dados_dano_por_nivel": "1d12",
+        "tipo_dano": "eletrico",
+        "alcance_m": 18,
+        "acao": "acao",
+        "concentracao": True,
+        "duracao": "ate_1_minuto",
+    },
     "bolha ácida": {
         "tipo": "dano_multialvo",
         "dados_dano_base": "1d6",

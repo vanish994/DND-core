@@ -3,69 +3,190 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <title>DND-core · Encontro de cripta</title>
+  <title>Dados &amp; Dragões — Combate Tático · Encontro de cripta</title>
+  <link rel="icon" type="image/png" href="/static/assets/logo.png">
   <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="/static/d20.css">
 </head>
 <body>
   <div class="girar" role="alert">Gire o celular para a horizontal para jogar.</div>
 
-  <header class="topo">
-    <section class="ficha" id="ficha" aria-label="Ficha do personagem"></section>
-    <div class="andar" id="andar">Carregando…</div>
-    <section class="iniciativa" aria-label="Ordem de iniciativa">
-      <h2>Ordem de Iniciativa</h2>
-      <ol id="iniciativa"></ol>
-    </section>
-    <div class="controles-vista" aria-label="Controles de visualização">
-      <button id="painel-toggle" class="controle-vista" type="button" aria-controls="painel" aria-expanded="false" title="Abrir registro e opções">
-        <span class="icone-vista" aria-hidden="true">☷</span><span class="rotulo">Registro</span>
-      </button>
-      <button id="tela-cheia" class="controle-vista" type="button" aria-label="Ativar tela cheia" aria-pressed="false" title="Ativar tela cheia">
-        <span class="icone-vista" aria-hidden="true">⛶</span><span class="rotulo">Tela cheia</span>
-      </button>
-    </div>
-  </header>
-
-  <main class="area-mapa">
-    <div class="mapa-wrap">
-      <canvas id="mapa" aria-label="Mapa de batalha"></canvas>
-      <p class="dica" id="dica" role="status">Carregando encontro…</p>
-      <div class="fim" id="fim" hidden>
-        <p id="fim-texto"></p>
-        <button id="novo" type="button">Novo encontro</button>
+  <div class="game">
+    <aside class="sidebar" aria-label="Ferramentas da interface">
+      <div class="logo-badge" title="Dados &amp; Dragões">
+        <img src="/static/assets/logo.png" class="game-logo" alt="Dados &amp; Dragões" width="44" height="44">
       </div>
-    </div>
-    <aside class="painel" id="painel" aria-label="Painel do combate" hidden>
-      <div class="painel-cabecalho">
-        <h2>Painel do combate</h2>
-        <button id="painel-fechar" class="fechar-painel" type="button" aria-label="Fechar painel">×</button>
-      </div>
-      <ul class="opcoes" id="opcoes" aria-label="Magias e truques"></ul>
-      <h3 class="registro-titulo">Registro recente</h3>
-      <ul class="registro" id="registro" aria-label="Registro do combate"></ul>
+      <button id="tool-visao" class="tool active" type="button" title="Visão de combate">◎</button>
+      <button id="tool-centralizar" class="tool" type="button" title="Centralizar mapa">⌖</button>
+      <button id="painel-toggle" class="tool controle-vista" type="button" aria-controls="painel" aria-expanded="false" title="Abrir magias e registro">
+        <span class="icone-vista" aria-hidden="true">▤</span><span class="rotulo" hidden>Registro</span>
+      </button>
+      <button id="tela-cheia" class="tool controle-vista" type="button" aria-label="Ativar tela cheia" aria-pressed="false" title="Ativar tela cheia">
+        <span class="icone-vista" aria-hidden="true">⛶</span><span class="rotulo" hidden>Tela cheia</span>
+      </button>
     </aside>
-  </main>
 
-  <nav class="barra" aria-label="Ações do turno">
-    <button type="button" data-acao="mover" class="botao-acao">
-      <span class="icone">👣</span><span>Mover</span>
-    </button>
-    <button type="button" data-acao="atacar" class="botao-acao">
-      <span class="icone">🗡</span><span>Atacar</span>
-    </button>
-    <button type="button" data-acao="magias" class="botao-acao">
-      <span class="icone">✦</span><span>Magias</span>
-    </button>
-    <button type="button" data-acao="truques" class="botao-acao">
-      <span class="icone">⚡</span><span>Truques</span>
-    </button>
-    <button type="button" data-acao="itens" class="botao-acao" disabled title="Em breve: itens ainda não estão ligados ao combate">
-      <span class="icone">⚗</span><span>Itens</span>
-    </button>
-    <button type="button" data-acao="encerrar" class="botao-acao">
-      <span class="icone">⌛</span><span>Encerrar Turno</span>
-    </button>
-  </nav>
+    <div class="main-column">
+      <header class="topbar topo">
+        <div class="turn-label" id="turnLabel">Turno 1</div>
+        <div class="andar" id="andar">Carregando…</div>
+        <section class="iniciativa-wrap" aria-label="Ordem de iniciativa">
+          <h2 class="sr-only">Ordem de Iniciativa</h2>
+          <ol class="initiative" id="iniciativa"></ol>
+        </section>
+        <div class="d20-tray" id="d20-tray" title="D20 — o resultado real vem exclusivamente do Rule Engine">
+          <div id="d20-die" class="d20" role="img" aria-label="Dado D20"></div>
+          <div class="d20-info">
+            <span class="d20-titulo" id="d20-titulo">Rule Engine</span>
+            <span class="d20-resultado" id="d20-resultado">D20 pronto</span>
+          </div>
+        </div>
+        <div class="controles-vista" aria-label="Escolha de sala e classe">
+          <select id="seletor-mapa" class="controle-vista seletor-classe" aria-label="Escolher sala" title="Trocar sala de encontro">
+            <option value="cripta_inicial">Sala 1: Cripta Inicial</option>
+            <option value="santuario_circular">Sala 2: Santuário Circular</option>
+            <option value="catacumba_dos_mortos">Sala 3: Catacumba dos Mortos</option>
+            <option value="camara_profana">Sala 4: Câmara Profana</option>
+            <option value="sarcofago_do_rei_mumia">Sala 5: Sarcófago do Rei-Múmia (Chefe)</option>
+          </select>
+          <select id="seletor-classe" class="controle-vista seletor-classe" aria-label="Escolher classe" title="Trocar classe e iniciar novo encontro">
+            <option value="bardo">Classe: Bardo</option>
+            <option value="monge">Classe: Monge</option>
+            <option value="guerreiro">Classe: Guerreiro</option>
+            <option value="barbaro">Classe: Bárbaro</option>
+            <option value="ladino">Classe: Ladino</option>
+            <option value="clerigo">Classe: Clérigo</option>
+            <option value="mago">Classe: Mago</option>
+            <option value="paladino">Classe: Paladino</option>
+            <option value="druida">Classe: Druida</option>
+            <option value="artifice">Classe: Artífice</option>
+            <option value="guardiao">Classe: Guardião</option>
+            <option value="feiticeiro">Classe: Feiticeiro</option>
+            <option value="bruxo">Classe: Bruxo</option>
+          </select>
+          <select id="seletor-especie" class="controle-vista seletor-classe" aria-label="Escolher raça/espécie" title="Trocar raça/espécie (PHB 2024) e iniciar novo encontro">
+            <option value="anao">Raça: Anão</option>
+            <option value="aasimar">Raça: Aasimar</option>
+            <option value="draconato">Raça: Draconato</option>
+            <option value="elfo">Raça: Elfo</option>
+            <option value="gnomo">Raça: Gnomo</option>
+            <option value="golias">Raça: Golias</option>
+            <option value="halfling">Raça: Pequenino (Halfling)</option>
+            <option value="humano">Raça: Humano</option>
+            <option value="orc">Raça: Orc</option>
+            <option value="tiefling">Raça: Tiferino (Tiefling)</option>
+          </select>
+        </div>
+      </header>
+
+      <main class="arena">
+        <div class="area-mapa">
+          <div class="cathedral" aria-hidden="true">
+            <div class="window left"></div>
+            <div class="window right"></div>
+            <div class="window center"></div>
+            <div class="pillar p1"></div>
+            <div class="pillar p2"></div>
+            <div class="pillar p3"></div>
+            <div class="pillar p4"></div>
+            <div class="red-carpet"></div>
+            <div class="altar">✦ ALTAR ✦</div>
+            <div class="rune">✧</div>
+          </div>
+
+          <div class="mapa-wrap">
+            <canvas id="mapa" aria-label="Mapa de batalha"></canvas>
+            <p class="dica toast" id="dica" role="status">Carregando encontro…</p>
+            <div class="fim" id="fim" hidden>
+              <img src="/static/assets/logo.png" class="fim-logo" alt="Dados &amp; Dragões" width="96" height="96">
+              <p id="fim-texto"></p>
+              <p class="fim-recompensa" id="fim-recompensa" hidden></p>
+              <p class="fim-nivel" id="fim-nivel" hidden></p>
+              <div class="fim-acoes">
+                <button id="descansar" type="button" hidden>Descanso Curto (1 DV)</button>
+                <button id="avancar" type="button" hidden>Avançar de sala</button>
+                <button id="novo" type="button">Novo encontro</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="minimap" id="minimap" title="Minimapa tático" aria-label="Minimapa"></div>
+
+          <section class="combat-log" aria-label="Registro de combate">
+            <nav class="tabs" aria-label="Abas do registro">
+              <button class="tab" type="button" data-aba="geral">Geral</button>
+              <button class="tab active" type="button" data-aba="combate">Combate</button>
+              <button class="tab" type="button" data-aba="sistema">Sistema</button>
+            </nav>
+            <ul class="log-content registro" id="registro" aria-label="Registro do combate"></ul>
+          </section>
+
+          <aside class="painel" id="painel" aria-label="Painel do combate" hidden>
+            <div class="painel-cabecalho">
+              <h2>Grimório &amp; Ações</h2>
+              <button id="painel-fechar" class="fechar-painel" type="button" aria-label="Fechar painel">×</button>
+            </div>
+            <ul class="opcoes" id="opcoes" aria-label="Magias e truques"></ul>
+          </aside>
+        </div>
+      </main>
+
+      <footer class="bottom barra" aria-label="Ações do turno">
+        <section class="character-panel">
+          <div class="portrait" id="portrait" title="Personagem ativo">
+            <canvas id="retrato" width="48" height="48" aria-hidden="true"></canvas>
+            <span class="badge-nivel" id="badgeNivel">1</span>
+            <span class="badge-ca" id="badgeCa">15</span>
+          </div>
+
+          <section class="stats ficha" id="ficha" aria-label="Ficha do personagem"></section>
+
+          <div class="actions">
+            <button type="button" data-acao="mover" class="action botao-acao" title="Mover [1]">
+              <span class="icone">👣</span><span class="rotulo-acao">Mover</span><small>1</small>
+            </button>
+            <button type="button" data-acao="atacar" class="action botao-acao" title="Atacar [2]">
+              <span class="icone">⚔</span><span class="rotulo-acao">Atacar</span><small>2</small>
+            </button>
+            <button type="button" data-acao="golpe_bonus" class="action botao-acao" hidden title="Golpe Desarmado Bônus [3]">
+              <span class="icone">👊</span><span class="rotulo-acao">Golpe Bônus</span><small>3</small>
+            </button>
+            <button type="button" data-acao="recuperar_folego" class="action botao-acao" hidden title="Recuperar o Fôlego [3]">
+              <span class="icone">💨</span><span class="rotulo-acao">Fôlego</span><small>3</small>
+            </button>
+            <button type="button" data-acao="furia" class="action botao-acao" hidden title="Fúria [3]">
+              <span class="icone">🔥</span><span class="rotulo-acao">Fúria</span><small>3</small>
+            </button>
+            <button type="button" data-acao="mirar" class="action botao-acao" hidden title="Mirar [3]">
+              <span class="icone">🎯</span><span class="rotulo-acao">Mirar</span><small>3</small>
+            </button>
+            <button type="button" data-acao="recuperacao_arcana" class="action botao-acao" hidden title="Recuperação Arcana [3]">
+              <span class="icone">🔮</span><span class="rotulo-acao">Rec. Arcana</span><small>3</small>
+            </button>
+            <button type="button" data-acao="maos_consagradas" class="action botao-acao" hidden title="Mãos Consagradas [3]">
+              <span class="icone">✚</span><span class="rotulo-acao">Mãos Cons.</span><small>3</small>
+            </button>
+            <button type="button" data-acao="feiticaria_inata" class="action botao-acao" hidden title="Feitiçaria Inata [3]">
+              <span class="icone">✨</span><span class="rotulo-acao">Feit. Inata</span><small>3</small>
+            </button>
+            <button type="button" data-acao="magias" class="action botao-acao" title="Magias de 1º círculo [4]">
+              <span class="icone spell-icon spell-cura" id="icone-magias" aria-hidden="true"></span><span class="rotulo-acao">Magias</span><small>4</small>
+            </button>
+            <button type="button" data-acao="truques" class="action botao-acao" title="Truques [5]">
+              <span class="icone spell-icon spell-musica" id="icone-truques" aria-hidden="true"></span><span class="rotulo-acao">Truques</span><small>5</small>
+            </button>
+            <button type="button" data-acao="itens" class="action botao-acao" disabled title="Em breve: itens ainda não estão ligados ao combate">
+              <span class="icone">🧪</span><span class="rotulo-acao">Itens</span><small>6</small>
+            </button>
+          </div>
+        </section>
+
+        <button type="button" data-acao="encerrar" class="turn-button botao-acao" id="endTurn">
+          <span class="icone" hidden>⌛</span><span>Encerrar Turno</span>
+        </button>
+      </footer>
+    </div>
+  </div>
 
   <script src="/static/app.js" type="module"></script>
 </body>
