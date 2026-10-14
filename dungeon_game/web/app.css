@@ -1358,3 +1358,68 @@ select:focus-visible {
   .bottom { height: 68px; }
   .action { height: 52px; }
 }
+
+
+/* Arena em tela cheia: HUD sobreposto, sem reservar altura fora do mapa */
+.main-column {
+  display: block !important;
+  position: relative;
+  height: 100dvh;
+  overflow: hidden;
+}
+.topbar {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 44px;
+  z-index: 8;
+  background: rgba(5, 11, 21, .88);
+  backdrop-filter: blur(5px);
+}
+.arena {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.area-mapa, .mapa-wrap {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.bottom {
+  position: absolute;
+  z-index: 8;
+  left: 58px;
+  right: 10px;
+  bottom: 8px;
+  height: 78px;
+  grid-template-columns: minmax(0, 1fr) 150px;
+  background: rgba(5, 11, 21, .88);
+  border: 1px solid #294361;
+  border-radius: 10px;
+  backdrop-filter: blur(5px);
+  box-shadow: 0 8px 28px rgba(0,0,0,.45);
+}
+.iniciativa-wrap { z-index: 8; top: 54px !important; }
+.dica { z-index: 7; top: 54px; }
+.combat-log { z-index: 7; bottom: 96px; }
+.minimap { z-index: 7; top: auto; bottom: 96px; }
+.painel { z-index: 10; }
+@media (max-width: 1050px) {
+  .bottom {
+    left: 48px;
+    right: 5px;
+    bottom: 5px;
+    height: 70px;
+    grid-template-columns: minmax(0, 1fr) 112px;
+    padding: 3px 5px;
+  }
+  .iniciativa-wrap { top: 50px !important; }
+  .combat-log { bottom: 82px; }
+  .minimap { bottom: 82px; }
+}
+@media (max-height: 560px) and (orientation: landscape) {
+  .bottom { height: 62px; bottom: 4px; }
+  .combat-log, .minimap { bottom: 72px; }
+}
