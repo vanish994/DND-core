@@ -74,7 +74,7 @@ class FichaEMapaTests(unittest.TestCase):
 
     def test_tabuleiro_bloqueia_paredes_porta_e_pilares(self):
         board = novo_encontro().board
-        self.assertEqual((board.width, board.height), (24, 14))
+        self.assertEqual((board.width, board.height), (48, 28))
         for pos in [(0, 0), (0, 7), (4, 3)]:  # canto, porta, pilar
             self.assertFalse(board.is_walkable(BoardPosition(*pos)), pos)
         self.assertTrue(board.is_walkable(BoardPosition(2, 7)))  # entrada do jogador
@@ -293,7 +293,7 @@ class TaticasEsqueletoEProgressaoTests(unittest.TestCase):
         self.assertEqual(encontro.ficha["pv_atuais"], 8)
         self.assertEqual(encontro.ficha["xp"], 100)
         self.assertEqual(encontro.ficha["ouro_po"], 15)
-        self.assertEqual((encontro.board.width, encontro.board.height), (42, 26))
+        self.assertEqual((encontro.board.width, encontro.board.height), (48, 28))
         self.assertEqual(set(encontro.inimigos), {"goblin-1", "esqueleto-1", "goblin-arqueiro-1"})
         self.assertEqual(encontro.proxima_sala, "catacumba_dos_mortos")
 
