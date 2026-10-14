@@ -872,7 +872,7 @@ function desenharSpriteEmContexto(contexto, nome, x, y, tamanho = TAMANHO) {
 // O herói usa a folha de animação ampliada; inimigos em pixel art ficam
 // no tamanho original da casa para preservar os detalhes e evitar deformação.
 const ESCALA_SPRITE_HEROI = 2.0;
-const ESCALA_SPRITE_INIMIGO = 1.0;
+const ESCALA_SPRITE_INIMIGO = 0.68;
 
 function desenharSprite(nome, x, y) {
   const tamanho = TAMANHO * ESCALA_SPRITE_INIMIGO;
