@@ -235,8 +235,8 @@ SALAS_PADRAO: dict[str, dict[str, Any]] = {
         "proxima_sala": "santuario_circular",
         "recompensa_ouro_po": 15,
         "inimigos": [
-            ("goblin-1", "goblin", (25, 10)),
-            ("esqueleto-1", "esqueleto", (25, 17)),
+            ("goblin-1", "goblin", (13, 3)),
+            ("esqueleto-1", "esqueleto", (13, 10)),
         ],
     },
     "santuario_circular": {
@@ -245,9 +245,9 @@ SALAS_PADRAO: dict[str, dict[str, Any]] = {
         "proxima_sala": "catacumba_dos_mortos",
         "recompensa_ouro_po": 30,
         "inimigos": [
-            ("goblin-1", "goblin", (21, 10)),
-            ("esqueleto-1", "esqueleto", (27, 13)),
-            ("goblin-arqueiro-1", "goblin_arqueiro", (21, 16)),
+            ("goblin-1", "goblin", (18, 9)),
+            ("esqueleto-1", "esqueleto", (24, 12)),
+            ("goblin-arqueiro-1", "goblin_arqueiro", (18, 15)),
         ],
     },
     "catacumba_dos_mortos": {
@@ -256,9 +256,9 @@ SALAS_PADRAO: dict[str, dict[str, Any]] = {
         "proxima_sala": "camara_profana",
         "recompensa_ouro_po": 45,
         "inimigos": [
-            ("zumbi-1", "zumbi", (24, 9)),
-            ("cultista-1", "cultista", (25, 14)),
-            ("carnical-1", "carnical", (28, 18)),
+            ("zumbi-1", "zumbi", (13, 3)),
+            ("cultista-1", "cultista", (14, 8)),
+            ("carnical-1", "carnical", (17, 12)),
         ],
     },
     "camara_profana": {
@@ -267,9 +267,9 @@ SALAS_PADRAO: dict[str, dict[str, Any]] = {
         "proxima_sala": "sarcofago_do_rei_mumia",
         "recompensa_ouro_po": 100,
         "inimigos": [
-            ("sombra-1", "sombra", (24, 9)),
-            ("armadura-animada-1", "armadura_animada", (23, 14)),
-            ("aparicao-1", "aparicao", (29, 14)),
+            ("sombra-1", "sombra", (14, 3)),
+            ("armadura-animada-1", "armadura_animada", (13, 8)),
+            ("aparicao-1", "aparicao", (19, 8)),
         ],
     },
     "sarcofago_do_rei_mumia": {
@@ -278,9 +278,9 @@ SALAS_PADRAO: dict[str, dict[str, Any]] = {
         "proxima_sala": None,
         "recompensa_ouro_po": 200,
         "inimigos": [
-            ("espectro-1", "espectro", (24, 9)),
-            ("esqueleto-minotauro-1", "esqueleto_minotauro", (23, 18)),
-            ("mumia-1", "mumia", (31, 14)),
+            ("espectro-1", "espectro", (15, 4)),
+            ("esqueleto-minotauro-1", "esqueleto_minotauro", (14, 13)),
+            ("mumia-1", "mumia", (22, 9)),
         ],
     },
 }
