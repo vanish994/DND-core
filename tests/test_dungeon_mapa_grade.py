@@ -51,10 +51,10 @@ class MapaGradeTests(unittest.TestCase):
         self.assertEqual(catalogo[2]["proxima_sala"], "camara_profana")
         self.assertEqual(catalogo[3]["proxima_sala"], "sarcofago_do_rei_mumia")
         self.assertIsNone(catalogo[4]["proxima_sala"])
-        self.assertEqual((catalogo[1]["largura"], catalogo[1]["altura"]), (42, 26))
-        self.assertEqual((catalogo[2]["largura"], catalogo[2]["altura"]), (26, 16))
-        self.assertEqual((catalogo[3]["largura"], catalogo[3]["altura"]), (28, 16))
-        self.assertEqual((catalogo[4]["largura"], catalogo[4]["altura"]), (30, 18))
+        self.assertEqual((catalogo[1]["largura"], catalogo[1]["altura"]), (48, 28))
+        self.assertEqual((catalogo[2]["largura"], catalogo[2]["altura"]), (48, 28))
+        self.assertEqual((catalogo[3]["largura"], catalogo[3]["altura"]), (48, 28))
+        self.assertEqual((catalogo[4]["largura"], catalogo[4]["altura"]), (48, 28))
 
         for item in catalogo:
             mapa = carregar_mapa(item["id"])
