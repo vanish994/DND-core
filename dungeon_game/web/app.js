@@ -761,50 +761,85 @@ const SPRITES_CLASSE = {
 function desenharTerreno(x, y, tipo) {
   const e = ESTILO_TERRENO[tipo] || ESTILO_TERRENO.chao;
   const pixelTerreno = TAMANHO / 8;
+  const gx = Math.round(x / TAMANHO);
+  const gy = Math.round(y / TAMANHO);
+  // Variação determinística: cada ladrilho mantém sua aparência entre quadros.
+  const variacao = (gx * 17 + gy * 31 + gx * gy * 7) % 5;
   ctx.fillStyle = e.base;
   ctx.fillRect(x, y, TAMANHO, TAMANHO);
-  // Textura determinística de ladrilho gótico.
+
+  // Luz suave no topo e sombra na base dão volume sem abandonar a pixel art.
+  const luz = ctx.createLinearGradient(x, y, x + TAMANHO, y + TAMANHO);
+  luz.addColorStop(0, tipo === "agua" ? "rgba(111, 181, 225, 0.13)" : "rgba(255, 239, 205, 0.075)");
+  luz.addColorStop(1, "rgba(0, 0, 0, 0.24)");
+  ctx.fillStyle = luz;
+  ctx.fillRect(x, y, TAMANHO, TAMANHO);
+
+  // Manchas e juntas de pedra com distribuição estável por casa.
   ctx.fillStyle = e.sombra;
-  for (let i = 0; i < 6; i++) {
-    const px = ((x * 7 + y * 13 + i * 5) % 8) * pixelTerreno;
-    const py = ((x * 3 + y * 11 + i * 3) % 8) * pixelTerreno;
+  for (let i = 0; i < 4 + variacao; i++) {
+    const px = ((gx * 7 + gy * 13 + i * 5 + variacao) % 8) * pixelTerreno;
+    const py = ((gx * 3 + gy * 11 + i * 3 + variacao * 2) % 8) * pixelTerreno;
     ctx.fillRect(x + px, y + py, pixelTerreno, pixelTerreno);
   }
-  ctx.strokeStyle = "rgba(0, 0, 0, 0.28)";
+
+  if (tipo === "chao" && (gx * 13 + gy * 19) % 7 === 0) {
+    // Pequenas fissuras ocasionais: detalhe de ambiente, sem poluir cada ladrilho.
+    ctx.strokeStyle = "rgba(8, 7, 11, 0.48)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x + 8 + (variacao * 2), y + 7);
+    ctx.lineTo(x + 13 + (variacao * 2), y + 13);
+    ctx.lineTo(x + 11 + (variacao * 2), y + 19);
+    ctx.stroke();
+  }
+
+  // Borda interna iluminada e base escurecida para separar visualmente as casas.
+  ctx.strokeStyle = "rgba(0, 0, 0, 0.34)";
   ctx.lineWidth = 1;
   ctx.strokeRect(x + 0.5, y + 0.5, TAMANHO - 1, TAMANHO - 1);
+  ctx.fillStyle = "rgba(255, 235, 190, 0.045)";
+  ctx.fillRect(x + 1, y + 1, TAMANHO - 2, 1);
 
   if (tipo === "parede") {
     ctx.fillStyle = e.vinho;
     ctx.fillRect(x, y + TAMANHO / 2 - 1, TAMANHO, 2);
     ctx.fillRect(x + TAMANHO / 3, y, 2, TAMANHO / 2);
     ctx.fillRect(x + (TAMANHO * 2) / 3, y + TAMANHO / 2, 2, TAMANHO / 2);
+    ctx.fillStyle = "rgba(0, 0, 0, 0.24)";
+    ctx.fillRect(x + 2, y + 3, TAMANHO - 4, 2);
   }
   if (tipo === "porta") {
     ctx.fillStyle = "#2a1c0e";
     for (let i = 1; i < 4; i++) ctx.fillRect(x + i * (TAMANHO / 4) - 1, y, 2, TAMANHO);
+    ctx.fillStyle = "rgba(255, 205, 115, 0.42)";
+    ctx.fillRect(x + 3, y + 2, TAMANHO - 6, 2);
+    ctx.fillStyle = "#b58a4d";
+    ctx.fillRect(x + TAMANHO / 2 - 2, y + TAMANHO / 2, 4, 4);
   }
   if (tipo === "agua") {
-    ctx.fillStyle = "#5fa6d9";
-    ctx.fillRect(x + 4, y + 10, 10, 2);
-    ctx.fillRect(x + 18, y + 22, 10, 2);
+    ctx.fillStyle = "rgba(105, 184, 229, 0.65)";
+    ctx.fillRect(x + 4 + (variacao % 3), y + 9, 11, 2);
+    ctx.fillRect(x + 17, y + 21 - (variacao % 2), 10, 2);
+    ctx.fillStyle = "rgba(9, 28, 49, 0.42)";
+    ctx.fillRect(x + 2, y + 15, TAMANHO - 4, 1);
   }
   if (tipo === "pilar") {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.42)";
+    ctx.fillRect(x + 4, y + 7, TAMANHO - 7, TAMANHO - 7);
     ctx.fillStyle = "#241f29";
-    ctx.fillRect(x + 5, y + 5, TAMANHO - 10, TAMANHO - 10);
+    ctx.fillRect(x + 5, y + 4, TAMANHO - 10, TAMANHO - 10);
     ctx.fillStyle = "#7a6855";
-    ctx.fillRect(x + 7, y + 7, TAMANHO - 14, 4);
+    ctx.fillRect(x + 7, y + 6, TAMANHO - 14, 4);
+    ctx.fillStyle = "rgba(255, 228, 177, 0.2)";
+    ctx.fillRect(x + 7, y + 6, 2, TAMANHO - 12);
   }
   if (tipo === "tocha") {
     const grad = ctx.createRadialGradient(
-      x + TAMANHO / 2,
-      y + TAMANHO / 2,
-      2,
-      x + TAMANHO / 2,
-      y + TAMANHO / 2,
-      TAMANHO * 1.4,
+      x + TAMANHO / 2, y + TAMANHO / 2, 2,
+      x + TAMANHO / 2, y + TAMANHO / 2, TAMANHO * 1.15,
     );
-    grad.addColorStop(0, "rgba(255, 175, 65, 0.45)");
+    grad.addColorStop(0, "rgba(255, 175, 65, 0.34)");
     grad.addColorStop(1, "rgba(255, 140, 30, 0)");
     ctx.fillStyle = grad;
     ctx.fillRect(x - TAMANHO, y - TAMANHO, TAMANHO * 3, TAMANHO * 3);
