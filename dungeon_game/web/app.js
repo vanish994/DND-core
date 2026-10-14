@@ -869,7 +869,7 @@ function desenharSpriteEmContexto(contexto, nome, x, y, tamanho = TAMANHO) {
 
 // Sprites maiores que a casa para manter silhuetas legíveis quando o mapa
 // é reduzido para caber na tela do celular. A base continua ancorada na casa.
-const ESCALA_SPRITE_UNIDADE = 1.42;
+const ESCALA_SPRITE_UNIDADE = 2.0;
 
 function desenharSprite(nome, x, y) {
   const tamanho = TAMANHO * ESCALA_SPRITE_UNIDADE;
