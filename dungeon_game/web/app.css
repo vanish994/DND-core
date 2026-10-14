@@ -1089,3 +1089,226 @@ select:focus-visible {
     font-size: 11px;
   }
 }
+
+
+/* HUD tático compacto — aplicado diretamente à main */
+:root {
+  --panel: rgba(7, 13, 24, .96);
+  --border: #294361;
+  --blue: #3b9cff;
+  --text: #dce8f8;
+  --muted: #93a8c4;
+}
+.game {
+  grid-template-columns: 48px minmax(0, 1fr);
+  background: #070c16;
+}
+.sidebar {
+  background: #080e19;
+  border-right-color: #203650;
+  gap: 8px;
+}
+.logo-badge, .tool {
+  border-color: #294361;
+  background: linear-gradient(145deg, #15243a, #080e19);
+}
+.tool:hover, .tool.active, .tool[aria-expanded="true"], .tool[aria-pressed="true"] {
+  color: #d9eaff;
+  background: #173b63;
+  border-color: #459eff;
+  box-shadow: 0 0 12px rgba(48, 143, 255, .25);
+}
+.main-column {
+  grid-template-rows: 54px minmax(0, 1fr) 116px;
+}
+.topbar {
+  min-width: 0;
+  gap: 8px;
+  padding: 5px 12px;
+  background: rgba(5, 11, 21, .98);
+  border-bottom-color: #294361;
+}
+.turn-label, .andar, .seletor-classe {
+  color: #dceaff;
+  background: #0b1728;
+  border-color: #294361;
+  border-radius: 7px;
+}
+.turn-label, .andar { padding: 7px 10px; }
+.iniciativa-wrap {
+  position: absolute;
+  z-index: 7;
+  top: 12px;
+  right: 12px;
+  width: 208px;
+  max-height: min(58%, 390px);
+  overflow-y: auto;
+  padding: 8px;
+  border: 1px solid #294361;
+  border-radius: 10px;
+  background: rgba(5, 12, 23, .94);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .55);
+}
+.initiative {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+}
+.unit-card {
+  width: 100%;
+  height: 43px;
+  min-height: 43px;
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 9px;
+  padding: 4px 8px;
+  border: 1px solid #223650;
+  border-radius: 7px;
+  background: #0a1423;
+}
+.unit-card .unit-icon { font-size: 20px; }
+.unit-card canvas.unit-sprite { width: 30px; height: 30px; }
+.unit-card .unit-nome { font-size: 12px; text-align: left; flex: 1; }
+.unit-card.ally { border-bottom: 1px solid #287ec7; }
+.unit-card.enemy { border-bottom: 1px solid #983c49; }
+.unit-card.current, .unit-card.ativo {
+  border: 2px solid #21c997;
+  background: #09251f;
+  box-shadow: 0 0 10px rgba(33, 201, 151, .15);
+}
+.arena {
+  background: radial-gradient(ellipse at center, #1b2534 0%, #0a101b 72%, #060a12 100%);
+}
+.cathedral { opacity: .45; }
+#mapa {
+  border: 1px solid #294361;
+  border-radius: 3px;
+  box-shadow: 0 10px 34px rgba(0,0,0,.72);
+}
+.dica {
+  top: 10px;
+  left: 12px;
+  transform: none;
+  max-width: min(58%, 520px);
+  color: #dceaff;
+  border-color: #355779;
+  background: rgba(5, 13, 25, .92);
+  border-radius: 8px;
+  box-shadow: 0 5px 18px rgba(0,0,0,.42);
+}
+.minimap {
+  top: auto;
+  right: 12px;
+  bottom: 12px;
+  width: 126px;
+  height: 88px;
+  border-color: #294361;
+  border-radius: 8px;
+  background: rgba(5, 12, 23, .94);
+}
+.combat-log {
+  left: 12px;
+  bottom: 12px;
+  width: min(270px, 30%);
+  border-color: #294361;
+  border-radius: 8px;
+  background: rgba(5, 12, 23, .92);
+  box-shadow: 0 5px 18px rgba(0,0,0,.4);
+}
+.tabs { border-bottom-color: #223650; }
+.tab { background: #0a1423; color: #9eb3ce; }
+.tab.active { color: #dceaff; background: #102642; border-bottom-color: #399cff; }
+.log-content {
+  height: 48px;
+  padding: 5px 9px;
+  color: #a9bad0;
+  font-size: 10px;
+}
+.painel {
+  border-color: #294361;
+  border-radius: 10px;
+  background: rgba(5, 12, 23, .97);
+}
+.painel-cabecalho { border-bottom-color: #223650; }
+.painel-cabecalho h2, .opcoes button .opcao-texto span { color: #dceaff; }
+.opcoes button {
+  background: #0b1728;
+  border-color: #294361;
+  border-radius: 7px;
+}
+.opcoes button:hover:not(:disabled) { background: #142b46; border-color: #459eff; }
+.bottom {
+  grid-template-columns: minmax(0, 1fr) 190px;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #070d18;
+  border-top-color: #294361;
+}
+.character-panel {
+  gap: 10px;
+  border-color: #294361;
+  border-radius: 9px;
+  background: #0a1423;
+}
+.portrait { border-color: #355779; background: #0d1b2d; }
+.badge-nivel, .badge-ca {
+  border-color: #459eff;
+  background: #081424;
+  color: #dceaff;
+}
+.char-name { color: #dceaff; }
+.bar { border-color: #294361; background: #050b14; border-radius: 5px; }
+.actions { gap: 6px; padding-bottom: 0; }
+.action {
+  width: clamp(48px, 6vw, 82px);
+  height: 74px;
+  border-color: #294361;
+  border-radius: 8px;
+  background: #081424;
+  gap: 5px;
+}
+.action .icone { font-size: 25px; }
+.action .rotulo-acao { font-size: 11px; color: #dce8f8; }
+.action small { display: none; }
+.action:hover:not(:disabled), .action.active, .action[aria-pressed="true"] {
+  background: #0b2a4b;
+  border-color: #2697ff;
+  box-shadow: 0 0 12px rgba(38,151,255,.2);
+}
+.turn-button {
+  border: 1px solid #355779;
+  border-radius: 9px;
+  color: #e0edff;
+  background: linear-gradient(135deg, #102b49, #091526);
+  font-family: inherit;
+  font-size: 14px;
+}
+.turn-button:hover:not(:disabled) {
+  background: #163b61;
+  box-shadow: 0 0 12px rgba(38,151,255,.2);
+}
+@media (max-width: 1050px) {
+  .main-column { grid-template-rows: 50px minmax(0, 1fr) 100px; }
+  .iniciativa-wrap { width: 164px; right: 7px; top: 7px; padding: 5px; }
+  .unit-card { height: 36px; min-height: 36px; }
+  .unit-card canvas.unit-sprite { width: 25px; height: 25px; }
+  .unit-card .unit-nome { font-size: 10px; }
+  .bottom { grid-template-columns: minmax(0, 1fr) 140px; padding: 5px 7px; gap: 6px; }
+  .character-panel { gap: 6px; padding: 4px 6px; }
+  .portrait { width: 42px; height: 46px; flex-basis: 42px; }
+  #retrato { width: 34px; height: 34px; }
+  .stats { min-width: 100px; flex-basis: 130px; }
+  .action { width: clamp(35px, 5.3vw, 54px); height: 62px; }
+  .action .icone { font-size: 21px; }
+  .action .rotulo-acao { font-size: 9px; }
+  .combat-log { width: min(220px, 34%); }
+}
+@media (max-height: 560px) and (orientation: landscape) {
+  .main-column { grid-template-rows: 42px minmax(0, 1fr) 82px; }
+  .topbar { padding-top: 3px; padding-bottom: 3px; }
+  .bottom { padding-top: 4px; padding-bottom: 4px; }
+  .action { height: 58px; }
+  .portrait { height: 42px; }
+  .log-content { height: 32px; }
+}
