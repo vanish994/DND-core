@@ -869,10 +869,13 @@ function desenharSpriteEmContexto(contexto, nome, x, y, tamanho = TAMANHO) {
 
 // Sprites maiores que a casa para manter silhuetas legíveis quando o mapa
 // é reduzido para caber na tela do celular. A base continua ancorada na casa.
-const ESCALA_SPRITE_UNIDADE = 2.0;
+// O herói usa a folha de animação ampliada; inimigos em pixel art ficam
+// no tamanho original da casa para preservar os detalhes e evitar deformação.
+const ESCALA_SPRITE_HEROI = 2.0;
+const ESCALA_SPRITE_INIMIGO = 1.0;
 
 function desenharSprite(nome, x, y) {
-  const tamanho = TAMANHO * ESCALA_SPRITE_UNIDADE;
+  const tamanho = TAMANHO * ESCALA_SPRITE_INIMIGO;
   const deslocamentoX = (TAMANHO - tamanho) / 2;
   const deslocamentoY = TAMANHO - tamanho;
   desenharSpriteEmContexto(ctx, nome, x + deslocamentoX, y + deslocamentoY, tamanho);
@@ -885,7 +888,7 @@ function desenharBardo(x, y) {
     desenharSprite("heroi", x, y);
     return;
   }
-  const tamanho = TAMANHO * ESCALA_SPRITE_UNIDADE;
+  const tamanho = TAMANHO * ESCALA_SPRITE_HEROI;
   ctx.drawImage(
     folha,
     quadroBardo * TAMANHO_QUADRO_BARDO,
