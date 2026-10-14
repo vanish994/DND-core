@@ -1508,14 +1508,17 @@ function ajustarMapa() {
   const { largura, altura } = estado.dados.mapa;
   const aspecto = largura / altura;
   const area = wrap.getBoundingClientRect();
-  let w = area.width - 16;
+  // O mapa usa a maior escala que cabe na arena inteira, atrás do HUD.
+  const margemHorizontal = 12;
+  const margemVertical = 12;
+  let w = Math.max(1, area.width - margemHorizontal * 2);
   let h = w / aspecto;
-  if (h > area.height - 16) {
-    h = area.height - 16;
+  if (h > area.height - margemVertical * 2) {
+    h = Math.max(1, area.height - margemVertical * 2);
     w = h * aspecto;
   }
-  canvas.style.width = `${Math.max(120, Math.floor(w))}px`;
-  canvas.style.height = `${Math.max(80, Math.floor(h))}px`;
+  canvas.style.width = `${Math.floor(w)}px`;
+  canvas.style.height = `${Math.floor(h)}px`;
 }
 
 function renderizarTudo() {
