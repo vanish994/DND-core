@@ -867,8 +867,15 @@ function desenharSpriteEmContexto(contexto, nome, x, y, tamanho = TAMANHO) {
   });
 }
 
+// Sprites maiores que a casa para manter silhuetas legíveis quando o mapa
+// é reduzido para caber na tela do celular. A base continua ancorada na casa.
+const ESCALA_SPRITE_UNIDADE = 1.42;
+
 function desenharSprite(nome, x, y) {
-  desenharSpriteEmContexto(ctx, nome, x, y, TAMANHO);
+  const tamanho = TAMANHO * ESCALA_SPRITE_UNIDADE;
+  const deslocamentoX = (TAMANHO - tamanho) / 2;
+  const deslocamentoY = TAMANHO - tamanho;
+  desenharSpriteEmContexto(ctx, nome, x + deslocamentoX, y + deslocamentoY, tamanho);
 }
 
 function desenharBardo(x, y) {
@@ -878,16 +885,17 @@ function desenharBardo(x, y) {
     desenharSprite("heroi", x, y);
     return;
   }
+  const tamanho = TAMANHO * ESCALA_SPRITE_UNIDADE;
   ctx.drawImage(
     folha,
     quadroBardo * TAMANHO_QUADRO_BARDO,
     LINHA_DIRECAO_BARDO[direcaoBardo] * TAMANHO_QUADRO_BARDO,
     TAMANHO_QUADRO_BARDO,
     TAMANHO_QUADRO_BARDO,
-    x,
-    y,
-    TAMANHO,
-    TAMANHO,
+    x + (TAMANHO - tamanho) / 2,
+    y + TAMANHO - tamanho,
+    tamanho,
+    tamanho,
   );
 }
 
