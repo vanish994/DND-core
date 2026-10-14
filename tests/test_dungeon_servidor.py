@@ -53,8 +53,8 @@ class ApiEncontroTests(unittest.TestCase):
         self.assertEqual(estado["movimento_restante_pes"], 30)
         self.assertFalse(estado["acao_principal_usada"])
         self.assertEqual(len(estado["iniciativa"]), 3)
-        self.assertEqual(estado["mapa"]["largura"], 24)
-        self.assertEqual(len(estado["mapa"]["grade"]), 14)
+        self.assertEqual(estado["mapa"]["largura"], 48)
+        self.assertEqual(len(estado["mapa"]["grade"]), 28)
 
     def test_estado_traz_perfil_para_o_sprite(self):
         _, estado = self.criar()
@@ -219,8 +219,8 @@ class ApiEncontroTests(unittest.TestCase):
 
         status, estado = chamar("POST", "/api/encontros", {"mapa_id": "santuario_circular"})
         self.assertEqual(status, 201)
-        self.assertEqual(estado["mapa"]["largura"], 42)
-        self.assertEqual(estado["mapa"]["altura"], 26)
+        self.assertEqual(estado["mapa"]["largura"], 48)
+        self.assertEqual(estado["mapa"]["altura"], 28)
         self.assertEqual(estado["sala"], 2)
 
         status_3, estado_3 = chamar("POST", "/api/encontros", {"mapa_id": "catacumba_dos_mortos"})
