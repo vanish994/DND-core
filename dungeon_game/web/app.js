@@ -887,6 +887,35 @@ function desenharAnelUnidade(x, y, cor, ativo = false) {
   ctx.restore();
 }
 
+function desenharSombraUnidade(x, y, heroi = false) {
+  // Sombra elíptica separa o sprite do piso sem borrar os pixels do personagem.
+  ctx.save();
+  const cx = x + TAMANHO / 2;
+  const cy = y + TAMANHO - 3;
+  const grad = ctx.createRadialGradient(cx, cy, 1, cx, cy, TAMANHO * 0.62);
+  grad.addColorStop(0, heroi ? "rgba(0, 0, 0, 0.62)" : "rgba(0, 0, 0, 0.58)");
+  grad.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, TAMANHO * 0.58, TAMANHO * 0.22, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function desenharVinhetaMapa(largura, altura) {
+  // Escurece suavemente as bordas para conduzir o olhar ao centro da arena.
+  const w = largura * TAMANHO;
+  const h = altura * TAMANHO;
+  const grad = ctx.createRadialGradient(w * 0.5, h * 0.46, Math.min(w, h) * 0.12, w * 0.5, h * 0.46, Math.max(w, h) * 0.72);
+  grad.addColorStop(0, "rgba(5, 4, 8, 0)");
+  grad.addColorStop(0.68, "rgba(5, 4, 8, 0.06)");
+  grad.addColorStop(1, "rgba(5, 4, 8, 0.42)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
+}
+
+
+
 function desenharSpriteEmContexto(contexto, nome, x, y, tamanho = TAMANHO) {
   const sprite = SPRITES[nome];
   if (!sprite) return;
@@ -1027,10 +1056,14 @@ function desenhar() {
     ctx.stroke();
   }
 
-  // Inimigos com anel vermelho na base.
+  // Luz ambiente por cima do piso, antes de desenhar unidades e indicadores.
+  desenharVinhetaMapa(largura, altura);
+
+  // Inimigos com sombra de contato e anel de seleção.
   d.unidades.forEach((u) => {
     if (u.derrotado) return;
     const [x, y] = u.posicao;
+    desenharSombraUnidade(x * TAMANHO, y * TAMANHO);
     desenharAnelUnidade(x * TAMANHO, y * TAMANHO, "#dc4545", d.turno_de === u.id);
     desenharSprite(u.perfil, x * TAMANHO, y * TAMANHO);
     barraVida(x * TAMANHO, y * TAMANHO, u.pv_atuais, u.pv_maximo, false);
@@ -1040,6 +1073,7 @@ function desenhar() {
   const p = d.personagem;
   const px = p.posicao[0] * TAMANHO;
   const py = p.posicao[1] * TAMANHO;
+  desenharSombraUnidade(px, py, true);
   desenharAnelUnidade(px, py, d.de_jogador ? "#ffdc91" : "#358bf2", d.de_jogador);
   desenharBardo(px, py);
   barraVida(px, py, p.pv_atuais, p.pv_maximo, true);
