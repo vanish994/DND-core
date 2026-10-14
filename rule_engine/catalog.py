@@ -139,6 +139,47 @@ CATALOGO_ARMAS = {
     "Pistola": {"dano": "1d10", "tipo": "perfurante", "alcance": 9, "peso": 1, "propriedades": ["municao", "recarga"]},
 }
 
+MAESTRIAS_POR_ARMA = {
+    "Clava": "lentidao",
+    "Clava Grande": "empurrar",
+    "Adaga": "agil",
+    "Dardo": "afligir",
+    "Machadinha": "afligir",
+    "Martelo Leve": "agil",
+    "Maça": "drenar",
+    "Cajado": "derrubar",
+    "Funda": "lentidao",
+    "Azagaia": "lentidao",
+    "Arco Curto": "afligir",
+    "Besta Leve": "lentidao",
+    "Machado de Batalha": "derrubar",
+    "Mangual": "drenar",
+    "Glaive": "garantido",
+    "Espada Longa": "drenar",
+    "Espada Curta": "afligir",
+    "Rapieira": "afligir",
+    "Cimitarra": "agil",
+    "Machado Grande": "trespassar",
+    "Malho": "derrubar",
+    "Espada Grande": "garantido",
+    "Alabarda": "trespassar",
+    "Lança Longa": "empurrar",
+    "Picareta de Guerra": "drenar",
+    "Tridente": "derrubar",
+    "Martelo de Guerra": "empurrar",
+    "Lança de Montaria": "derrubar",
+    "Chicote": "lentidao",
+    "Arco Longo": "lentidao",
+    "Besta Pesada": "empurrar",
+    "Besta de Mão": "afligir",
+    "Mosquete": "lentidao",
+    "Pistola": "afligir",
+}
+
+for _arma_nome, _arma_maestria in MAESTRIAS_POR_ARMA.items():
+    if _arma_nome in CATALOGO_ARMAS:
+        CATALOGO_ARMAS[_arma_nome]["maestria"] = _arma_maestria
+
 CATALOGO_ARMADURAS = {
     "Acolchoada": {
         "categoria": "leve",

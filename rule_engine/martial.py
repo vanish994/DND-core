@@ -5,6 +5,9 @@ resolve apenas a regra, sem rolar dados implicitamente.
 """
 
 
+from .catalog import CATALOGO_ARMAS
+
+
 def _mod(valor: int) -> int:
     return (int(valor) - 10) // 2
 
@@ -37,6 +40,96 @@ def resolver_maestria_arma(fatos: dict) -> dict:
     escolhidas = list(fatos.get("armas", []))
     if len(escolhidas) > quantidade:
         return {"resultado": "bloqueado", "motivo": "quantidade_de_maestrias_excedida", "limite": quantidade}
+    if str(fatos.get("acao", "")).lower() == "aplicar":
+        arma = str(fatos.get("arma", "")).strip()
+        if quantidade <= 0 or arma not in escolhidas:
+            return {"resultado": "sem_maestria", "arma": arma}
+        dados_arma = CATALOGO_ARMAS.get(arma) or {}
+        maestria = str(fatos.get("maestria") or dados_arma.get("maestria") or "").lower()
+        if not maestria:
+            return {"resultado": "sem_maestria", "arma": arma}
+        acertou = bool(fatos.get("acertou", True))
+        mod_ataque = int(fatos.get("modificador_ataque", 0))
+        bonus_prof = int(fatos.get("bonus_proficiencia", 2))
+        if not acertou:
+            if maestria == "garantido":
+                return {
+                    "resultado": "resolvido",
+                    "caracteristica": "maestria_em_arma",
+                    "arma": arma,
+                    "maestria": "garantido",
+                    "efeito": "dano_em_erro",
+                    "dano_garantido": max(0, mod_ataque),
+                    "tipo_dano": str(dados_arma.get("tipo", "cortante")),
+                }
+            return {"resultado": "sem_efeito_em_erro", "arma": arma, "maestria": maestria}
+        if maestria == "afligir":
+            return {
+                "resultado": "resolvido",
+                "caracteristica": "maestria_em_arma",
+                "arma": arma,
+                "maestria": "afligir",
+                "efeito": "vantagem_proximo_ataque",
+                "vantagem_proximo_ataque": True,
+            }
+        if maestria == "drenar":
+            return {
+                "resultado": "resolvido",
+                "caracteristica": "maestria_em_arma",
+                "arma": arma,
+                "maestria": "drenar",
+                "efeito": "desvantagem_proximo_ataque_alvo",
+                "desvantagem_proximo_ataque_alvo": True,
+            }
+        if maestria == "lentidao":
+            return {
+                "resultado": "resolvido",
+                "caracteristica": "maestria_em_arma",
+                "arma": arma,
+                "maestria": "lentidao",
+                "efeito": "reduzir_deslocamento",
+                "reducao_deslocamento_pes": 10,
+            }
+        if maestria == "empurrar":
+            return {
+                "resultado": "resolvido",
+                "caracteristica": "maestria_em_arma",
+                "arma": arma,
+                "maestria": "empurrar",
+                "efeito": "empurrar_alvo",
+                "empurrar_pes": 10,
+            }
+        if maestria == "derrubar":
+            return {
+                "resultado": "resolvido",
+                "caracteristica": "maestria_em_arma",
+                "arma": arma,
+                "maestria": "derrubar",
+                "efeito": "salvaguarda_derrubar",
+                "salvaguarda": "constituicao",
+                "cd": 8 + mod_ataque + bonus_prof,
+                "condicao": "caido",
+            }
+        if maestria == "trespassar":
+            return {
+                "resultado": "resolvido",
+                "caracteristica": "maestria_em_arma",
+                "arma": arma,
+                "maestria": "trespassar",
+                "efeito": "ataque_adjacente",
+                "dado_dano_adjacente": str(dados_arma.get("dano", "1d12")),
+                "tipo_dano": str(dados_arma.get("tipo", "cortante")),
+            }
+        if maestria == "agil":
+            return {
+                "resultado": "resolvido",
+                "caracteristica": "maestria_em_arma",
+                "arma": arma,
+                "maestria": "agil",
+                "efeito": "golpe_agil",
+                "dano_extra": 2,
+            }
+        return {"resultado": "sem_efeito_em_acerto", "arma": arma, "maestria": maestria}
     return {"resultado": "resolvido", "caracteristica": "maestria_em_arma", "limite": quantidade, "armas": escolhidas}
 
 

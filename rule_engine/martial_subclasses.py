@@ -100,6 +100,51 @@ SUBCLASS_FEATURES = {
         13: ["enganador_versatil"],
         17: ["ladrao_de_magia"],
     },
+    "colegio_da_bravura": {
+        3: ["inspiracao_marcial"],
+        6: ["ataque_extra"],
+        14: ["magia_de_batalha"],
+    },
+    "dominio_da_vida": {
+        3: ["discipulo_da_vida", "preservar_a_vida"],
+        6: ["curandeiro_abencoado"],
+        17: ["cura_suprema"],
+    },
+    "evocador": {
+        3: ["truque_potente", "esculpir_magias"],
+        6: ["evocacao_empoderada"],
+        10: ["sobrecarga_magica"],
+    },
+    "juramento_da_devocao": {
+        3: ["arma_sagrada"],
+        7: ["aura_da_devocao"],
+        15: ["golpe_protetor"],
+    },
+    "circulo_das_estrelas": {
+        3: ["forma_estrelada", "mapa_estelar"],
+        6: ["pressagio_cosmico"],
+        10: ["constelacoes_cintilantes"],
+    },
+    "reanimador": {
+        3: ["descarga_voltaica"],
+        5: ["companheiro_reanimado"],
+        9: ["conduto_arcano"],
+    },
+    "cacador": {
+        3: ["matador_de_colossos", "conhecimento_ do_cacador"],
+        7: ["taticas_defensivas"],
+        11: ["superioridade_do_cacador"],
+    },
+    "feiticaria_draconica": {
+        3: ["resiliencia_draconica"],
+        6: ["afinidade_elemental"],
+        14: ["asas_ de_dragao"],
+    },
+    "patrono_infero": {
+        3: ["bencao_do_obscuro"],
+        6: ["sorte_do_proprio_obscuro"],
+        10: ["resiliencia_infernal"],
+    },
 }
 
 ALIASES = {
@@ -174,6 +219,25 @@ def resolver_subclasse_marcial(fatos: dict) -> dict:
             "dados_energia": max(1, (nivel + 2) // 3),
             "dado": "d6" if nivel < 5 else "d8" if nivel < 11 else "d10" if nivel < 17 else "d12",
         }
+    if caracteristica == "inspiracao_marcial":
+        return {"resultado": "resolvido", "bonus_ca": 1, "bonus_dano_arma": 2}
+    if caracteristica == "discipulo_da_vida":
+        return {"resultado": "resolvido", "cura_extra_base": 2}
+    if caracteristica == "truque_potente":
+        return {"resultado": "resolvido", "bonus_dano_magia": 2, "metade_dano_em_falha": True}
+    if caracteristica == "arma_sagrada":
+        return {"resultado": "resolvido", "bonus_dano_radiante": 2}
+    if caracteristica == "forma_estrelada":
+        return {"resultado": "resolvido", "bonus_dano_magia": 2, "bonus_cura": 2}
+    if caracteristica == "descarga_voltaica":
+        return {"resultado": "resolvido", "bonus_dano_eletrico": 2, "bonus_dano_arma": 2}
+    if caracteristica == "matador_de_colossos":
+        return {"resultado": "resolvido", "dado_dano_extra": "1d8", "requer_alvo_ferido": True}
+    if caracteristica == "resiliencia_draconica":
+        return {"resultado": "resolvido", "ca_base": 13, "pv_extra_por_nivel": 1, "bonus_dano_magia": 2}
+    if caracteristica == "bencao_do_obscuro":
+        mod_car = int(fatos.get("modificador_carisma", 3))
+        return {"resultado": "resolvido", "pv_temporarios_ao_abater": max(1, mod_car + nivel)}
     # Nunca declare sucesso apenas porque a característica consta do catálogo.
     # Apenas efeitos explicitamente implementados acima podem ser resolvidos.
     if not caracteristica:

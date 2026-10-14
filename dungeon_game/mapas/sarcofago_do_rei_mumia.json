@@ -1,0 +1,43 @@
+{
+  "id": "sarcofago-do-rei-mumia",
+  "nome": "Sarcófago do Rei-Múmia",
+  "ambiente": "cripta",
+  "andar": 1,
+  "sala": 5,
+  "proxima_sala": null,
+  "recompensa_ouro_po": 200,
+  "casa_pes": 5,
+  "legenda": {
+    ".": {"tipo": "chao", "nome": "Laje real ancestral"},
+    "#": {"tipo": "parede", "nome": "Parede do mausoléu", "bloqueia_movimento": true, "bloqueia_visao": true},
+    "+": {"tipo": "porta", "nome": "Portão real selado", "bloqueia_movimento": true, "bloqueia_visao": true},
+    "~": {"tipo": "agua", "nome": "Fosso de cinzas", "custo_movimento": 2},
+    "o": {"tipo": "pilar", "nome": "Obelisco funerário", "bloqueia_movimento": true, "bloqueia_visao": false},
+    "t": {"tipo": "tocha", "nome": "Pira eterna", "bloqueia_movimento": true, "bloqueia_visao": false}
+  },
+  "entradas": {
+    "jogador": [{"x": 2, "y": 9}],
+    "inimigos": [{"x": 15, "y": 4}, {"x": 14, "y": 13}, {"x": 22, "y": 9}]
+  },
+  "grade": [
+    "##############################",
+    "#....t........##........t....#",
+    "#............................#",
+    "#....o..................o....#",
+    "#..........o......o..........#",
+    "#............................#",
+    "#......~~~~........~~~~......#",
+    "#......~~~~........~~~~......#",
+    "#............................#",
+    "+............................#",
+    "#............................#",
+    "#......~~~~........~~~~......#",
+    "#......~~~~........~~~~......#",
+    "#............................#",
+    "#..........o......o..........#",
+    "#....o..................o....#",
+    "#....t........##........t....#",
+    "##############################"
+  ],
+  "fonte": "Mapa original do DND-core; não derivado de outras obras."
+}

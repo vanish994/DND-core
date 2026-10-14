@@ -84,6 +84,21 @@ class TestListaDeMagias(unittest.TestCase):
         encontro.posicoes["esqueleto-1"] = encontro.posicoes["esqueleto-1"].__class__(23, 13)
         self.assertNotIn("esqueleto-1", encontro.alvos_magia())
 
+    def test_alvos_de_magia_e_conjuracao_exigem_linha_de_visao(self):
+        encontro = novo_encontro()
+        no_turno_do_bardo(encontro)
+        # No santuário circular, uma parede entre o Bardo e o alvo bloqueia a linha de visão.
+        encontro._iniciar_sala("santuario_circular")
+        no_turno_do_bardo(encontro)
+        encontro.posicoes["bardo-1"] = modulo.BoardPosition(5, 9)  # biblioteca lateral
+        encontro.posicoes["goblin-1"] = modulo.BoardPosition(12, 9)  # atrás da parede x=7
+        self.assertLessEqual(encontro.distancia_pes("bardo-1", "goblin-1"), 60)
+        self.assertNotIn("goblin-1", encontro.alvos_magia())
+        espacos_antes = encontro.ficha["conjuracao"]["espacos_restantes"]["1"]
+        recusa = encontro.conjurar("Comando", "goblin-1", "parar")
+        self.assertEqual(recusa, {"status": "bloqueado", "motivo": "sem_linha_de_visao"})
+        self.assertEqual(encontro.ficha["conjuracao"]["espacos_restantes"]["1"], espacos_antes)
+
 
 class TestConjurarRecusas(unittest.TestCase):
     def test_magia_sem_efeito_e_recusada_sem_gastar_espaco(self):
@@ -211,7 +226,26 @@ class TestComando(unittest.TestCase):
         posicao = (encontro.posicoes["goblin-1"].x, encontro.posicoes["goblin-1"].y)
         turno_do_goblin(encontro)
         self.assertTrue(encontro.inimigos["goblin-1"].get("caido"))
+        self.assertIn("caido", encontro.inimigos["goblin-1"].get("condicoes", []))
         self.assertEqual((encontro.posicoes["goblin-1"].x, encontro.posicoes["goblin-1"].y), posicao)
+
+    def test_alvo_caido_concede_vantagem_corpo_a_corpo_e_gasta_metade_do_movimento_para_levantar(self):
+        encontro = self._com_comando_falhado("abaixar")
+        turno_do_goblin(encontro)
+        no_turno_do_bardo(encontro)
+        self.assertIn("caido", encontro._condicoes_combatente("goblin-1"))
+        efeito_perto = encontro._efeito_condicoes_no_ataque("bardo-1", "goblin-1", 5)
+        self.assertEqual(efeito_perto["resultado"], "vantagem")
+        efeito_longe = encontro._efeito_condicoes_no_ataque("bardo-1", "goblin-1", 30)
+        self.assertEqual(efeito_longe["resultado"], "desvantagem")
+
+        # No próximo turno do Goblin, ele gasta metade do deslocamento (3 casas em vez de 6) para se levantar.
+        pos_antes = encontro.posicoes["goblin-1"]
+        turno_do_goblin(encontro)
+        self.assertNotIn("caido", encontro._condicoes_combatente("goblin-1"))
+        pos_depois = encontro.posicoes["goblin-1"]
+        passos_dados = max(abs(pos_depois.x - pos_antes.x), abs(pos_depois.y - pos_antes.y))
+        self.assertLessEqual(passos_dados, 3)
 
     def test_aproximar_move_mas_nao_ataca(self):
         encontro = self._com_comando_falhado("aproximar")

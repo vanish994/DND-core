@@ -59,7 +59,8 @@ def rolar_ataque_auditavel(fatos: Mapping[str, Any]) -> dict[str, Any]:
     modifier = int(fatos.get("modifier", 0))
     total = roll + modifier
     ac = int(fatos["target_ac"])
-    critical = roll == 20
+    limiar_critico = int(fatos.get("critical_threshold", 20))
+    critical = roll >= limiar_critico
     hit = critical or (roll != 1 and total >= ac)
     return {
         "type": "attack",

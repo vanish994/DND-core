@@ -840,6 +840,10 @@ def _delegar_para_especialista(classe: str, chave: str, nivel: int, f: dict) -> 
             opcoes = subclasses_da_classe(classe)
         except Exception:  # classe fora do catálogo de subclasse
             opcoes = []
+        subclasse = f.get("subclasse")
+        if subclasse:
+            dados = invocar(resolver_subclasse_marcial, {**base, "subclasse": subclasse})
+            return completar({**dados, "subclasses_disponiveis": sorted(opcoes)})
         return completar(
             {
                 "resultado": "escolha",
@@ -851,16 +855,8 @@ def _delegar_para_especialista(classe: str, chave: str, nivel: int, f: dict) -> 
         subclasse = f.get("subclasse")
         if not subclasse:
             return completar({"resultado": "escolha", "motivo": "subclasse_ausente"})
-        if classe in {"barbaro", "guerreiro", "monge", "ladino"}:
-            dados = invocar(resolver_subclasse_marcial, {**base, "subclasse": subclasse})
-            return completar(dados)
-        return completar(
-            {
-                "resultado": "nao_implementado",
-                "motivo": "subclasse_sem_resolvedor_especifico",
-                "subclasse": subclasse,
-            }
-        )
+        dados = invocar(resolver_subclasse_marcial, {**base, "subclasse": subclasse})
+        return completar(dados)
     if chave == "dadiva_epica":
         opcoes = sorted(nome for nome, dados in FEATS.items() if dados.get("categoria") == "dadiva_epica")
         return completar({"resultado": "escolha", "marco": "dadiva_epica", "exige_nivel": 19, "opcoes": opcoes})

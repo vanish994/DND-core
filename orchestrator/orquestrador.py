@@ -208,7 +208,7 @@ class OrquestradorAcoes:
     def _preparar(self, fatos: dict[str, Any], personagens: list[dict[str, Any]] | None) -> _Preparo | ResultadoAcao:
         """Encaminha a ação ao subsistema correto e monta os fatos do motor."""
         tipo = fatos.get("type")
-        if tipo == "class_feature":
+        if tipo in {"class_feature", "martial_feature"}:
             return self._preparar_caracteristica(fatos, personagens)
         if tipo in {"attack", "initiative"}:
             return self._preparar_ataque(fatos, personagens)
@@ -342,18 +342,38 @@ class OrquestradorAcoes:
                 return ResultadoAcao("bloqueado", dict(sopro))
             return ResultadoAcao("resolvido", dict(resultado_sopro), [], list(sopro.get("rolagens") or []))
 
-        nome_canonico = next((k for k in CATALOGO_ARMAS if k.casefold() == nome_arma.casefold()), None)
-        arma = CATALOGO_ARMAS.get(nome_canonico) if nome_canonico else None
-        if arma is None:
-            return ResultadoAcao.bloqueado("arma_nao_encontrada_no_catalogo", arma=nome_arma)
+        desarmado = arma_normalizada in {"ataque desarmado", "golpe desarmado"}
+        if desarmado:
+            nome_canonico = "Ataque Desarmado"
+            arma = {"dano": "1", "tipo": "contundente", "alcance": 0, "peso": 0, "propriedades": []}
+        else:
+            nome_canonico = next((k for k in CATALOGO_ARMAS if k.casefold() == nome_arma.casefold()), None)
+            arma = CATALOGO_ARMAS.get(nome_canonico) if nome_canonico else None
+            if arma is None:
+                return ResultadoAcao.bloqueado("arma_nao_encontrada_no_catalogo", arma=nome_arma)
+            recusa = self._verificar_proficiencia_na_arma(ficha, nome_canonico)
+            if recusa is not None:
+                return recusa
 
-        recusa = self._verificar_proficiencia_na_arma(ficha, nome_canonico)
-        if recusa is not None:
-            return recusa
+        nivel = max(1, int(ficha.get("nivel", 1) or 1))
+        classe = str(ficha.get("classe", "")).strip().lower()
+        propriedades = set(arma.get("propriedades", []))
+        dano_arma = str(arma["dano"])
+        usa_artes_marciais = False
+        if classe == "monge" and "municao" not in propriedades and "pesada" not in propriedades and "duas_maos" not in propriedades:
+            artes = self.engine.evaluate(
+                {"type": "class_feature", "classe": "monge", "nivel": nivel, "recurso": "artes_marciais"}
+            ).outcome
+            if artes.get("resultado") == "resolvido":
+                usa_artes_marciais = bool(artes.get("usa_destreza"))
+                dado_marcial = f"1{artes['dado']}"
+                lados_atuais = int(dano_arma.split("d")[1]) if "d" in dano_arma else 1
+                lados_marciais = int(str(artes["dado"]).lstrip("d"))
+                if lados_marciais >= lados_atuais:
+                    dano_arma = dado_marcial
 
         atributos = ficha.get("atributos") or {}
-        propriedades = set(arma.get("propriedades", []))
-        if "acuidade" in propriedades:
+        if "acuidade" in propriedades or usa_artes_marciais:
             if not all(k in atributos or k in (ficha.get("modificadores") or {}) for k in ("forca", "destreza")):
                 return ResultadoAcao.bloqueado("atributos_para_arma_ausentes_na_ficha")
             forca = self._modificador(ficha, "forca")
@@ -371,7 +391,6 @@ class OrquestradorAcoes:
             if modificador_atributo is None:
                 return ResultadoAcao.bloqueado("forca_ausente_na_ficha")
 
-        nivel = max(1, int(ficha.get("nivel", 1) or 1))
         bonus_proficiencia = int(ficha.get("bonus_proficiencia", 2 + (nivel - 1) // 4))
         fatos.update(
             {
@@ -380,7 +399,7 @@ class OrquestradorAcoes:
                 "proficiency_applied": bonus_proficiencia,
                 "modifier_source": "ficha_autoritativa",
                 "weapon": nome_canonico,
-                "weapon_damage": arma["dano"],
+                "weapon_damage": dano_arma,
                 "damage_type": arma["tipo"],
                 "damage_modifier": modificador_atributo,
                 "attack_ability": atributo_ataque,
@@ -394,7 +413,12 @@ class OrquestradorAcoes:
         if alvo is None:
             return ResultadoAcao.bloqueado("monstro_desconhecido_no_bestiario", alvo=alvo_nome)
         # A CA vem sempre do catálogo oficial; nunca de uma CA fornecida pelo modelo.
-        fatos["target_ac"] = int(alvo["ca"])
+        bonus_cobertura = 0
+        cobertura = fatos.get("cover", fatos.get("cobertura"))
+        if cobertura and str(cobertura) != "nenhuma":
+            res_cobertura = self.engine.evaluate({"type": "cover", "cover": str(cobertura)}).outcome
+            bonus_cobertura = int(res_cobertura.get("bonus_ca", 0))
+        fatos["target_ac"] = int(alvo["ca"]) + bonus_cobertura
         fatos["target_name"] = alvo["nome"]
         return _Preparo(fatos)
 

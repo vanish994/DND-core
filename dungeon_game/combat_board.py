@@ -26,6 +26,7 @@ class CombatBoard:
     blocked: frozenset[BoardPosition] = frozenset()
     tile_feet: int = 5
     distance_in_squares: DistanceInSquares | None = field(default=None, compare=False, repr=False)
+    vision_blocked: frozenset[BoardPosition] = frozenset()
 
     def __post_init__(self) -> None:
         if self.width < 1 or self.height < 1:
@@ -34,12 +35,62 @@ class CombatBoard:
             raise ValueError("tile_feet precisa ser positivo")
         if any(not self.in_bounds(pos) for pos in self.blocked):
             raise ValueError("Há obstáculos fora do tabuleiro")
+        if any(not self.in_bounds(pos) for pos in self.vision_blocked):
+            raise ValueError("Há obstáculos de visão fora do tabuleiro")
 
     def in_bounds(self, pos: BoardPosition) -> bool:
         return 0 <= pos.x < self.width and 0 <= pos.y < self.height
 
     def is_walkable(self, pos: BoardPosition) -> bool:
         return self.in_bounds(pos) and pos not in self.blocked
+
+    def line_positions(self, origin: BoardPosition, target: BoardPosition) -> tuple[BoardPosition, ...]:
+        """Casas atravessadas pelo segmento entre origem e destino (inclusive)."""
+        if not self.in_bounds(origin) or not self.in_bounds(target):
+            raise ValueError("Posição fora do tabuleiro")
+        x0, y0 = origin.x, origin.y
+        x1, y1 = target.x, target.y
+        dx = abs(x1 - x0)
+        dy = abs(y1 - y0)
+        sx = 1 if x1 > x0 else -1 if x1 < x0 else 0
+        sy = 1 if y1 > y0 else -1 if y1 < y0 else 0
+        x, y = x0, y0
+        positions = [BoardPosition(x, y)]
+        ix, iy = 0, 0
+        while ix < dx or iy < dy:
+            decision = (1 + 2 * ix) * dy - (1 + 2 * iy) * dx
+            if decision == 0:
+                x += sx
+                y += sy
+                ix += 1
+                iy += 1
+            elif decision < 0:
+                x += sx
+                ix += 1
+            else:
+                y += sy
+                iy += 1
+            positions.append(BoardPosition(x, y))
+        return tuple(positions)
+
+    def has_line_of_sight(self, origin: BoardPosition, target: BoardPosition) -> bool:
+        """Verifica se nenhuma casa intermediária bloqueia a visão."""
+        caminho = self.line_positions(origin, target)
+        return all(pos not in self.vision_blocked for pos in caminho[1:-1])
+
+    def has_cover_obstacle(
+        self,
+        origin: BoardPosition,
+        target: BoardPosition,
+        *,
+        occupied: Iterable[BoardPosition] = (),
+    ) -> bool:
+        """Indica se há obstáculo parcial (pilar, tocha ou criatura) entre origem e destino."""
+        intermediarias = self.line_positions(origin, target)[1:-1]
+        if not intermediarias:
+            return False
+        obstaculos_parciais = (self.blocked - self.vision_blocked) | (set(occupied) - {origin, target})
+        return any(pos in obstaculos_parciais for pos in intermediarias)
 
     def distance_feet(self, origin: BoardPosition, target: BoardPosition) -> int:
         """Delega a convenção mecânica de distância à integração configurada."""

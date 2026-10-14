@@ -2886,6 +2886,121 @@ def validar_uso_monstro(fatos: dict) -> dict:
     }
 
 
+def resolver_efeito_especial_monstro(fatos: dict) -> dict:
+    """Resolve efeitos especiais de acerto ou traços táticos de monstros do SRD 5.2.1."""
+    nome = str(fatos.get("nome", "")).strip()
+    monstro = consultar_monstro(nome)
+    if monstro is None:
+        return {"resultado": "bloqueado", "motivo": "monstro_desconhecido"}
+    nome_canonico = monstro["nome"]
+    gatilho = str(fatos.get("gatilho", "ao_acertar")).strip().lower()
+
+    if gatilho == "ao_cair_a_zero_pv":
+        tem_fortitude = any(
+            str(t.get("nome", "")).strip().lower() == "undead fortitude" for t in (monstro.get("tracos") or ())
+        )
+        if not tem_fortitude:
+            return {"resultado": "nenhum_efeito", "monstro": nome_canonico}
+        tipo_dano = str(fatos.get("tipo_dano", "")).strip().lower()
+        critico = bool(fatos.get("critico", False))
+        dano_causado = int(fatos.get("dano_causado", 0))
+        if tipo_dano in {"radiant", "radiante"} or critico or dano_causado <= 0:
+            return {
+                "resultado": "nao_aplicavel",
+                "monstro": nome_canonico,
+                "efeito": "fortitude_de_morto_vivo",
+                "motivo": "dano_radiante_ou_critico",
+            }
+        mod_con = int((monstro.get("modificadores") or {}).get("constituicao", 3))
+        return {
+            "resultado": "resolvido",
+            "monstro": nome_canonico,
+            "efeito": "fortitude_de_morto_vivo",
+            "salvaguarda": {
+                "atributo": "constituicao",
+                "modificador": mod_con,
+                "cd": 5 + dano_causado,
+            },
+            "pv_em_sucesso": 1,
+            "origem": "SRD 5.2.1 — Undead Fortitude",
+        }
+
+    a_distancia = bool(fatos.get("a_distancia", False))
+    passos_movidos_pes = int(fatos.get("passos_movidos_pes", 0))
+    alvo_especie = str(fatos.get("alvo_especie", "")).strip().lower()
+    dano_causado = max(0, int(fatos.get("dano_causado", 0)))
+
+    if nome_canonico == "Ghoul" and not a_distancia:
+        if alvo_especie in {"elfo", "elf", "morto-vivo", "undead"}:
+            return {
+                "resultado": "nao_aplicavel",
+                "monstro": nome_canonico,
+                "efeito": "toque_paralisante",
+                "motivo": "alvo_imune_paralisia_carnical",
+            }
+        return {
+            "resultado": "resolvido",
+            "monstro": nome_canonico,
+            "efeito": "toque_paralisante",
+            "salvaguarda": {"atributo": "constituicao", "cd": 10},
+            "condicao_em_falha": "paralisado",
+            "repete_salvaguarda_fim_turno": True,
+            "origem": "SRD 5.2.1 — Ghoul (Claws)",
+        }
+
+    if nome_canonico == "Shadow" and not a_distancia:
+        return {
+            "resultado": "resolvido",
+            "monstro": nome_canonico,
+            "efeito": "dreno_forca",
+            "atributo_drenado": "forca",
+            "dado_dreno": "1d4",
+            "morte_em_zero": True,
+            "recupera_em_descanso": "curto_ou_longo",
+            "origem": "SRD 5.2.1 — Shadow (Strength Drain)",
+        }
+
+    if nome_canonico in {"Specter", "Wight"} and not a_distancia:
+        cd = 10 if nome_canonico == "Specter" else 13
+        return {
+            "resultado": "resolvido",
+            "monstro": nome_canonico,
+            "efeito": "dreno_vida",
+            "salvaguarda": {"atributo": "constituicao", "cd": cd},
+            "reducao_pv_maximo": dano_causado,
+            "morte_em_zero": True,
+            "origem": f"SRD 5.2.1 — {nome_canonico} (Life Drain)",
+        }
+
+    if nome_canonico == "Minotaur Skeleton" and not a_distancia and passos_movidos_pes >= 10:
+        return {
+            "resultado": "resolvido",
+            "monstro": nome_canonico,
+            "efeito": "investida",
+            "dado_dano_extra": "2d8",
+            "tipo_dano_extra": "perfurante",
+            "salvaguarda": {"atributo": "forca", "cd": 14},
+            "empurrar_pes_em_falha": 10,
+            "condicao_em_falha": "caido",
+            "origem": "SRD 5.2.1 — Minotaur Skeleton (Charge)",
+        }
+
+    if nome_canonico == "Mummy" and not a_distancia:
+        return {
+            "resultado": "resolvido",
+            "monstro": nome_canonico,
+            "efeito": "maldicao_da_mumia",
+            "dado_dano_extra": "3d6",
+            "tipo_dano_extra": "necrotico",
+            "salvaguarda": {"atributo": "constituicao", "cd": 12},
+            "condicao_em_falha": "maldicao_da_mumia",
+            "bloqueia_cura": True,
+            "origem": "SRD 5.2.1 — Mummy (Rotting Fist)",
+        }
+
+    return {"resultado": "nenhum_efeito", "monstro": nome_canonico}
+
+
 def resolver_bestiario(fatos: dict) -> dict:
     """Resolve operações auditáveis sobre o catálogo do bestiário."""
     operacao = str(fatos.get("operacao", "consultar")).lower()
@@ -2928,4 +3043,6 @@ def resolver_bestiario(fatos: dict) -> dict:
     if operacao == "xp_encontro":
         nomes = [str(nome) for nome in fatos.get("nomes", [])]
         return {"resultado": "resolvido", "monstros": nomes, "xp_total": xp_encontro(nomes)}
+    if operacao == "efeito_especial_monstro":
+        return resolver_efeito_especial_monstro(fatos)
     return {"resultado": "bloqueado", "motivo": "operacao_desconhecida"}

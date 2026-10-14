@@ -75,6 +75,34 @@ class AtaqueDeInimigoTests(unittest.TestCase):
         resultado = self.orquestrador.executar(Acao.de_ferramenta("resolver_regra", {"fatos": fatos}), [bardo()])
         self.assertEqual(resultado.dados["target_ac"], 13)
 
+    def test_esqueleto_usa_arco_a_distancia_e_aplica_desvantagem_no_alcance_longo(self):
+        normal = atacar(self.orquestrador, "esqueleto", bardo(), seed=1, distancia_pes=50)
+        self.assertEqual(normal["acao"], "Shortbow")
+        self.assertTrue(normal["a_distancia"])
+        self.assertFalse(normal["desvantagem_por_alcance"])
+
+        longo = atacar(self.orquestrador, "esqueleto", bardo(), seed=1, distancia_pes=120)
+        self.assertEqual(longo["acao"], "Shortbow")
+        self.assertTrue(longo["desvantagem_por_alcance"])
+        self.assertEqual(len(longo["ataque"]["rolls"]), 2)
+
+    def test_esqueleto_bloqueia_fora_do_alcance_ou_sem_linha_de_visao_e_aplica_cobertura(self):
+        fora = atacar(self.orquestrador, "esqueleto", bardo(), seed=1, distancia_pes=325)
+        self.assertEqual(fora["status"], "bloqueado")
+        self.assertEqual(fora["motivo"], "fora_de_alcance")
+
+        sem_visao = atacar(
+            self.orquestrador, "esqueleto", bardo(), seed=1, distancia_pes=40, linha_de_visao_bloqueada=True
+        )
+        self.assertEqual(sem_visao["status"], "bloqueado")
+        self.assertEqual(sem_visao["motivo"], "linha_de_visao")
+
+        com_cobertura = atacar(
+            self.orquestrador, "esqueleto", bardo(ca=13), seed=4, distancia_pes=40, cobertura="meia"
+        )
+        self.assertEqual(com_cobertura["bonus_ca_por_cobertura"], 2)
+        self.assertEqual(com_cobertura["ataque"]["target_ac"], 15)
+
 
 class AtaqueDeMonstroNoOrquestradorTests(unittest.TestCase):
     def setUp(self):

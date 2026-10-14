@@ -25,6 +25,7 @@ class DungeonRuleAdapter:
         height: int,
         *,
         blocked: frozenset[BoardPosition] = frozenset(),
+        vision_blocked: frozenset[BoardPosition] = frozenset(),
         tile_feet: int = 5,
     ) -> CombatBoard:
         """Injeta no tabuleiro a convenção de distância do Rule Engine."""
@@ -32,6 +33,7 @@ class DungeonRuleAdapter:
             width=width,
             height=height,
             blocked=blocked,
+            vision_blocked=vision_blocked,
             tile_feet=tile_feet,
             distance_in_squares=distancia_grade,
         )

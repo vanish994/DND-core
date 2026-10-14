@@ -46,9 +46,25 @@ class CombatBoardTests(unittest.TestCase):
     def test_invalid_start_and_out_of_bounds_obstacles_are_rejected(self):
         with self.assertRaises(ValueError):
             CombatBoard(4, 4, blocked=frozenset({BoardPosition(9, 9)}))
+        with self.assertRaises(ValueError):
+            CombatBoard(4, 4, vision_blocked=frozenset({BoardPosition(9, 9)}))
         board = CombatBoard(4, 4, blocked=frozenset({BoardPosition(1, 1)}))
         with self.assertRaises(ValueError):
             board.reachable_positions(BoardPosition(1, 1), 30)
+
+    def test_line_of_sight_and_cover_obstacles(self):
+        wall = frozenset({BoardPosition(2, 2)})
+        pillar = frozenset({BoardPosition(2, 1)})
+        board = CombatBoard(5, 5, blocked=wall | pillar, vision_blocked=wall)
+        self.assertFalse(board.has_line_of_sight(BoardPosition(0, 2), BoardPosition(4, 2)))
+        self.assertTrue(board.has_line_of_sight(BoardPosition(0, 1), BoardPosition(4, 1)))
+        self.assertTrue(board.has_cover_obstacle(BoardPosition(0, 1), BoardPosition(4, 1)))
+        self.assertFalse(board.has_cover_obstacle(BoardPosition(0, 0), BoardPosition(4, 0)))
+        self.assertTrue(
+            board.has_cover_obstacle(
+                BoardPosition(0, 0), BoardPosition(4, 0), occupied={BoardPosition(2, 0)}
+            )
+        )
 
 
 if __name__ == "__main__":
