@@ -1549,3 +1549,13 @@ select:focus-visible {
 
 /* Registro de combate removido da interface para liberar o mapa */
 .combat-log { display: none !important; }
+
+
+/* Garantia: esconder completamente o painel de registro do combate */
+main.arena section.combat-log,
+.arena .combat-log,
+section.combat-log[aria-label="Registro de combate"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
