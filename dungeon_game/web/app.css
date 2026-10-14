@@ -1312,3 +1312,10 @@ select:focus-visible {
   .portrait { height: 42px; }
   .log-content { height: 32px; }
 }
+
+
+/* Posiciona a iniciativa sobre a área do mapa, abaixo do cabeçalho */
+.iniciativa-wrap { top: 66px; }
+@media (max-width: 1050px) {
+  .iniciativa-wrap { top: 56px; }
+}
