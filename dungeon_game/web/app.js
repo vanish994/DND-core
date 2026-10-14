@@ -527,6 +527,19 @@ const ESTILO_TERRENO = {
   tocha: { base: "#2d2930", sombra: "#252128", vinho: "#38323b" },
 };
 
+// Cada arena tem uma paleta própria, sem alterar colisões ou regras táticas.
+const TEMAS_MAPA = {
+  "cripta-inicial": { piso: "#30333b", sombra: "#242832", acento: "#86b7d8" },
+  "santuario-circular": { piso: "#34313a", sombra: "#29232f", acento: "#e0b45e" },
+  "catacumba-dos-mortos": { piso: "#2b3431", sombra: "#202a27", acento: "#91b9a0" },
+  "camara-profana": { piso: "#38282f", sombra: "#2a1e25", acento: "#d87983" },
+  "sarcofago-do-rei-mumia": { piso: "#3a3026", sombra: "#2a221c", acento: "#c7a0df" },
+};
+
+function temaMapaAtual() {
+  return TEMAS_MAPA[estado.dados?.mapa?.id] || TEMAS_MAPA["cripta-inicial"];
+}
+
 const COMANDOS = [
   ["aproximar", "Aproximar"],
   ["largar", "Largar"],
@@ -759,7 +772,11 @@ const SPRITES_CLASSE = {
 };
 
 function desenharTerreno(x, y, tipo) {
-  const e = ESTILO_TERRENO[tipo] || ESTILO_TERRENO.chao;
+  const estiloBase = ESTILO_TERRENO[tipo] || ESTILO_TERRENO.chao;
+  const tema = temaMapaAtual();
+  const e = tipo === "chao"
+    ? { ...estiloBase, base: tema.piso, sombra: tema.sombra }
+    : estiloBase;
   const pixelTerreno = TAMANHO / 8;
   const gx = Math.round(x / TAMANHO);
   const gy = Math.round(y / TAMANHO);
@@ -857,7 +874,8 @@ function desenharRunaCentral(largura, altura) {
   const cy = (altura * TAMANHO) / 2;
   const raio = Math.min(largura, altura) * TAMANHO * 0.22;
   ctx.save();
-  ctx.strokeStyle = "rgba(217, 166, 83, 0.26)";
+  ctx.strokeStyle = temaMapaAtual().acento;
+  ctx.globalAlpha = 0.3;
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.arc(cx, cy, raio, 0, Math.PI * 2);
